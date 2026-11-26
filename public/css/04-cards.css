@@ -1,0 +1,58 @@
+/* The printed card. This file is exempt from the UI type scale: every size
+   here is a fraction of the card's own width (cqw), so a card renders
+   identically at thumbnail and at full size. */
+.mtg-card{display:block;position:relative;container-type:inline-size;width:100%;aspect-ratio:var(--card-aspect);padding:0;border:0;border-radius:4.8% / 3.4%;background:var(--card-border);color:var(--card-text);font-family:var(--font-ui);text-align:left;box-shadow:0 6px 18px var(--shadow-40);min-height:0;overflow:hidden}
+button.mtg-card{cursor:pointer}
+.mtg-card.selected{outline:3px solid var(--gold-hi);outline-offset:2px}
+.mtg-frame{position:absolute;inset:3.4cqw;display:grid;grid-template-rows:7.4cqw 41cqw 6.6cqw 1fr;gap:1.4cqw;padding:2.6cqw 3cqw 8cqw;border-radius:3cqw;background:var(--frame)}
+.mtg-card:is(.frame-w){--frame:var(--frame-w);--box:var(--box-w)}
+.mtg-card:is(.frame-u){--frame:var(--frame-u);--box:var(--box-u)}
+.mtg-card:is(.frame-b){--frame:var(--frame-b);--box:var(--box-b)}
+.mtg-card:is(.frame-r){--frame:var(--frame-r);--box:var(--box-r)}
+.mtg-card:is(.frame-g){--frame:var(--frame-g);--box:var(--box-g)}
+.mtg-card:is(.frame-gold){--frame:var(--frame-gold);--box:var(--box-gold)}
+.mtg-card:is(.frame-artifact){--frame:var(--frame-artifact);--box:var(--box-artifact)}
+.mtg-card:is(.frame-land){--frame:var(--frame-land);--box:var(--box-land)}
+.mtg-card:is(.frame-colorless){--frame:var(--frame-colorless);--box:var(--box-colorless)}
+.mtg-name,.mtg-type{grid-area:auto;display:flex;align-items:center;justify-content:space-between;gap:1.5cqw;padding:0 2.4cqw;border-radius:2.4cqw / 1.8cqw;background:var(--box);box-shadow:inset 0 0 0 .5cqw color-mix(in srgb,var(--card-text) 45%,transparent)}
+.mtg-title{font-size:4.6cqw;font-weight:800;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
+.mtg-title em{font-weight:600;opacity:.5}
+.mtg-cost{display:flex;gap:.5cqw;flex:none}
+.mtg-art{border-radius:1cqw;background:repeating-linear-gradient(135deg,var(--art-placeholder) 0 3cqw,color-mix(in srgb,var(--art-placeholder) 85%,white) 3cqw 6cqw);box-shadow:0 0 0 .6cqw var(--card-border)}
+.mtg-type span{font-size:4cqw;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mtg-pip{flex:none;width:3.6cqw;height:3.6cqw;border-radius:50%;background:var(--rarity-common);box-shadow:0 0 0 .5cqw var(--card-border)}
+.rarity-uncommon .mtg-pip{background:var(--rarity-uncommon)}
+.rarity-rare .mtg-pip{background:var(--rarity-rare)}
+.rarity-mythic .mtg-pip{background:var(--rarity-mythic)}
+.mtg-box{border-radius:1cqw;background:var(--box);padding:2.4cqw 3cqw;box-shadow:inset 0 0 0 .5cqw color-mix(in srgb,var(--card-text) 45%,transparent);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.mtg-rules{line-height:1.22}
+.mtg-rules p{margin:0 0 .6em}
+.mtg-rules p:last-child{margin-bottom:0}
+.mtg-flavor{margin-top:.7em;font-style:italic}
+.mtg-pt{position:absolute;right:5cqw;bottom:8.6cqw;min-width:15cqw;padding:.8cqw 2.6cqw;border-radius:2cqw;background:var(--box);font-size:5cqw;font-weight:800;text-align:center;line-height:1.1;box-shadow:inset 0 0 0 .5cqw var(--card-text),0 0 0 .6cqw var(--card-border)}
+.mtg-foot{position:absolute;left:6cqw;right:6cqw;bottom:4.4cqw;display:flex;justify-content:space-between;gap:2cqw;color:var(--card-foot-ink);font-size:2.7cqw;font-weight:700;line-height:1;letter-spacing:.02em;white-space:nowrap}
+.mtg-foot span:last-child{overflow:hidden;text-overflow:ellipsis}
+.mana{display:inline-grid;place-items:center;width:4.6cqw;height:4.6cqw;border-radius:50%;background:var(--mana-n);color:var(--card-text);font-size:3.2cqw;font-weight:800;font-style:normal;line-height:1;box-shadow:-.25cqw .35cqw 0 var(--card-border);vertical-align:-.9cqw;margin:0 .15cqw}
+.mana-w{background:var(--mana-w)}.mana-u{background:var(--mana-u)}.mana-b{background:var(--mana-b)}.mana-r{background:var(--mana-r)}.mana-g{background:var(--mana-g)}
+.mana-hybrid{background:linear-gradient(135deg,var(--mana-w) 50%,var(--mana-u) 50%)}
+.mana-t{background:var(--card-text);color:var(--card-foot-ink)}
+.mtg-name .mana{vertical-align:baseline;margin:0}
+
+/* Sets page */
+.set-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--space-12);align-items:start}
+.set-card{display:grid;gap:var(--space-4);align-content:start;padding:var(--space-12);text-align:left;background:var(--ink-700);color:var(--text);border:1px solid var(--line-1);border-radius:var(--radius-control);text-decoration:none;font-weight:600}
+.set-card strong{color:var(--gold-hi);font-size:var(--text-title)}
+.set-card small{color:var(--text-muted);font-size:var(--text-small);font-weight:500}
+
+/* Set editor: grid of cards beside the editor and a large live preview. */
+.set-page{display:grid;gap:var(--space-16);grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "editor" "cards"}
+.set-head{grid-area:head;display:grid;gap:var(--space-8)}
+.set-editor{grid-area:editor;display:grid;gap:var(--space-16);align-content:start}
+.set-cards{grid-area:cards;display:grid;gap:var(--space-12);align-content:start}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:var(--space-12)}
+.preview{width:min(100%,22rem);margin:0 auto}
+.save-state{color:var(--text-muted);font-size:var(--text-small)}
+@media(min-width:860px){
+  .set-page{grid-template-columns:minmax(0,1fr) 26rem;grid-template-areas:"head head" "cards editor";align-items:start}
+  .set-editor{position:sticky;top:var(--space-16)}
+}

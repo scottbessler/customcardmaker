@@ -1,0 +1,38 @@
+/* Design-system tokens. Every colour, size and radius the UI uses is named here. */
+/* Bitter, self-hosted so an installed PWA keeps its type offline. The filename
+   carries the upstream version so swapping the face busts the cache (the CSS
+   version can't reach this URL). Change it together with the preload in
+   src/render.rs. */
+@font-face{font-family:"Bitter";font-style:normal;font-weight:100 900;font-display:swap;src:url(/public/vendor/bitter-v42-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Bitter";font-style:normal;font-weight:100 900;font-display:swap;src:url(/public/vendor/bitter-v42-latin-ext.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+:root{
+  color-scheme:dark;
+  --ink-900:#120f22;--ink-800:#1a1630;--ink-700:#241f40;--ink-600:#322b57;
+  --line-1:#3a3360;--line-2:#5b5290;--line-3:#8b82c4;
+  --text:#f2eee2;--text-muted:#b4aed0;--text-faint:#7a739f;
+  --gold:#d9a441;--gold-hi:#f0c870;--danger:#b8504e;--danger-ink:#ffb4ae;--ink-on-gold:#1a1208;
+  --control-h:44px;--control-h-primary:52px;
+  --space-4:4px;--space-8:8px;--space-12:12px;--space-16:16px;--space-24:24px;--space-32:32px;
+  --radius-control:12px;--radius-surface:16px;--radius-chip:999px;
+  --font-ui:"Bitter",ui-serif,Georgia,"Times New Roman",serif;--tracking-ui:-.01em;
+  --text-display:28px;--text-title:20px;--text-action:17px;--text-body:15px;--text-small:13px;--text-label:11px;
+  --safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px);
+  --shadow:#000;--white:#fff;--card-foot-ink:#f2eee2;
+  --shadow-40:color-mix(in srgb,var(--shadow) 40%,transparent);--shadow-70:color-mix(in srgb,var(--shadow) 70%,transparent);
+
+  /* The printed card. These belong to the card, not the UI around it. */
+  --card-aspect:63/88;
+  --card-border:#0d0b14;
+  --card-text:#16130f;
+  --frame-w:#f4efd6;--frame-u:#9cc3de;--frame-b:#7a706c;--frame-r:#d98a6b;--frame-g:#8cb890;
+  --frame-gold:#d6b560;--frame-artifact:#a9b4bd;--frame-land:#b9a687;--frame-colorless:#b8b2ab;
+  --box-w:#fbf8ea;--box-u:#e3eef6;--box-b:#d8d2cd;--box-r:#f5dcd0;--box-g:#dcebdc;
+  --box-gold:#f2e8c4;--box-artifact:#e6eaee;--box-land:#ece3d0;--box-colorless:#ebe8e4;
+  --art-placeholder:#524a7a;
+  --rarity-common:#1a1a1a;--rarity-uncommon:#a9bcc8;--rarity-rare:#d6b04a;--rarity-mythic:#e0623a;
+  --mana-w:#f8f2d0;--mana-u:#aad3ec;--mana-b:#c3b9b2;--mana-r:#f0a98a;--mana-g:#a5d0ae;--mana-n:#d2c9c2;
+}
+/* WebKit reports a zero bottom inset in standalone mode on phones that do have
+   a home indicator, so an installed PWA floors the clearance itself. */
+@media(orientation:portrait){html.standalone-pwa{--safe-bottom:max(env(safe-area-inset-bottom,0px),34px)}}
+@media(orientation:landscape){html.standalone-pwa{--safe-bottom:max(env(safe-area-inset-bottom,0px),21px)}}
