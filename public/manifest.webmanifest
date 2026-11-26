@@ -1,0 +1,12 @@
+{
+  "name": "customcardmaker",
+  "short_name": "cardmaker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1630",
+  "theme_color": "#1a1630",
+  "icons": [
+    { "src": "/public/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/public/apple-touch-icon.svg", "sizes": "180x180", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

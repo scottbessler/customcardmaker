@@ -1,0 +1,17 @@
+*{box-sizing:border-box}
+html{background:var(--ink-800)}
+body{margin:0;background:radial-gradient(circle at top,var(--ink-600),var(--ink-800) 60%);background-attachment:fixed;color:var(--text);font:var(--text-body)/1.45 var(--font-ui);letter-spacing:var(--tracking-ui);min-height:100vh}
+/* The page gutter is a token so a full-width band can pull back out of it by
+   exactly as much as the page put in. The device's own insets live in the
+   gutter, so every page clears the Dynamic Island in landscape and the home
+   indicator below without each one remembering to. */
+.page{--gutter-left:calc(1rem + var(--safe-left));--gutter-right:calc(1rem + var(--safe-right));max-width:1200px;margin:0 auto;padding:1rem var(--gutter-right) calc(1rem + var(--safe-bottom)) var(--gutter-left)}
+.site-header{padding-top:var(--safe-top);display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem}
+.brand{font-weight:700;color:var(--gold);text-decoration:none;font-size:var(--text-title)}
+h1,h2{color:var(--gold);margin:0 0 var(--space-8)}
+h1{font-size:var(--text-display);font-weight:700}
+h2{font-size:var(--text-title);font-weight:700}
+a{color:var(--gold-hi)}
+.muted{color:var(--text-muted)}
+.error{color:var(--danger-ink)}
+.error:empty{display:none}

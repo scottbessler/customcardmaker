@@ -1,0 +1,13 @@
+.panel{background:color-mix(in srgb,var(--ink-700) 92%,black);border:1px solid var(--line-1);border-radius:var(--radius-control);padding:1.25rem;box-shadow:0 12px 40px var(--shadow-40)}
+form{display:grid;gap:.65rem}
+label{display:grid;gap:.3rem;color:var(--text-muted);font-size:var(--text-small);font-weight:600}
+input,button,select,textarea{font:inherit;letter-spacing:var(--tracking-ui);padding:.7rem;border-radius:var(--radius-control);border:1px solid var(--line-2);background:var(--ink-800);color:var(--text);min-width:0}
+textarea{resize:vertical;line-height:1.4}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--gold-hi);outline-offset:1px}
+button{background:var(--gold);color:var(--ink-on-gold);font-weight:700;cursor:pointer;min-height:var(--control-h);padding:.45rem .9rem;font-size:var(--text-action);border:0}
+button.quiet{background:var(--ink-800);color:var(--text-muted);border:1px solid var(--line-2)}
+button.danger{background:var(--danger);color:var(--white)}
+button:disabled{cursor:default;opacity:.55}
+.row{display:flex;flex-wrap:wrap;gap:var(--space-8);align-items:end}
+.row>*{flex:1 1 8rem}
+.row>button{flex:0 0 auto}
