@@ -2,6 +2,7 @@ import { html, render, useCallback, useEffect, useLayoutEffect, useRef, useState
 import { api, uploadArt } from "/public/api.js";
 import { artUrl, prepareArt } from "/public/art.js";
 import { CardFace, Mana } from "/public/card-face.js";
+import { BulkBar, TransferDialog } from "/public/bulk.js";
 import { TypeBuilder } from "/public/type-builder.js";
 
 const SAVE_DELAY_MS = 500;
@@ -173,6 +174,12 @@ function SetPage() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(null);
+  // Select mode: tapping a card picks it instead of opening it, and the bulk
+  // bar takes the editor's place.
+  const [bulk, setBulk] = useState(false);
+  const [picked, setPicked] = useState(() => new Set());
+  const [transfer, setTransfer] = useState(null);
+  const [notice, setNotice] = useState(null);
   // Edits are held here until the pause after the last keystroke, so a fast
   // typist makes one request, not one per letter.
   const pending = useRef(new Map());
@@ -222,6 +229,68 @@ function SetPage() {
     setStatus("Unsaved changes");
     clearTimeout(timer.current);
     timer.current = setTimeout(flush, SAVE_DELAY_MS);
+  }
+
+  useEffect(() => {
+    if (!bulk) return undefined;
+    const leave = (event) => {
+      // Escape closes a dialog first; only a bare one ends select mode.
+      if (event.key === "Escape" && !document.querySelector("dialog[open]")) endBulk();
+    };
+    addEventListener("keydown", leave);
+    return () => removeEventListener("keydown", leave);
+  }, [bulk]);
+
+  async function startBulk() {
+    await flush();
+    setNotice(null);
+    setPicked(new Set());
+    setBulk(true);
+  }
+
+  function endBulk() {
+    setBulk(false);
+    setPicked(new Set());
+  }
+
+  function togglePicked(id) {
+    setPicked((now) => {
+      const next = new Set(now);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }
+
+  /** Back from the server's idea of the set, after cards were moved or deleted. */
+  async function reload() {
+    const fresh = await api("GET", `/api/sets/${setId}`);
+    setDetail(fresh);
+    setSelected((was) => fresh.cards.find((c) => c.id === was)?.id ?? fresh.cards[0]?.id ?? null);
+  }
+
+  async function bulkDelete() {
+    setConfirming(null);
+    const ids = [...picked];
+    try {
+      await api("POST", "/api/cards/delete", { ids });
+      await reload();
+      endBulk();
+      setNotice({ text: `Deleted ${ids.length} ${ids.length === 1 ? "card" : "cards"}.` });
+      setError("");
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function bulkTransfer(to) {
+    const ids = [...picked];
+    const copy = transfer === "copy";
+    const done = await api("POST", "/api/cards/transfer", { ids, to, copy });
+    setTransfer(null);
+    await reload();
+    endBulk();
+    setNotice({ text: `${copy ? "Copied" : "Moved"} ${done.count} ${done.count === 1 ? "card" : "cards"} to`, link: { href: `/sets/${done.set.id}`, label: done.set.name } });
+    setError("");
   }
 
   async function addCard(card = {}) {
@@ -280,7 +349,12 @@ function SetPage() {
         <h1>${set.name}</h1>
         <p class="muted set-meta"><span class="set-code">${set.code}</span> · ${cards.length} ${cards.length === 1 ? "card" : "cards"}</p>
       </div>
-      <p class="save-state" role="status">${status}</p>
+      <div class="set-tools">
+        <p class="save-state" role="status">${status}</p>
+        ${cards.length
+          ? html`<button type="button" class="quiet select-cards" aria-pressed=${String(bulk)} onClick=${bulk ? endBulk : startBulk}>${bulk ? "Done" : "Select"}</button>`
+          : null}
+      </div>
       <details class="set-settings">
         <summary>Set settings</summary>
         <div class="row">
@@ -291,22 +365,38 @@ function SetPage() {
       </details>
     </section>
     <p class="error" role="alert">${error}</p>
+    ${notice
+      ? html`<p class="notice" role="status">${notice.text}${notice.link ? html` <a href=${notice.link.href}>${notice.link.label}</a>.` : null}</p>`
+      : null}
+    ${bulk
+      ? html`<${BulkBar}
+          count=${picked.size}
+          total=${cards.length}
+          onAll=${() => setPicked(new Set(cards.map((c) => c.id)))}
+          onNone=${() => setPicked(new Set())}
+          onMove=${() => setTransfer("move")}
+          onCopy=${() => setTransfer("copy")}
+          onDelete=${() => setConfirming("bulk")}
+        />`
+      : null}
 
     <section class="filmstrip" aria-label="Cards in this set">
-      ${cards.map((c) => html`<div class="strip-item" key=${c.id}>
+      ${cards.map((c) => html`<div class=${`strip-item${bulk && picked.has(c.id) ? " picked" : ""}`} key=${c.id}>
         <${CardFace}
           card=${c.card}
           code=${set.code}
           number=${c.position}
           total=${cards.length}
-          selected=${c.id === selected}
-          onClick=${async () => { await flush(); setSelected(c.id); }}
+          selected=${bulk ? picked.has(c.id) : c.id === selected}
+          onClick=${bulk ? () => togglePicked(c.id) : async () => { await flush(); setSelected(c.id); }}
         />
       </div>`)}
-      <button type="button" class="add-card" onClick=${() => addCard()}><span class="plus">+</span>Add card</button>
+      ${bulk ? null : html`<button type="button" class="add-card" onClick=${() => addCard()}><span class="plus">+</span>Add card</button>`}
     </section>
 
-    ${current
+    ${bulk
+      ? null
+      : current
       ? html`<section class="creator">
           <div class="stage">
             <div class="preview">${face(current)}</div>
@@ -319,6 +409,22 @@ function SetPage() {
         </section>`
       : html`<p class="muted empty">No cards yet. Add the first one.</p>`}
 
+    <${Confirm}
+      open=${confirming === "bulk"}
+      title=${`Delete ${picked.size} ${picked.size === 1 ? "card" : "cards"}?`}
+      body="They will be removed and the cards after them renumbered. This cannot be undone."
+      action=${`Delete ${picked.size} ${picked.size === 1 ? "card" : "cards"}`}
+      onConfirm=${bulkDelete}
+      onCancel=${() => setConfirming(null)}
+    />
+    <${TransferDialog}
+      open=${transfer !== null}
+      mode=${transfer ?? "move"}
+      count=${picked.size}
+      currentSetId=${setId}
+      onSubmit=${bulkTransfer}
+      onCancel=${() => setTransfer(null)}
+    />
     <${Confirm}
       open=${confirming === "card"}
       title="Delete this card?"

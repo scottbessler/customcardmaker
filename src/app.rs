@@ -84,6 +84,8 @@ pub fn router(s: AppState) -> Router {
             post(routes::upload_art).layer(DefaultBodyLimit::max(art::MAX_BYTES)),
         )
         .route("/api/art/{id}", get(routes::get_art))
+        .route("/api/cards/delete", post(routes::delete_cards))
+        .route("/api/cards/transfer", post(routes::transfer_cards))
         .route(
             "/api/cards/{id}",
             put(routes::save_card).delete(routes::delete_card),

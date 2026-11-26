@@ -36,8 +36,10 @@ that changes behaviour, not here.
   - [ ] More requirements are expected once we have a real MTG Nexus export;
         see the note below
   - [ ] Maybe later: export *to* Cockatrice XML, so sets round-trip
-- [ ] **5. Bulk delete** — select several cards, delete them together.
-- [ ] **6. Bulk move** — move or copy selected cards to a new or different set.
+- [x] **5. Bulk delete** — select several cards, delete them together.
+- [x] **6. Bulk move** — move or copy selected cards to a new or different set.
+  - [ ] Follow-ups: pick cards across several sets at once (the API already allows
+        it); drag cards to reorder within a set
 - [ ] **7. Export for proxy printing** — MakePlayingCards (MPC).
   - [ ] Render each card to a print-resolution PNG (and the card back)
   - [ ] Output MPC can take, or that

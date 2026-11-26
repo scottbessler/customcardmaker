@@ -25,6 +25,7 @@ fn import_map() -> String {
     let entries = [
         "/public/api.js",
         "/public/art.js",
+        "/public/bulk.js",
         "/public/card-face.js",
         "/public/frame.js",
         "/public/type-builder.js",
