@@ -4,6 +4,7 @@ use crate::{
     card::{self, Card},
     cockatrice,
     error::{ApiError, AppError},
+    openverse::{ArtCredit, SearchPage},
     render,
     session::{ApiUser, MaybeUser},
     sets::{self, Destination, SetDetail, SetSummary, StoredCard, Transferred},
@@ -103,12 +104,25 @@ pub async fn create_set(
     ))
 }
 
+/// A set as its owner sees it, plus who made each piece of borrowed art.
+#[derive(serde::Serialize)]
+pub struct SetView {
+    #[serde(flatten)]
+    detail: SetDetail,
+    credits: std::collections::HashMap<Uuid, ArtCredit>,
+}
+
 pub async fn get_set(
     State(s): State<AppState>,
     ApiUser(me): ApiUser,
     Path(id): Path<Uuid>,
-) -> Api<SetDetail> {
-    s.sets.get(me, id).await?.map(Json).ok_or_else(no_set)
+) -> Api<SetView> {
+    let detail = s.sets.get(me, id).await?.ok_or_else(no_set)?;
+    let credits = s
+        .art
+        .credits(detail.cards.iter().filter_map(|c| c.card.art).collect())
+        .await?;
+    Ok(Json(SetView { detail, credits }))
 }
 
 #[derive(Deserialize)]
@@ -222,7 +236,7 @@ pub async fn upload_art(
 ) -> Result<(StatusCode, Json<serde_json::Value>), ApiError> {
     let content_type = art::sniff(&body)
         .ok_or_else(|| AppError::bad_request("That is not a PNG, JPEG or WebP image."))?;
-    let id = s.art.save(me, content_type, &body).await?;
+    let id = s.art.save(me, content_type, &body, None).await?;
     Ok((StatusCode::CREATED, Json(serde_json::json!({ "id": id }))))
 }
 
@@ -326,7 +340,7 @@ async fn attach_pictures(
         set.spawn(async move {
             let _permit = permits.acquire_owned().await.ok()?;
             let (content_type, bytes) = fetch_picture(&client, &url).await?;
-            let id = store.save(me, content_type, &bytes).await.ok()?;
+            let id = store.save(me, content_type, &bytes, None).await.ok()?;
             Some((index, id))
         });
     }
@@ -519,13 +533,72 @@ pub async fn gallery_list(State(s): State<AppState>) -> Api<Vec<sets::GalleryEnt
     Ok(Json(s.sets.gallery().await?))
 }
 
-pub async fn gallery_set(
-    State(s): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> Api<sets::GalleryDetail> {
-    s.sets
+/// A public set as anyone sees it, plus who made each piece of borrowed art.
+#[derive(serde::Serialize)]
+pub struct GalleryView {
+    #[serde(flatten)]
+    detail: sets::GalleryDetail,
+    credits: std::collections::HashMap<Uuid, ArtCredit>,
+}
+
+pub async fn gallery_set(State(s): State<AppState>, Path(id): Path<Uuid>) -> Api<GalleryView> {
+    let detail = s
+        .sets
         .public_set(id)
         .await?
-        .map(Json)
-        .ok_or_else(|| AppError::not_found("There is no such public set.").into())
+        .ok_or_else(|| ApiError::from(AppError::not_found("There is no such public set.")))?;
+    let credits = s
+        .art
+        .credits(detail.cards.iter().filter_map(|c| c.card.art).collect())
+        .await?;
+    Ok(Json(GalleryView { detail, credits }))
+}
+
+#[derive(Deserialize)]
+pub struct ArtSearch {
+    q: String,
+    #[serde(default = "first_page")]
+    page: u32,
+    /// Include the non-commercial Creative Commons licences.
+    #[serde(default)]
+    nc: bool,
+}
+
+fn first_page() -> u32 {
+    1
+}
+
+pub async fn search_art(
+    State(s): State<AppState>,
+    ApiUser(me): ApiUser,
+    axum::extract::Query(query): axum::extract::Query<ArtSearch>,
+) -> Api<SearchPage> {
+    Ok(Json(
+        s.openverse
+            .search(me, &query.q, query.page, query.nc)
+            .await?,
+    ))
+}
+
+#[derive(Deserialize)]
+pub struct ArtPick {
+    /// An Openverse result's id, from a search. Nothing else: the server never
+    /// fetches a URL it was handed.
+    id: String,
+}
+
+pub async fn import_art(
+    State(s): State<AppState>,
+    ApiUser(me): ApiUser,
+    Json(pick): Json<ArtPick>,
+) -> Result<(StatusCode, Json<serde_json::Value>), ApiError> {
+    let got = s.openverse.fetch(&pick.id).await?;
+    let id = s
+        .art
+        .save(me, got.content_type, &got.bytes, Some(&got.credit))
+        .await?;
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::json!({ "id": id, "credit": got.credit })),
+    ))
 }

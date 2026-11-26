@@ -2,6 +2,7 @@ use crate::{
     art::{self, ArtStore},
     auth,
     db::Db,
+    openverse::{self, Openverse},
     render, routes,
     sets::SetStore,
     users::UserStore,
@@ -32,6 +33,7 @@ pub struct AppState {
     pub sets: SetStore,
     pub users: UserStore,
     pub art: ArtStore,
+    pub openverse: Arc<Openverse>,
     pub webauthn: Arc<Webauthn>,
     pub key: Key,
     /// Fetches card pictures named by an imported file. One client for the
@@ -49,12 +51,21 @@ impl FromRef<AppState> for Key {
 }
 
 impl AppState {
+    /// The same state, searching art somewhere else: a test points it at a fake.
+    pub fn with_openverse(mut self, base: &str) -> Result<Self> {
+        self.openverse = Arc::new(Openverse::new(base)?);
+        Ok(self)
+    }
+
     pub async fn open(data: impl AsRef<std::path::Path>, passkey_disabled: bool) -> Result<Self> {
         let db = Db::open(data).await?;
         Ok(Self {
             sets: SetStore::new(db.clone()),
             users: UserStore::new(db.clone()),
             art: ArtStore::open(db).await?,
+            openverse: Arc::new(Openverse::new(
+                &env::var("OPENVERSE_URL").unwrap_or_else(|_| openverse::DEFAULT_BASE.into()),
+            )?),
             webauthn: Arc::new(build_webauthn()?),
             key: load_key(),
             http: build_http_client()?,
@@ -107,6 +118,8 @@ pub fn router(s: AppState) -> Router {
             "/api/art",
             post(routes::upload_art).layer(DefaultBodyLimit::max(art::MAX_BYTES)),
         )
+        .route("/api/art/search", get(routes::search_art))
+        .route("/api/art/openverse", post(routes::import_art))
         .route("/api/art/{id}", get(routes::get_art))
         .route("/api/cards/delete", post(routes::delete_cards))
         .route("/api/cards/transfer", post(routes::transfer_cards))

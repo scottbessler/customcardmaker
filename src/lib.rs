@@ -5,6 +5,7 @@ pub mod card;
 pub mod cockatrice;
 pub mod db;
 pub mod error;
+pub mod openverse;
 pub mod render;
 pub mod routes;
 pub mod session;

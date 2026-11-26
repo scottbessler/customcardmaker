@@ -12,6 +12,8 @@ pub enum AppError {
     Unauthorized(String),
     NotFound(String),
     Conflict(String),
+    TooManyRequests(String),
+    BadGateway(String),
     Internal(String),
 }
 
@@ -25,6 +27,12 @@ impl AppError {
     pub fn conflict(x: impl Into<String>) -> Self {
         Self::Conflict(x.into())
     }
+    pub fn too_many(x: impl Into<String>) -> Self {
+        Self::TooManyRequests(x.into())
+    }
+    pub fn bad_gateway(x: impl Into<String>) -> Self {
+        Self::BadGateway(x.into())
+    }
     pub fn not_found(x: impl Into<String>) -> Self {
         Self::NotFound(x.into())
     }
@@ -37,6 +45,8 @@ impl AppError {
             Self::Unauthorized(_) => StatusCode::UNAUTHORIZED,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::Conflict(_) => StatusCode::CONFLICT,
+            Self::TooManyRequests(_) => StatusCode::TOO_MANY_REQUESTS,
+            Self::BadGateway(_) => StatusCode::BAD_GATEWAY,
             Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -46,6 +56,8 @@ impl AppError {
             | Self::Unauthorized(x)
             | Self::NotFound(x)
             | Self::Conflict(x)
+            | Self::TooManyRequests(x)
+            | Self::BadGateway(x)
             | Self::Internal(x) => x,
         }
     }
@@ -55,6 +67,8 @@ impl AppError {
             Self::Unauthorized(_) => "Sign in required",
             Self::NotFound(_) => "Not found",
             Self::Conflict(_) => "Already exists",
+            Self::TooManyRequests(_) => "Slow down",
+            Self::BadGateway(_) => "Service unavailable",
             Self::Internal(_) => "Something went wrong",
         }
     }

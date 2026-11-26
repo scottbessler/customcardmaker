@@ -58,12 +58,14 @@ that changes behaviour, not here.
   - [x] The art of a card in a public set is visible to everyone; no other art is
   - [ ] Follow-ups: copy a public set into your own account; pagination and search;
         a way to report a set (needed before this is open to people you don't know)
-- [ ] **9. Creative Commons art search** — find art without leaving the app.
-  - [ ] Search an open CC image index (Openverse is the likely one) from the card
-        editor and pick a result as the card's art
-  - [ ] Keep the credit with the art (artist, licence, source link) and fill the
-        card's artist line from it; licence terms are respected (see the note)
-  - [ ] Only fetch what was picked, and serve it from our own storage like an upload
+- [x] **9. Creative Commons art search** — find art without leaving the app.
+  - [x] Search Openverse from the card editor and pick a result as the card's art
+  - [x] Keep the credit with the art (artist, licence, source link) and fill the
+        card's artist line from it; shown in the editor and on public pages
+  - [x] Only fetch what was picked, and serve it from our own storage like an upload
+  - [ ] Follow-ups: Openverse OAuth credentials for a higher quota (anonymous is
+        low and shared, and I hit its limit while building this); search by
+        category; drag-to-reposition a borrowed image
 - [ ] **10. Clean up rules text with OpenRouter** — suggest edits to match Oracle wording.
   - [ ] A "Suggest cleanup" action on the rules text; the model's answer is shown as
         a before/after the user accepts or rejects, never applied silently

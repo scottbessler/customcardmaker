@@ -72,7 +72,7 @@ test("art can be removed from a card", async ({ page }) => {
 test("something that is not an image is turned away with a reason", async ({ page }) => {
   await setWithCard(page);
   await page.setInputFiles('input[name="art"]', { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
-  await expect(page.locator(".art-error, .art-actions ~ .error, .form-section .error").first()).toContainText("Choose an image");
+  await expect(page.locator(".art-error")).toContainText("Choose an image");
   await expect(page.locator(".preview .mtg-art")).not.toHaveClass(/has-art/);
 });
 

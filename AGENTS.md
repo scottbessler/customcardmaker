@@ -89,6 +89,11 @@ Toolchain: Rust 1.90+ (edition 2024), bun 1.3.13, node 22 — see `.mise.toml`.
   is vendored as-is, so it is exempt from the raw-colour check. `SYMBOL_KEYS` in
   `public/frame.js` is the list of symbols we claim; an e2e test checks each
   against the font. To update the font, follow `MANA-LICENSE.md`.
+- Creative Commons art comes from Openverse, only through `src/openverse.rs`. It
+  reads `OPENVERSE_URL` (default `https://api.openverse.org`); the e2e suite points
+  it at `tests/e2e/fake-openverse.mjs`, which `playwright.config.ts` starts, and
+  the Rust tests use a fake on a local port, so nothing in CI calls the real
+  service. The server contacts only that host, never a URL from a result.
 - `public/type-data.js` (the lists the type line suggests from) is generated:
   `python3 scripts/fetch_types.py` refreshes it from Scryfall's public catalogs.
   Commit the diff; the app never calls Scryfall.

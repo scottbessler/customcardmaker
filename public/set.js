@@ -1,6 +1,7 @@
 import { html, render, useCallback, useEffect, useLayoutEffect, useRef, useState } from "/public/vendor/htm-preact.js";
 import { api, uploadArt } from "/public/api.js";
 import { artUrl, prepareArt } from "/public/art.js";
+import { ArtSearchDialog, Credit } from "/public/art-search.js";
 import { CardFace, Mana } from "/public/card-face.js";
 import { BulkBar, TransferDialog } from "/public/bulk.js";
 import { TypeBuilder } from "/public/type-builder.js";
@@ -62,8 +63,9 @@ function Palette({ target, onInsert }) {
   </div>`;
 }
 
-function Editor({ card, template, onChange, onSetDefault }) {
+function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
   const [target, setTarget] = useState("mana_cost");
+  const [searching, setSearching] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [artError, setArtError] = useState("");
   // An upload outlives the render that started it; apply it to the card as it
@@ -99,6 +101,14 @@ function Editor({ card, template, onChange, onSetDefault }) {
     // The controlled value resets the caret, so put it back after the token.
     caret.current = { key: target, position: start + token.length };
     onChange({ ...card, [target]: value });
+  }
+
+  /** Art found on Openverse: keep it, and fill the artist from its credit if that is empty. */
+  function pickedArt({ id, credit: found }) {
+    setSearching(false);
+    onCredit(id, found);
+    const artist = latest.current.artist || found.creator.slice(0, limits.artist);
+    onChange({ ...latest.current, art: id, artist });
   }
 
   async function chooseArt(event) {
@@ -174,11 +184,14 @@ function Editor({ card, template, onChange, onSetDefault }) {
             ${uploading ? "Uploading…" : card.art ? "Replace image" : "Upload image"}
             <input type="file" name="art" accept="image/png,image/jpeg,image/webp" disabled=${uploading} onChange=${chooseArt} />
           </label>
+          <button type="button" class="quiet search-art" onClick=${() => setSearching(true)}>Find free art…</button>
           <button type="button" class="quiet remove-art" disabled=${!card.art} onClick=${() => onChange({ ...card, art: null })}>Remove</button>
           <p class="art-hint muted">PNG, JPEG or WebP. It is shrunk to fit before it is sent.</p>
         </div>
       </div>
-      <p class="error" role="alert">${artError}</p>
+      ${card.art && credit ? html`<p class="art-credit-line"><${Credit} credit=${credit} /></p>` : null}
+      <${ArtSearchDialog} open=${searching} onPick=${pickedArt} onCancel=${() => setSearching(false)} />
+      <p class="error art-error" role="alert">${artError}</p>
     </fieldset>
 
     <fieldset class="form-section">
@@ -203,6 +216,8 @@ function SetPage() {
   const [picked, setPicked] = useState(() => new Set());
   const [transfer, setTransfer] = useState(null);
   const [notice, setNotice] = useState(null);
+  // Who made each piece of borrowed art, by art id.
+  const [credits, setCredits] = useState({});
   // Edits are held here until the pause after the last keystroke, so a fast
   // typist makes one request, not one per letter.
   const pending = useRef(new Map());
@@ -211,6 +226,7 @@ function SetPage() {
   useEffect(() => {
     api("GET", `/api/sets/${setId}`).then((d) => {
       setDetail(d);
+      setCredits(d.credits ?? {});
       setSelected(d.cards[0]?.id ?? null);
     }, (e) => setError(e.message));
   }, []);
@@ -288,6 +304,7 @@ function SetPage() {
   async function reload() {
     const fresh = await api("GET", `/api/sets/${setId}`);
     setDetail(fresh);
+    setCredits(fresh.credits ?? {});
     setSelected((was) => fresh.cards.find((c) => c.id === was)?.id ?? fresh.cards[0]?.id ?? null);
   }
 
@@ -441,7 +458,15 @@ function SetPage() {
               <button type="button" class="quiet danger-quiet delete-card" onClick=${() => setConfirming("card")}>Delete</button>
             </div>
           </div>
-          <${Editor} key=${current.id} card=${current.card} template=${set.default_template} onChange=${(card) => edit(current.id, card)} onSetDefault=${(default_template) => patchSet({ default_template })} />
+          <${Editor}
+            key=${current.id}
+            card=${current.card}
+            template=${set.default_template}
+            credit=${credits[current.card.art]}
+            onChange=${(card) => edit(current.id, card)}
+            onSetDefault=${(default_template) => patchSet({ default_template })}
+            onCredit=${(id, credit) => setCredits((now) => ({ ...now, [id]: credit }))}
+          />
         </section>`
       : html`<p class="muted empty">No cards yet. Add the first one.</p>`}
 

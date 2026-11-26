@@ -15,9 +15,12 @@ import type { DeviceOptions } from "./tests/e2e/fixtures";
 const DATA_PATH = process.env.E2E_DATA_PATH ?? mkdtempSync(join(tmpdir(), "ccm-e2e-"));
 
 /** In CI the server is built by its own job; locally cargo still builds it. */
+// The app looks for Creative Commons art at a stand-in (tests/e2e/fake-openverse.mjs),
+// so no test depends on, or spends the quota of, the real service.
+const OPENVERSE = "http://127.0.0.1:18081";
 const serverCommand = process.env.E2E_SERVER_BIN
-  ? `PASSKEY_DISABLED=1 DATA_PATH="${DATA_PATH}" PORT=18080 ${process.env.E2E_SERVER_BIN}`
-  : `PASSKEY_DISABLED=1 DATA_PATH="${DATA_PATH}" PORT=18080 cargo run`;
+  ? `PASSKEY_DISABLED=1 DATA_PATH="${DATA_PATH}" OPENVERSE_URL=${OPENVERSE} PORT=18080 ${process.env.E2E_SERVER_BIN}`
+  : `PASSKEY_DISABLED=1 DATA_PATH="${DATA_PATH}" OPENVERSE_URL=${OPENVERSE} PORT=18080 cargo run`;
 
 export default defineConfig<DeviceOptions>({
   testDir: "./tests/e2e",
@@ -52,13 +55,21 @@ export default defineConfig<DeviceOptions>({
   ...(process.env.TEST_BASE_URL
     ? {}
     : {
-        webServer: {
-          // Passkeys cannot be driven headlessly; the server signs in by username.
-          command: serverCommand,
-          url: "http://127.0.0.1:18080/healthcheck",
-          reuseExistingServer: true,
-          timeout: 120_000,
-        },
+        webServer: [
+          {
+            command: "node tests/e2e/fake-openverse.mjs",
+            url: `${OPENVERSE}/health`,
+            reuseExistingServer: true,
+            timeout: 30_000,
+          },
+          {
+            // Passkeys cannot be driven headlessly; the server signs in by username.
+            command: serverCommand,
+            url: "http://127.0.0.1:18080/healthcheck",
+            reuseExistingServer: true,
+            timeout: 120_000,
+          },
+        ],
       }),
   projects: [
     {
