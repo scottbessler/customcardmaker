@@ -1026,4 +1026,154 @@ async fn gallery_pages_are_for_everyone_but_only_for_public_sets() {
             .1
             .contains("Sign out")
     );
+
+// ---- importing a Cockatrice file -----------------------------------------
+
+/// A one-route server that answers a real PNG, so an import can be given a
+/// `picurl` that actually resolves. Returns the picture's URL.
+async fn picture_server() -> String {
+    use axum::routing::get;
+    let app = Router::new().route(
+        "/card.png",
+        get(|| async { ([(header::CONTENT_TYPE, "image/png")], PNG) }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    format!("http://{addr}/card.png")
+}
+
+fn cockatrice_file(picture: Option<&str>) -> Value {
+    let picurl = picture
+        .map(|url| format!(r#" picurl="{url}""#))
+        .unwrap_or_default();
+    json!({
+        "xml": format!(
+            r#"<cockatrice_carddatabase version="4"><sets><set><name>IMP</name><longname>Imported</longname></set></sets><cards>
+            <card><name>Art Bird</name><text>Flying</text><prop><type>Creature — Bird</type><manacost>{{1}}{{W}}</manacost><pt>1/1</pt></prop><set rarity="common"{picurl}>IMP</set></card>
+            <card><name>No Art</name><text>Nothing</text><prop><type>Sorcery</type></prop><set rarity="rare">IMP</set></card>
+            </cards></cockatrice_carddatabase>"#
+        )
+    })
+}
+
+#[tokio::test]
+async fn a_cockatrice_file_becomes_a_set_owned_by_its_importer() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+
+    let reply = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some(cockatrice_file(None)),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{:?}", reply.body);
+    assert_eq!(reply.body["cards_imported"], 2);
+    assert_eq!(reply.body["images_imported"], 0);
+    assert_eq!(reply.body["set_code"], "IMP");
+    assert_eq!(
+        reply.body["set_name"], "Imported",
+        "the file's long name is used when none is given"
+    );
+
+    let set = reply.body["set_id"].as_str().unwrap();
+    let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&me)).await;
+    let cards = detail.body["cards"].as_array().unwrap();
+    assert_eq!(cards[0]["card"]["name"], "Art Bird");
+    assert_eq!(cards[0]["card"]["mana_cost"], "{1}{W}");
+    assert_eq!(cards[1]["card"]["rarity"], "rare");
+
+    // A stranger cannot import, and the code from the file is upper-cased.
+    assert_eq!(
+        call(
+            &app,
+            "POST",
+            "/api/import/cockatrice",
+            Some(cockatrice_file(None)),
+            None
+        )
+        .await
+        .status,
+        StatusCode::UNAUTHORIZED
+    );
+    let lowercase = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some(json!({"xml": "<cockatrice_carddatabase><cards><card><name>A</name><set>abc</set></card></cards></cockatrice_carddatabase>"})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(lowercase.body["set_code"], "ABC");
+}
+
+#[tokio::test]
+async fn importing_can_download_each_card_picture() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let url = picture_server().await;
+
+    let reply = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some({
+            let mut body = cockatrice_file(Some(&url));
+            body["images"] = json!(true);
+            body
+        }),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{:?}", reply.body);
+    assert_eq!(reply.body["cards_imported"], 2);
+    assert_eq!(reply.body["images_imported"], 1);
+
+    let set = reply.body["set_id"].as_str().unwrap();
+    let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&me)).await;
+    let cards = detail.body["cards"].as_array().unwrap();
+    let art = cards[0]["card"]["art"]
+        .as_str()
+        .expect("the card kept its picture");
+    assert!(cards[1]["card"]["art"].is_null(), "no URL, no art");
+
+    // The picture is now an ordinary upload of the importer's.
+    let (status, headers, bytes) =
+        raw(&app, "GET", &format!("/api/art/{art}"), vec![], Some(&me)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(bytes, PNG);
+    assert_eq!(headers[header::CONTENT_TYPE], "image/png");
+}
+
+#[tokio::test]
+async fn a_picture_that_cannot_be_fetched_is_skipped_not_fatal() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+
+    // A URL nothing answers on, and one that answers with something that is not
+    // an image. Both cards import; neither gets art.
+    let dead = "http://127.0.0.1:9/nothing.png";
+    let reply = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some({
+            let mut body = cockatrice_file(Some(dead));
+            body["images"] = json!(true);
+            body
+        }),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{:?}", reply.body);
+    assert_eq!(reply.body["images_imported"], 0);
+
+    let set = reply.body["set_id"].as_str().unwrap();
+    let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&me)).await;
+    assert!(detail.body["cards"][0]["card"]["art"].is_null());
 }

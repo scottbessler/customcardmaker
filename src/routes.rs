@@ -17,6 +17,8 @@ use axum::{
     response::{Html, IntoResponse, Redirect, Response},
 };
 use serde::Deserialize;
+use std::sync::Arc;
+use tokio::{sync::Semaphore, task::JoinSet};
 use uuid::Uuid;
 
 const SERVICE_WORKER_JS: &str = include_str!("../public/sw.js");
@@ -258,10 +260,12 @@ pub async fn import_cockatrice(
     };
 
     let cards_imported = database.cards.len();
-    let set = s
-        .sets
-        .create_with_cards(me, name, code, database.cards)
-        .await?;
+    let (cards, images_imported) = if body.images {
+        attach_pictures(&s, me, database.cards).await
+    } else {
+        (detach(database.cards), 0)
+    };
+    let set = s.sets.create_with_cards(me, name, code, cards).await?;
     Ok((
         StatusCode::CREATED,
         Json(ImportCockatriceResult {
@@ -269,8 +273,87 @@ pub async fn import_cockatrice(
             set_code: set.code,
             set_name: set.name,
             cards_imported,
+            images_imported,
         }),
     ))
+}
+
+/// The largest picture downloaded from a card database. A card face is a few
+/// hundred KB.
+const MAX_PICTURE_BYTES: usize = art::MAX_BYTES;
+/// How many pictures are downloaded at once. Enough to keep an import quick
+/// without hammering the host the file points at.
+const PICTURE_FETCHES: usize = 4;
+const PICTURE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+
+fn detach(cards: Vec<cockatrice::ImportedCard>) -> Vec<Card> {
+    cards.into_iter().map(|item| item.card).collect()
+}
+
+/// Downloads each card's picture and stores it as the importer's art, so the
+/// imported cards come with the images the file named. A picture that fails to
+/// download (or is not an image) is skipped: the card still imports, without
+/// art.
+async fn attach_pictures(
+    s: &AppState,
+    me: Uuid,
+    cards: Vec<cockatrice::ImportedCard>,
+) -> (Vec<Card>, usize) {
+    let permits = Arc::new(Semaphore::new(PICTURE_FETCHES));
+    let mut set = JoinSet::new();
+    let mut arts: Vec<Option<Uuid>> = vec![None; cards.len()];
+
+    for (index, item) in cards.iter().enumerate() {
+        let Some(url) = item.image_url.clone() else {
+            continue;
+        };
+        let client = s.http.clone();
+        let store = s.art.clone();
+        let permits = Arc::clone(&permits);
+        set.spawn(async move {
+            let _permit = permits.acquire_owned().await.ok()?;
+            let (content_type, bytes) = fetch_picture(&client, &url).await?;
+            let id = store.save(me, content_type, &bytes).await.ok()?;
+            Some((index, id))
+        });
+    }
+
+    let mut imported = 0;
+    while let Some(joined) = set.join_next().await {
+        if let Ok(Some((index, id))) = joined {
+            arts[index] = Some(id);
+            imported += 1;
+        }
+    }
+
+    let cards = cards
+        .into_iter()
+        .zip(arts)
+        .map(|(item, art)| Card { art, ..item.card })
+        .collect();
+    (cards, imported)
+}
+
+/// `None` unless the URL answers with a small image of a kind we serve.
+async fn fetch_picture(client: &reqwest::Client, url: &str) -> Option<(&'static str, Vec<u8>)> {
+    let mut response = client.get(url).timeout(PICTURE_TIMEOUT).send().await.ok()?;
+    if !response.status().is_success() {
+        return None;
+    }
+    if response
+        .content_length()
+        .is_some_and(|length| length > MAX_PICTURE_BYTES as u64)
+    {
+        return None;
+    }
+    let mut bytes: Vec<u8> = Vec::new();
+    while let Ok(Some(chunk)) = response.chunk().await {
+        if bytes.len() + chunk.len() > MAX_PICTURE_BYTES {
+            return None;
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    art::sniff(&bytes).map(|content_type| (content_type, bytes))
 }
 
 /// Form data for Cockatrice import
@@ -282,6 +365,9 @@ pub struct ImportCockatriceForm {
     pub set_code: Option<String>,
     /// Set name; falls back to the file's long name
     pub set_name: Option<String>,
+    /// Download each card's picture and use it as the card's art
+    #[serde(default)]
+    pub images: bool,
 }
 
 /// Result of Cockatrice import
@@ -295,6 +381,8 @@ pub struct ImportCockatriceResult {
     pub set_name: String,
     /// Number of cards imported
     pub cards_imported: usize,
+    /// Number of card pictures downloaded and attached
+    pub images_imported: usize,
 }
 
 /// Show the Cockatrice import UI page. It needs an account to import into.
