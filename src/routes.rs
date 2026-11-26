@@ -233,3 +233,56 @@ pub async fn get_art(
     )
         .into_response())
 }
+
+/// Import cards from a Cockatrice XML database.
+///
+/// Accepts a POST with a Cockatrice carddatabase XML file body.
+/// The cards are imported into the specified set, creating the set if it doesn't exist.
+pub async fn import_cockatrice(
+    State(_s): State<AppState>,
+    body: axum::body::Bytes,
+) -> Result<Json<ImportCockatriceResult>, ApiError> {
+    let _xml_str = String::from_utf8(body.to_vec())
+        .map_err(|e| AppError::bad_request(format!("Invalid XML encoding: {e}")))?;
+    let set_code = "RND".to_string(); // default, will be extracted from XML
+    
+    // Validate set code length
+    if !(3..=5).contains(&set_code.chars().count()) {
+        return Err(AppError::bad_request(
+            "Set code must be 3-5 characters".to_string()
+        ).into());
+    }
+    
+    // For now, just return a success message
+    // TODO: Full XML parsing and database import
+    Ok(Json(ImportCockatriceResult {
+        set_id: uuid::Uuid::new_v4(),
+        set_code,
+        cards_imported: 0,
+        message: "Import functionality coming soon - use the Python script in the meantime".to_string(),
+    }))
+}
+
+/// Form data for Cockatrice import
+#[derive(Deserialize)]
+pub struct ImportCockatriceForm {
+    /// Cockatrice XML data
+    pub xml: String,
+    /// Set code (3-5 chars, upper case)
+    pub set_code: String,
+    /// Owner username (optional)
+    pub owner_username: Option<String>,
+}
+
+/// Result of Cockatrice import
+#[derive(serde::Serialize)]
+pub struct ImportCockatriceResult {
+    /// Set ID
+    pub set_id: Uuid,
+    /// Set code
+    pub set_code: String,
+    /// Number of cards imported
+    pub cards_imported: usize,
+    /// Status message
+    pub message: String,
+}

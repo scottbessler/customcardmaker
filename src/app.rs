@@ -79,6 +79,7 @@ pub fn router(s: AppState) -> Router {
                 .delete(routes::delete_set),
         )
         .route("/api/sets/{id}/cards", post(routes::add_card))
+        .route("/api/import/cockatrice", post(routes::import_cockatrice))
         .route(
             "/api/art",
             post(routes::upload_art).layer(DefaultBodyLimit::max(art::MAX_BYTES)),
