@@ -1,12 +1,23 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import { IPHONE_PORTRAIT } from "./tests/e2e/devices";
 import type { DeviceOptions } from "./tests/e2e/fixtures";
 
 /**
+/**
+ * A database of its own for every run. The default `data/` folder is shared by
+ * every branch checked out here, and a run on a branch with a newer migration
+ * leaves it ahead of an older build, which then (rightly) refuses to open a
+ * database from the future. Set E2E_DATA_PATH to keep one between runs.
+ */
+const DATA_PATH = process.env.E2E_DATA_PATH ?? mkdtempSync(join(tmpdir(), "ccm-e2e-"));
+
 /** In CI the server is built by its own job; locally cargo still builds it. */
 const serverCommand = process.env.E2E_SERVER_BIN
-  ? `PASSKEY_DISABLED=1 PORT=18080 ${process.env.E2E_SERVER_BIN}`
-  : "PASSKEY_DISABLED=1 PORT=18080 cargo run";
+  ? `PASSKEY_DISABLED=1 DATA_PATH="${DATA_PATH}" PORT=18080 ${process.env.E2E_SERVER_BIN}`
+  : `PASSKEY_DISABLED=1 DATA_PATH="${DATA_PATH}" PORT=18080 cargo run`;
 
 export default defineConfig<DeviceOptions>({
   testDir: "./tests/e2e",

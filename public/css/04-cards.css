@@ -45,5 +45,24 @@ button.mtg-card{cursor:pointer}
    `vertical-align:middle` is left alone on purpose: it centres the disc on the
    x-height of the line, which is where a reader's eye puts the middle of text. */
 .mtg-card .mana{font-size:3.6cqw;margin:0 .08em}
+/* Plate text is centred on its capitals, not on its line box. A line box has room
+   for descenders, so the letters sit high in it, and the cost beside them (centred in
+   the plate) looks low. Where the browser can trim a box to the capital height and the
+   baseline the letters are centred exactly, at any size; the padding gives the
+   overflow clip back the room the trim took (descenders, tall letters), and being
+   the same above and below it leaves the centre alone. Where it cannot, a measured
+   nudge does the same job to within a pixel. */
+.mtg-title,.mtg-type span{position:relative}
+.mtg-title{top:.105em}
+.mtg-type span{top:.13em}
+@supports (text-box: trim-both cap alphabetic){
+  .mtg-title,.mtg-type span{top:0;text-box:trim-both cap alphabetic;padding-block:.3em}
+}
+/* In rules text a symbol is the size of the text beside it, not a fixed size, and
+   its centre is the middle of the capitals: half way from the baseline to the cap
+   height. `middle` puts it half an x-height up, which is about two pixels too low
+   beside capitals and tall letters, so it is raised by the difference. `top` moves it
+   without touching the line's height. */
+.mtg-rules .mana{font-size:.86em;position:relative;top:-.14em}
 .mtg-card .ms-cost.ms-tap{background-color:var(--card-text);color:var(--card-foot-ink)}
 .mana-unknown{opacity:.6}
