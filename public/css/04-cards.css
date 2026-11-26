@@ -39,8 +39,9 @@ button.mtg-card{cursor:pointer}
 .mtg-foot span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 /* Symbols are the Mana font's (vendor/mana-*.css); here they only take the
    card's scale. The font's own sizes are in em, so one font-size sizes the
-   whole symbol -- circle, glyph and shadow together. */
-.mtg-card .mana{font-size:3.6cqw;margin:0 .08em;vertical-align:-.28em}
-.mtg-name .mana{vertical-align:baseline}
+   whole symbol -- circle, glyph and shadow together. The font's own
+   `vertical-align:middle` is left alone on purpose: it centres the disc on the
+   x-height of the line, which is where a reader's eye puts the middle of text. */
+.mtg-card .mana{font-size:3.6cqw;margin:0 .08em}
 .mtg-card .ms-cost.ms-tap{background-color:var(--card-text);color:var(--card-foot-ink)}
 .mana-unknown{opacity:.6}

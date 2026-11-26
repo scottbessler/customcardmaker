@@ -77,3 +77,32 @@ test("a card with every kind of symbol keeps its look", async ({ page }) => {
   await page.evaluate(() => document.fonts.ready);
   await expectImage(card, "symbols.png");
 });
+
+test("a symbol sits on the middle of its line of text, not below it", async ({ page }) => {
+  await cardInEditor(page);
+  await page.fill('textarea[name="rules_text"]', "{T}: Draw a card.\n{2}{U}, {T}: Scry 2.");
+  await expect(page.locator(".preview .mtg-rules .mana")).toHaveCount(4);
+  await page.evaluate(() => document.fonts.ready);
+  // Where a reader's eye puts the middle of a line: half an x-height above the
+  // baseline. The disc's centre should be there, to the pixel.
+  const offsets = await page.evaluate(() =>
+    [...document.querySelectorAll(".preview .mtg-rules p")].flatMap((paragraph) => {
+      const style = getComputedStyle(paragraph);
+      const canvas = document.createElement("canvas").getContext("2d")!;
+      canvas.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const xHeight = canvas.measureText("x").actualBoundingBoxAscent;
+      // A zero-size inline box sits exactly on the baseline.
+      const probe = document.createElement("span");
+      probe.style.cssText = "display:inline-block;width:0;height:0";
+      paragraph.append(probe);
+      const baseline = probe.getBoundingClientRect().bottom;
+      probe.remove();
+      return [...paragraph.querySelectorAll(".mana")].map((symbol) => {
+        const box = symbol.getBoundingClientRect();
+        return (box.top + box.bottom) / 2 - (baseline - xHeight / 2);
+      });
+    }),
+  );
+  expect(offsets.length).toBe(4);
+  for (const offset of offsets) expect(Math.abs(offset), `a symbol is ${offset.toFixed(2)}px off the middle of its line`).toBeLessThanOrEqual(1);
+});
