@@ -113,6 +113,12 @@ nothing about real Magic cards.
 - **B7.** Duplicate copies the selected card to the end of the set.
 - **B3.** `/api/*` failures are JSON `{"error": "..."}`; page failures are pages.
   Internal errors never put the database's message in a response.
+- **B9.** `/import` reads a Cockatrice carddatabase XML file (the kind MTG Nexus
+  exports) and makes a new set: each card's name, mana cost, type line, rules
+  text, P/T and rarity are taken, in file order. A set code is required; the name
+  defaults to the file's long name. The set and its cards are written together
+  or not at all, and only into the signed-in account. A signed-out visitor to
+  `/import` is sent to `/`.
 
 ## 7. Not yet built
 

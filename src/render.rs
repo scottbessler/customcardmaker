@@ -151,12 +151,13 @@ pub fn frames_page() -> String {
     )
 }
 
-/// Import Cockatrice cards page
-pub fn import_page() -> String {
+/// Import Cockatrice cards page. The form is server-rendered like the welcome
+/// page; `import.js` only wires the submit and reports the result.
+pub fn import_page(user: &str) -> String {
     layout(
-        "Import Cockatrice Cards",
-        r#"<div id="app" class="import-page"></div>"#,
+        "Import Cockatrice cards",
+        r#"<section class="import-page"><h1>Import from Cockatrice</h1><p class="muted">Paste a Cockatrice card database XML file — the kind MTG Nexus exports. Every card becomes a card in a new set, and you can edit them afterwards.</p><form id="import-form" class="panel"><div class="row"><label>Set code<input name="set_code" required minlength="3" maxlength="5" pattern="[A-Za-z0-9]{3,5}" placeholder="RND" autocomplete="off" autocapitalize="characters"></label><label>Set name<input name="set_name" maxlength="64" placeholder="From the file" autocomplete="off"></label></div><label>XML<textarea name="xml" required rows="14" spellcheck="false" placeholder="Paste the whole carddatabase XML file here"></textarea></label><p class="muted">Leave the set name blank to use the name in the file. The code is always required.</p><div class="actions"><button type="submit">Import cards</button><a href="/">Cancel</a></div><p id="import-error" class="error" role="alert" hidden></p><p id="import-result" class="muted" role="status" hidden></p></form></section>"#,
         Some("/public/import.js"),
-        None,
+        Some(user),
     )
 }

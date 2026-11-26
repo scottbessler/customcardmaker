@@ -2,8 +2,7 @@ use crate::{
     art::{self, ArtStore},
     auth,
     db::Db,
-    render,
-    routes,
+    render, routes,
     sets::SetStore,
     users::UserStore,
 };
@@ -81,7 +80,10 @@ pub fn router(s: AppState) -> Router {
                 .delete(routes::delete_set),
         )
         .route("/api/sets/{id}/cards", post(routes::add_card))
-        .route("/api/import/cockatrice", post(routes::import_cockatrice))
+        .route(
+            "/api/import/cockatrice",
+            post(routes::import_cockatrice).layer(DefaultBodyLimit::max(8 * 1024 * 1024)),
+        )
         .route(
             "/api/art",
             post(routes::upload_art).layer(DefaultBodyLimit::max(art::MAX_BYTES)),
