@@ -57,6 +57,23 @@
 .strip-item{flex:0 0 112px;scroll-snap-align:start}
 .add-card{flex:0 0 112px;aspect-ratio:var(--card-aspect);display:grid;place-content:center;gap:var(--space-4);background:transparent;color:var(--gold-hi);border:2px dashed var(--line-2);border-radius:var(--radius-control);font-size:var(--text-small)}
 .add-card .plus{font-size:var(--text-display);line-height:1}
+.set-tools{display:grid;justify-items:end;gap:var(--space-4)}
+.select-cards{min-height:var(--control-h)}
+.select-cards[aria-pressed=true]{background:var(--gold);color:var(--ink-on-gold);border-color:var(--gold)}
+.notice{margin:0;color:var(--text-muted);font-size:var(--text-small)}
+.bulk-bar{display:flex;flex-wrap:wrap;gap:var(--space-8) var(--space-16);align-items:center;justify-content:space-between;padding:var(--space-12);border:1px solid var(--line-2);border-radius:var(--radius-control);background:var(--ink-700)}
+.bulk-count{font-weight:700;color:var(--gold-hi)}
+.bulk-actions{display:flex;flex-wrap:wrap;gap:var(--space-8)}
+.strip-item{position:relative}
+.strip-item.picked::before,.strip-item.picked::after{content:"";position:absolute;z-index:1;pointer-events:none}
+/* The badge sits on the art box, not the corner: the corner is the name and
+   cost, which are what tell one card from another. The disc is drawn first and
+   the tick over it: a later pseudo-element paints on top. */
+.strip-item.picked::before{top:26%;right:8px;width:24px;height:24px;border-radius:50%;background:var(--gold);box-shadow:0 1px 4px var(--shadow-70)}
+.strip-item.picked::after{top:calc(26% + 4px);right:17px;width:6px;height:12px;border:solid var(--ink-on-gold);border-width:0 3px 3px 0;transform:rotate(45deg)}
+.transfer-dialog form{margin:0;padding:var(--space-16);gap:var(--space-12)}
+.transfer-dialog h2{margin:0;font-size:var(--text-action)}
+.transfer-dialog footer{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-8)}
 .creator{display:grid;gap:var(--space-16);grid-template-columns:minmax(0,1fr)}
 .stage{display:grid;gap:var(--space-12);justify-items:center;align-content:start}
 .preview{width:min(100%,24rem)}

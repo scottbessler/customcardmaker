@@ -36,8 +36,10 @@ that changes behaviour, not here.
   - [ ] More requirements are expected once we have a real MTG Nexus export;
         see the note below
   - [ ] Maybe later: export *to* Cockatrice XML, so sets round-trip
-- [ ] **5. Bulk delete** — select several cards, delete them together.
-- [ ] **6. Bulk move** — move or copy selected cards to a new or different set.
+- [x] **5. Bulk delete** — select several cards, delete them together.
+- [x] **6. Bulk move** — move or copy selected cards to a new or different set.
+  - [ ] Follow-ups: pick cards across several sets at once (the API already allows
+        it); drag cards to reorder within a set
 - [ ] **7. Export for proxy printing** — MakePlayingCards (MPC).
   - [ ] Render each card to a print-resolution PNG (and the card back)
   - [ ] Output MPC can take, or that
@@ -48,6 +50,26 @@ that changes behaviour, not here.
         so the browser is where it is already drawn correctly)
   - [ ] Depends on 1 and 2: art and official frames are what make a proxy worth
         printing
+
+- [ ] **8. Public sets and a gallery** — publish a set; anyone can browse them.
+  - [ ] A set can be marked public (and taken private again, instantly)
+  - [ ] `/gallery`: every public set, newest first, with a sample card; and a
+        read-only page per set, for anyone, signed in or not
+  - [ ] The art of a card in a public set is visible to everyone; no other art is
+  - [ ] Follow-ups: copy a public set into your own account; pagination and search;
+        a way to report a set (needed before this is open to people you don't know)
+- [ ] **9. Creative Commons art search** — find art without leaving the app.
+  - [ ] Search an open CC image index (Openverse is the likely one) from the card
+        editor and pick a result as the card's art
+  - [ ] Keep the credit with the art (artist, licence, source link) and fill the
+        card's artist line from it; licence terms are respected (see the note)
+  - [ ] Only fetch what was picked, and serve it from our own storage like an upload
+- [ ] **10. Clean up rules text with OpenRouter** — suggest edits to match Oracle wording.
+  - [ ] A "Suggest cleanup" action on the rules text; the model's answer is shown as
+        a before/after the user accepts or rejects, never applied silently
+  - [ ] Only the card's text is sent; the key stays on the server; a per-account rate limit
+  - [ ] Works without a key configured (the button is simply absent), and is tested
+        against a fake OpenRouter so no test spends money
 
 ## Notes
 
@@ -65,6 +87,12 @@ that changes behaviour, not here.
   we have one real export; ask for one before finishing the item.
 - **Proxy export (item 7).** Do not assume MPC's or MPC Autofill's required
   sizes, bleed, or file naming from memory; they change. Check them at build time.
+- **CC art (item 9).** Prefer CC0 and CC BY; CC BY-SA needs the share-alike carried
+  on, and NoDerivatives forbids the cropping a card does, so leave those out of the
+  results. The sets are personal and non-commercial, but still keep the credit.
+- **Rules-text cleanup (item 10).** Needs an `OPENROUTER_API_KEY` secret and a chosen
+  model; the model's output is advice, so it is validated (length, no symbols
+  invented) before it is even offered.
 - **Selection (items 5 and 6)** share one multi-select mode in the filmstrip;
   build it once for 5 and 6 reuses it.
 

@@ -6,7 +6,7 @@ use crate::{
     error::{ApiError, AppError},
     render,
     session::{ApiUser, MaybeUser},
-    sets::{self, SetDetail, SetSummary, StoredCard},
+    sets::{self, Destination, SetDetail, SetSummary, StoredCard, Transferred},
     users::User,
 };
 use axum::{
@@ -304,4 +304,81 @@ pub async fn import_cockatrice_ui(
         return Ok(Redirect::to("/").into_response());
     };
     Ok(Html(render::import_page(&user.display_name)).into_response())
+}
+
+#[derive(Deserialize)]
+pub struct CardIds {
+    ids: Vec<Uuid>,
+}
+
+/// A bulk request names at least one card and no more than `MAX_BULK`.
+fn checked(ids: &[Uuid]) -> Result<(), AppError> {
+    if ids.is_empty() {
+        return Err(AppError::bad_request("Choose at least one card."));
+    }
+    if ids.len() > sets::MAX_BULK {
+        return Err(AppError::bad_request(format!(
+            "Choose at most {} cards at a time.",
+            sets::MAX_BULK
+        )));
+    }
+    Ok(())
+}
+
+fn some_missing() -> ApiError {
+    AppError::not_found("Some of those cards, or that set, no longer exist.").into()
+}
+
+pub async fn delete_cards(
+    State(s): State<AppState>,
+    ApiUser(me): ApiUser,
+    Json(body): Json<CardIds>,
+) -> Api<serde_json::Value> {
+    checked(&body.ids)?;
+    let deleted = s
+        .sets
+        .delete_cards(me, body.ids)
+        .await?
+        .ok_or_else(some_missing)?;
+    Ok(Json(serde_json::json!({ "deleted": deleted })))
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Target {
+    Existing { set: Uuid },
+    New { name: String, code: String },
+}
+
+#[derive(Deserialize)]
+pub struct Transfer {
+    ids: Vec<Uuid>,
+    to: Target,
+    /// Copy instead of move.
+    #[serde(default)]
+    copy: bool,
+}
+
+pub async fn transfer_cards(
+    State(s): State<AppState>,
+    ApiUser(me): ApiUser,
+    Json(body): Json<Transfer>,
+) -> Api<Transferred> {
+    checked(&body.ids)?;
+    let destination = match body.to {
+        Target::Existing { set } => Destination::Existing(set),
+        Target::New { name, code } => Destination::New {
+            name: sets::clean_name(&name)?,
+            code: sets::clean_code(&code)?,
+        },
+    };
+    let done = s
+        .sets
+        .transfer_cards(me, body.ids, destination, body.copy)
+        .await?
+        .ok_or_else(some_missing)?;
+    if done.count == 0 {
+        return Err(AppError::bad_request("Those cards are already in that set.").into());
+    }
+    Ok(Json(done))
 }

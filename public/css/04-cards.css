@@ -3,7 +3,9 @@
    identically at thumbnail and at full size. */
 .mtg-card{display:block;position:relative;container-type:inline-size;width:100%;aspect-ratio:var(--card-aspect);padding:0;border:0;border-radius:4.8% / 3.4%;background:var(--card-border);color:var(--card-text);font-family:var(--font-ui);text-align:left;box-shadow:0 6px 18px var(--shadow-40);min-height:0;overflow:hidden}
 button.mtg-card{cursor:pointer}
-.mtg-card.selected{outline:3px solid var(--gold-hi);outline-offset:2px}
+/* Inside the edge, over the black border: outside it the scrolling filmstrip
+   clips the ring on the first and last card. */
+.mtg-card.selected{outline:3px solid var(--gold-hi);outline-offset:-3px}
 .mtg-frame{position:absolute;inset:3.4cqw 3.4cqw 7.4cqw;display:grid;grid-template-rows:7.4cqw 41cqw 6.6cqw 1fr;gap:1.2cqw;padding:2.4cqw 3cqw 3cqw;border-radius:2.6cqw;background-color:var(--lo);background-image:repeating-linear-gradient(90deg,color-mix(in srgb,var(--white) 5%,transparent) 0 .3cqw,transparent .3cqw .9cqw),linear-gradient(160deg,var(--hi),var(--lo) 72%,color-mix(in srgb,var(--lo) 80%,black));box-shadow:inset 0 0 0 .4cqw color-mix(in srgb,var(--lo) 45%,black),inset .5cqw .6cqw .9cqw color-mix(in srgb,var(--white) 35%,transparent)}
 .mtg-card.frame-w{--hi:var(--frame-w-hi);--lo:var(--frame-w-lo);--box:var(--box-w)}
 .mtg-card.frame-u{--hi:var(--frame-u-hi);--lo:var(--frame-u-lo);--box:var(--box-u)}

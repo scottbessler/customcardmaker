@@ -111,6 +111,22 @@ nothing about real Magic cards.
   last. A subtype may contain a space (`Time Lord`). The box is disabled until a
   type is chosen. Field limits come from the server (`src/card.rs`), not the page.
 - **B7.** Duplicate copies the selected card to the end of the set.
+- **B9.** *Select* puts the set in select mode: tapping a card picks it instead of
+  opening it, the editor steps aside, and a bar shows how many are picked with
+  Select all, None, Move, Copy and Delete (all but the first two need at least one
+  card). *Done* or Escape leaves it, forgetting what was picked.
+- **B10.** Deleting picked cards asks first, naming how many; the rest are
+  renumbered `1..n`.
+- **B11.** Move and Copy ask where to: another set the account has (for a move, not
+  the one the cards are in) or a new set made in the same step. Moved or copied
+  cards go to the end of the destination in the order they had; a move closes the
+  gaps it leaves, a copy leaves the originals alone and makes new cards. A problem
+  (a bad code, say) is shown in the dialog, which stays open.
+- **B12.** A bulk edit is all or nothing: if any named card, or the destination, is
+  not the account's or no longer exists, nothing changes (`404`, and no new set is
+  left behind). It names between 1 and 500 cards; asking to move cards to the set
+  they are already in is refused. (`POST /api/cards/delete`,
+  `POST /api/cards/transfer`.)
 - **B3.** `/api/*` failures are JSON `{"error": "..."}`; page failures are pages.
   Internal errors never put the database's message in a response.
 - **B9.** `/import` reads a Cockatrice carddatabase XML file (the kind MTG Nexus
