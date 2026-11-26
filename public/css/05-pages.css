@@ -56,6 +56,18 @@
 .field-label{display:flex;justify-content:space-between;gap:var(--space-8)}
 .count{color:var(--text-faint);font-variant-numeric:tabular-nums}
 .type-picks{display:flex;flex-wrap:wrap;gap:var(--space-8)}
+.type-builder{display:grid;gap:var(--space-8)}
+.subtype-field{position:relative;display:grid;gap:var(--space-4)}
+.subtype-box{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-8);min-height:var(--control-h);padding:var(--space-4) var(--space-8);border:1px solid var(--line-2);border-radius:var(--radius-control);background:var(--ink-800)}
+.subtype-box:focus-within{outline:2px solid var(--gold-hi);outline-offset:1px}
+.subtype-token{display:inline-flex;align-items:center;gap:var(--space-4);padding:.15rem .3rem .15rem .65rem;border-radius:var(--radius-chip);background:var(--ink-600);border:1px solid var(--line-2);font-size:var(--text-small);font-weight:600}
+.subtype-remove{min-height:0;width:22px;height:22px;padding:0;border-radius:50%;background:transparent;color:var(--text-muted);font-size:var(--text-action);line-height:1}
+.subtype-input{flex:1 1 8rem;min-width:0;padding:.4rem .2rem;border:0;background:transparent;outline:none}
+.subtype-input:focus-visible{outline:none}
+.subtype-options{position:absolute;z-index:5;top:100%;left:0;right:0;margin:var(--space-4) 0 0;padding:var(--space-4);list-style:none;max-height:15rem;overflow-y:auto;border:1px solid var(--line-2);border-radius:var(--radius-control);background:var(--ink-700);box-shadow:0 12px 30px var(--shadow-70)}
+.subtype-options[hidden]{display:none}
+.subtype-option{padding:.55rem .7rem;border-radius:var(--space-8);cursor:pointer}
+.subtype-option[aria-selected=true],.subtype-option:hover{background:var(--ink-600);color:var(--gold-hi)}
 .rarity{display:flex;flex-wrap:wrap;gap:var(--space-8);min-width:0;margin:0;padding:0;border:0}
 .rarity>legend{padding:0;margin-bottom:var(--space-4);color:var(--text-muted);font-size:var(--text-small);font-weight:600}
 .rarity-option{position:relative;display:inline-flex;flex-direction:row;align-items:center;gap:var(--space-8);padding:.4rem .8rem;border:1px solid var(--line-2);border-radius:var(--radius-chip);color:var(--text-muted);text-transform:capitalize;cursor:pointer}

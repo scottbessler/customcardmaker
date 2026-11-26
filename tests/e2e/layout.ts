@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { settle } from "./rendering";
 
 /**
  * A geometry snapshot: box and chosen computed styles per selector, as JSON.
@@ -84,6 +85,7 @@ export async function readLayout(page: Page, selectors: string[]): Promise<Layou
  * they are checked even when `bun run test:e2e` skips image comparison.
  */
 export async function expectLayout(page: Page, name: string, selectors: string[]): Promise<void> {
+  await settle(page);
   const snapshot = await readLayout(page, selectors);
   expect(JSON.stringify(snapshot, null, 2)).toMatchSnapshot(["json", `${name}.json`]);
 }

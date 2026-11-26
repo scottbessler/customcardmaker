@@ -87,6 +87,13 @@ Toolchain: Rust 1.90+ (edition 2024), bun 1.3.13, node 22 — see `.mise.toml`.
   is vendored as-is, so it is exempt from the raw-colour check. `SYMBOL_KEYS` in
   `public/frame.js` is the list of symbols we claim; an e2e test checks each
   against the font. To update the font, follow `MANA-LICENSE.md`.
+- `public/type-data.js` (the lists the type line suggests from) is generated:
+  `python3 scripts/fetch_types.py` refreshes it from Scryfall's public catalogs.
+  Commit the diff; the app never calls Scryfall.
+- e2e fixtures that feed a **layout snapshot** must be deterministic in width,
+  not just unique: a random-length name or username wraps on a phone some of the
+  time and shifts every box below it. Use a short fixed name where the layout is
+  measured. `settle()` (in `rendering.ts`) runs before every snapshot helper.
 - The UI font is Bitter, vendored as variable woff2 subsets in
   `public/vendor/bitter-v42-*.woff2`. The version lives in the filename because
   the `@font-face` src sits in static CSS that `asset()` never rewrites — to

@@ -99,8 +99,17 @@ nothing about real Magic cards.
 - **B5.** The symbol palette inserts `{W}`, `{2}`, `{T}` and the rest at the
   caret of whichever of *mana cost* or *rules text* was last focused, and says
   which. `{T}` is not offered for a mana cost.
-- **B6.** A card-type button replaces the type before the ` — ` and keeps the
-  subtypes. Field limits come from the server (`src/card.rs`), not the page.
+- **B6.** The type line is edited as parts as well as text. Supertype and card-type
+  buttons toggle words in the line; subtypes are tokens with a typeahead. Both
+  read and write the one `type_line` string, so typing it by hand and using the
+  buttons always agree, and a word the buttons do not know is kept, never dropped.
+- **B8.** Subtype suggestions come from the chosen card types (creature types for a
+  Creature or Kindred, artifact types for an Artifact, and so on; all of them if
+  none is chosen), names starting with what was typed first, minus those already
+  chosen. A subtype that is not listed can still be added, capitalised. Enter or
+  comma adds, arrows choose, Escape closes, Backspace in the empty box removes the
+  last. A subtype may contain a space (`Time Lord`). The box is disabled until a
+  type is chosen. Field limits come from the server (`src/card.rs`), not the page.
 - **B7.** Duplicate copies the selected card to the end of the set.
 - **B3.** `/api/*` failures are JSON `{"error": "..."}`; page failures are pages.
   Internal errors never put the database's message in a response.
