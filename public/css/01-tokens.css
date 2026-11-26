@@ -17,7 +17,7 @@
   --font-ui:"Bitter",ui-serif,Georgia,"Times New Roman",serif;--tracking-ui:-.01em;
   --text-display:28px;--text-title:20px;--text-action:17px;--text-body:15px;--text-small:13px;--text-label:11px;
   --safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px);
-  --shadow:#000;--white:#fff;--card-foot-ink:#f2eee2;
+  --shadow:#000;--backdrop:color-mix(in srgb,var(--ink-900) 80%,transparent);--white:#fff;--card-foot-ink:#f2eee2;
   --shadow-40:color-mix(in srgb,var(--shadow) 40%,transparent);--shadow-70:color-mix(in srgb,var(--shadow) 70%,transparent);
 
   /* The printed card. These belong to the card, not the UI around it. */

@@ -47,6 +47,21 @@ const MIGRATIONS: &[&str] = &[
         updated_at TEXT NOT NULL
     ) WITHOUT ROWID;
     CREATE INDEX cards_by_set ON cards (set_id, position);",
+    // 3: accounts. A passkey credential list is read whole, so it is one JSON
+    // document; `username_key` is the lower-cased name the UNIQUE index guards.
+    "CREATE TABLE users (
+        id           TEXT PRIMARY KEY,
+        username     TEXT NOT NULL,
+        username_key TEXT NOT NULL UNIQUE,
+        display_name TEXT NOT NULL,
+        credentials  TEXT NOT NULL,
+        created_at   TEXT NOT NULL
+    ) WITHOUT ROWID;",
+    // 4: a set belongs to one account. Nullable because SQLite cannot add a
+    // NOT NULL column without a default; a set with no owner is unreachable,
+    // which is the right outcome for one made before accounts existed.
+    "ALTER TABLE sets ADD COLUMN owner_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+    CREATE INDEX sets_by_owner ON sets (owner_id, updated_at);",
 ];
 
 #[derive(Clone)]

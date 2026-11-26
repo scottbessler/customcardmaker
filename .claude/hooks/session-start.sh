@@ -16,4 +16,7 @@ cd "${CLAUDE_PROJECT_DIR:-$(dirname "$(dirname "$(dirname "$0")")")}"
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   [ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ] &&
     echo "export PLAYWRIGHT_BROWSERS_PATH=\"$PLAYWRIGHT_BROWSERS_PATH\"" >> "$CLAUDE_ENV_FILE"
+  # Passkey registration cannot be driven headlessly; every non-prod entrypoint
+  # in this repo already assumes this.
+  echo 'export PASSKEY_DISABLED=1' >> "$CLAUDE_ENV_FILE"
 fi

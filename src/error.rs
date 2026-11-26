@@ -9,7 +9,9 @@ use serde_json::json;
 #[derive(Debug)]
 pub enum AppError {
     BadRequest(String),
+    Unauthorized(String),
     NotFound(String),
+    Conflict(String),
     Internal(String),
 }
 
@@ -17,25 +19,42 @@ impl AppError {
     pub fn bad_request(x: impl Into<String>) -> Self {
         Self::BadRequest(x.into())
     }
+    pub fn unauthorized(x: impl Into<String>) -> Self {
+        Self::Unauthorized(x.into())
+    }
+    pub fn conflict(x: impl Into<String>) -> Self {
+        Self::Conflict(x.into())
+    }
     pub fn not_found(x: impl Into<String>) -> Self {
         Self::NotFound(x.into())
+    }
+    pub fn internal_text(x: impl Into<String>) -> Self {
+        Self::Internal(x.into())
     }
     pub fn status_code(&self) -> StatusCode {
         match self {
             Self::BadRequest(_) => StatusCode::BAD_REQUEST,
+            Self::Unauthorized(_) => StatusCode::UNAUTHORIZED,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
+            Self::Conflict(_) => StatusCode::CONFLICT,
             Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
     pub fn detail(&self) -> &str {
         match self {
-            Self::BadRequest(x) | Self::NotFound(x) | Self::Internal(x) => x,
+            Self::BadRequest(x)
+            | Self::Unauthorized(x)
+            | Self::NotFound(x)
+            | Self::Conflict(x)
+            | Self::Internal(x) => x,
         }
     }
     fn title(&self) -> &'static str {
         match self {
             Self::BadRequest(_) => "Bad request",
+            Self::Unauthorized(_) => "Sign in required",
             Self::NotFound(_) => "Not found",
+            Self::Conflict(_) => "Already exists",
             Self::Internal(_) => "Something went wrong",
         }
     }

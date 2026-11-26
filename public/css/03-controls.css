@@ -11,3 +11,12 @@ button:disabled{cursor:default;opacity:.55}
 .row{display:flex;flex-wrap:wrap;gap:var(--space-8);align-items:end}
 .row>*{flex:1 1 8rem}
 .row>button{flex:0 0 auto}
+button.danger-quiet{color:var(--danger-ink)}
+.chip{min-height:34px;padding:.2rem .75rem;border-radius:var(--radius-chip);font-size:var(--text-small);font-weight:600;background:var(--ink-800);color:var(--text-muted);border:1px solid var(--line-2)}
+.chip[aria-pressed=true]{background:var(--gold);color:var(--ink-on-gold);border-color:var(--gold)}
+.confirm-dialog{width:min(28rem,calc(100vw - 2rem));padding:0;border:1px solid var(--line-2);border-radius:var(--radius-control);background:var(--ink-700);color:var(--text);box-shadow:0 18px 60px var(--shadow-70)}
+.confirm-dialog::backdrop{background:var(--backdrop)}
+.confirm-dialog>div{display:grid;gap:var(--space-12);padding:var(--space-16)}
+.confirm-dialog h2{margin:0;font-size:var(--text-action)}
+.confirm-dialog p{margin:0;color:var(--text-muted);line-height:1.45}
+.confirm-dialog footer{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-8)}

@@ -5,8 +5,8 @@ import type { DeviceOptions } from "./tests/e2e/fixtures";
 /**
 /** In CI the server is built by its own job; locally cargo still builds it. */
 const serverCommand = process.env.E2E_SERVER_BIN
-  ? `PORT=18080 ${process.env.E2E_SERVER_BIN}`
-  : "PORT=18080 cargo run";
+  ? `PASSKEY_DISABLED=1 PORT=18080 ${process.env.E2E_SERVER_BIN}`
+  : "PASSKEY_DISABLED=1 PORT=18080 cargo run";
 
 export default defineConfig<DeviceOptions>({
   testDir: "./tests/e2e",
@@ -42,6 +42,7 @@ export default defineConfig<DeviceOptions>({
     ? {}
     : {
         webServer: {
+          // Passkeys cannot be driven headlessly; the server signs in by username.
           command: serverCommand,
           url: "http://127.0.0.1:18080/healthcheck",
           reuseExistingServer: true,

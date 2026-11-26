@@ -1,7 +1,7 @@
 import { html } from "/public/vendor/htm-preact.js";
 import { costSymbols, frameOf, rulesSize, symbolClass, symbolLabel, tokenize } from "/public/frame.js";
 
-function Mana({ symbol }) {
+export function Mana({ symbol }) {
   return html`<i class=${`mana ${symbolClass(symbol)}`} data-symbol=${symbol}>${symbolLabel(symbol)}</i>`;
 }
 

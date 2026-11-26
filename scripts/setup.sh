@@ -105,7 +105,7 @@ cat <<'EOM'
 
 [setup] done. Common commands:
   cargo test --locked            Rust unit + integration tests
-  cargo run                      serve on :8080
+  cargo run                      serve on :8080 (PASSKEY_DISABLED=1 to skip passkeys)
   ./dev.sh                       cargo run with file-watch restart
   cargo fmt && cargo clippy --all-targets
   bun run lint                   oxlint over public/ and tests/

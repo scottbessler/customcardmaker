@@ -56,8 +56,18 @@ Toolchain: Rust 1.90+ (edition 2024), bun 1.3.13, node 22 — see `.mise.toml`.
 
 - `warnings = "deny"` and `clippy::all = "deny"` are set in `Cargo.toml`; a
   warning fails the build, so fix rather than `#[allow]`.
-- There is no authentication yet — see SPEC.md. Do not deploy publicly before
-  that exists.
+- Accounts are passkey-only (`src/auth.rs`, ported from two-seven). Passkeys
+  can't be driven headlessly, so `PASSKEY_DISABLED=1` makes registering and
+  signing in work by username alone; `dev.sh`, the Playwright web server and the
+  Claude session-start hook all set it. **Never set it in production.** In
+  production set `SESSION_SECRET` (64+ bytes) so sessions survive a restart, and
+  `RP_ID` / `RP_ORIGIN` to the site's host and origin or passkeys will refuse to
+  register.
+- Every set belongs to one account. Store methods take the owner and filter on
+  it, so someone else's set answers exactly like one that does not exist (404);
+  keep it that way for any new query.
+- e2e tests sign in with `registerUser` from `tests/e2e/session.ts`; both
+  projects share one server and database, so every name must be unique.
 - e2e snapshots live beside their specs: geometry baselines under
   `tests/e2e/*-snapshots/json/`, image baselines under
   `tests/e2e/*-snapshots/images/`. **`bun run test:e2e` skips image comparison**

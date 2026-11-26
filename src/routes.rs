@@ -3,13 +3,15 @@ use crate::{
     card::Card,
     error::{ApiError, AppError},
     render,
+    session::{ApiUser, MaybeUser},
     sets::{self, SetDetail, SetSummary, StoredCard},
+    users::User,
 };
 use axum::{
     Json,
     extract::{Path, State},
     http::{StatusCode, header},
-    response::{Html, IntoResponse},
+    response::{Html, IntoResponse, Redirect, Response},
 };
 use serde::Deserialize;
 use uuid::Uuid;
@@ -29,24 +31,48 @@ pub async fn service_worker() -> impl IntoResponse {
     )
 }
 
-pub async fn index() -> Html<String> {
-    Html(render::sets_page())
+/// The account behind the session cookie, if it still exists. A cookie for an
+/// account that was deleted is a signed-out visitor, not an error.
+async fn account(s: &AppState, MaybeUser(id): MaybeUser) -> Result<Option<User>, AppError> {
+    match id {
+        Some(id) => Ok(s.users.get(id).await?),
+        None => Ok(None),
+    }
+}
+
+pub async fn index(State(s): State<AppState>, user: MaybeUser) -> Result<Html<String>, AppError> {
+    Ok(Html(match account(&s, user).await? {
+        Some(user) => render::sets_page(&user.display_name),
+        None => render::welcome_page(),
+    }))
 }
 
 pub async fn set_page(
     State(s): State<AppState>,
+    user: MaybeUser,
     Path(id): Path<Uuid>,
-) -> Result<Html<String>, AppError> {
+) -> Result<Response, AppError> {
+    let Some(user) = account(&s, user).await? else {
+        return Ok(Redirect::to("/").into_response());
+    };
     let detail = s
         .sets
-        .get(id)
+        .get(user.id, id)
         .await?
         .ok_or_else(|| AppError::not_found("There is no such set."))?;
-    Ok(Html(render::set_page(id, &detail.set.name)))
+    Ok(Html(render::set_page(id, &detail.set.name, &user.display_name)).into_response())
 }
 
-pub async fn list_sets(State(s): State<AppState>) -> Api<Vec<SetSummary>> {
-    Ok(Json(s.sets.list().await?))
+fn no_set() -> ApiError {
+    AppError::not_found("There is no such set.").into()
+}
+
+fn no_card() -> ApiError {
+    AppError::not_found("There is no such card.").into()
+}
+
+pub async fn list_sets(State(s): State<AppState>, ApiUser(me): ApiUser) -> Api<Vec<SetSummary>> {
+    Ok(Json(s.sets.list(me).await?))
 }
 
 #[derive(Deserialize)]
@@ -57,19 +83,23 @@ pub struct NewSet {
 
 pub async fn create_set(
     State(s): State<AppState>,
+    ApiUser(me): ApiUser,
     Json(body): Json<NewSet>,
 ) -> Result<(StatusCode, Json<SetSummary>), ApiError> {
     let name = sets::clean_name(&body.name)?;
     let code = sets::clean_code(&body.code)?;
-    Ok((StatusCode::CREATED, Json(s.sets.create(name, code).await?)))
+    Ok((
+        StatusCode::CREATED,
+        Json(s.sets.create(me, name, code).await?),
+    ))
 }
 
-pub async fn get_set(State(s): State<AppState>, Path(id): Path<Uuid>) -> Api<SetDetail> {
-    s.sets
-        .get(id)
-        .await?
-        .map(Json)
-        .ok_or_else(|| AppError::not_found("There is no such set.").into())
+pub async fn get_set(
+    State(s): State<AppState>,
+    ApiUser(me): ApiUser,
+    Path(id): Path<Uuid>,
+) -> Api<SetDetail> {
+    s.sets.get(me, id).await?.map(Json).ok_or_else(no_set)
 }
 
 #[derive(Deserialize)]
@@ -80,32 +110,35 @@ pub struct SetPatch {
 
 pub async fn patch_set(
     State(s): State<AppState>,
+    ApiUser(me): ApiUser,
     Path(id): Path<Uuid>,
     Json(body): Json<SetPatch>,
 ) -> Api<SetSummary> {
     let name = body.name.as_deref().map(sets::clean_name).transpose()?;
     let code = body.code.as_deref().map(sets::clean_code).transpose()?;
     s.sets
-        .rename(id, name, code)
+        .rename(me, id, name, code)
         .await?
         .map(Json)
-        .ok_or_else(|| AppError::not_found("There is no such set.").into())
+        .ok_or_else(no_set)
 }
 
 pub async fn delete_set(
     State(s): State<AppState>,
+    ApiUser(me): ApiUser,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, ApiError> {
-    if s.sets.delete(id).await? {
+    if s.sets.delete(me, id).await? {
         Ok(StatusCode::NO_CONTENT)
     } else {
-        Err(AppError::not_found("There is no such set.").into())
+        Err(no_set())
     }
 }
 
 /// A body is optional: no body, or `{}`, is a blank card.
 pub async fn add_card(
     State(s): State<AppState>,
+    ApiUser(me): ApiUser,
     Path(set_id): Path<Uuid>,
     body: Option<Json<Card>>,
 ) -> Result<(StatusCode, Json<StoredCard>), ApiError> {
@@ -113,32 +146,34 @@ pub async fn add_card(
     card.validate()?;
     let stored = s
         .sets
-        .add_card(set_id, card)
+        .add_card(me, set_id, card)
         .await?
-        .ok_or_else(|| AppError::not_found("There is no such set."))?;
+        .ok_or_else(no_set)?;
     Ok((StatusCode::CREATED, Json(stored)))
 }
 
 pub async fn save_card(
     State(s): State<AppState>,
+    ApiUser(me): ApiUser,
     Path(id): Path<Uuid>,
     Json(card): Json<Card>,
 ) -> Api<StoredCard> {
     card.validate()?;
     s.sets
-        .save_card(id, card)
+        .save_card(me, id, card)
         .await?
         .map(Json)
-        .ok_or_else(|| AppError::not_found("There is no such card.").into())
+        .ok_or_else(no_card)
 }
 
 pub async fn delete_card(
     State(s): State<AppState>,
+    ApiUser(me): ApiUser,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, ApiError> {
-    if s.sets.delete_card(id).await? {
+    if s.sets.delete_card(me, id).await? {
         Ok(StatusCode::NO_CONTENT)
     } else {
-        Err(AppError::not_found("There is no such card.").into())
+        Err(no_card())
     }
 }

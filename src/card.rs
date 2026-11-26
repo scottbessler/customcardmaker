@@ -17,6 +17,29 @@ pub const MAX_FLAVOR_TEXT: usize = 600;
 pub const MAX_POWER_TOUGHNESS: usize = 12;
 pub const MAX_ARTIST: usize = 80;
 
+/// The bounds the editor enforces, sent to the page so the form never has a
+/// second, hand-copied idea of how long a field may be.
+#[derive(Debug, Serialize)]
+pub struct Limits {
+    pub name: usize,
+    pub mana_cost: usize,
+    pub type_line: usize,
+    pub rules_text: usize,
+    pub flavor_text: usize,
+    pub power_toughness: usize,
+    pub artist: usize,
+}
+
+pub const LIMITS: Limits = Limits {
+    name: MAX_NAME,
+    mana_cost: MAX_MANA_COST,
+    type_line: MAX_TYPE_LINE,
+    rules_text: MAX_RULES_TEXT,
+    flavor_text: MAX_FLAVOR_TEXT,
+    power_toughness: MAX_POWER_TOUGHNESS,
+    artist: MAX_ARTIST,
+};
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Rarity {
