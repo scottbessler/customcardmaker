@@ -286,3 +286,8 @@ pub struct ImportCockatriceResult {
     /// Status message
     pub message: String,
 }
+
+/// Show the Cockatrice import UI page
+pub async fn import_cockatrice_ui() -> Html<String> {
+    Html(render::import_page())
+}

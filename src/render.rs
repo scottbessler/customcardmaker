@@ -150,3 +150,13 @@ pub fn frames_page() -> String {
         None,
     )
 }
+
+/// Import Cockatrice cards page
+pub fn import_page() -> String {
+    layout(
+        "Import Cockatrice Cards",
+        r#"<div id="app" class="import-page"></div>"#,
+        Some("/public/import.js"),
+        None,
+    )
+}

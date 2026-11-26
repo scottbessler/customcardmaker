@@ -2,7 +2,8 @@ use crate::{
     art::{self, ArtStore},
     auth,
     db::Db,
-    render, routes,
+    render,
+    routes,
     sets::SetStore,
     users::UserStore,
 };
@@ -63,6 +64,7 @@ pub fn router(s: AppState) -> Router {
     Router::new()
         .route("/", get(routes::index))
         .route("/frames", get(routes::frames))
+        .route("/import", get(routes::import_cockatrice_ui))
         .route("/sets/{id}", get(routes::set_page))
         .route("/healthcheck", get(routes::healthcheck))
         .route("/auth/register/begin", post(auth::register_begin))
