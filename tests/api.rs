@@ -536,3 +536,252 @@ async fn a_card_may_only_use_art_its_owner_uploaded() {
     assert_eq!(cleared.status, StatusCode::OK);
     assert!(cleared.body["card"]["art"].is_null());
 }
+
+// ---- bulk edits ----------------------------------------------------------
+
+/// A set with `names` as its cards; returns the set id and the card ids.
+async fn set_with(
+    app: &Router,
+    who: &str,
+    name: &str,
+    code: &str,
+    names: &[&str],
+) -> (String, Vec<String>) {
+    let set = call(
+        app,
+        "POST",
+        "/api/sets",
+        Some(json!({"name": name, "code": code})),
+        Some(who),
+    )
+    .await;
+    let id = set.body["id"].as_str().unwrap().to_string();
+    let mut cards = Vec::new();
+    for card in names {
+        let made = call(
+            app,
+            "POST",
+            &format!("/api/sets/{id}/cards"),
+            Some(json!({"name": card})),
+            Some(who),
+        )
+        .await;
+        cards.push(made.body["id"].as_str().unwrap().to_string());
+    }
+    (id, cards)
+}
+
+async fn names(app: &Router, who: &str, set: &str) -> Vec<String> {
+    let detail = call(app, "GET", &format!("/api/sets/{set}"), None, Some(who)).await;
+    detail.body["cards"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| format!("{}#{}", c["card"]["name"].as_str().unwrap(), c["position"]))
+        .collect()
+}
+
+#[tokio::test]
+async fn cards_are_deleted_in_bulk_and_the_rest_renumbered() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let (set, ids) = set_with(&app, &me, "Dusk", "DSK", &["A", "B", "C", "D"]).await;
+
+    let reply = call(
+        &app,
+        "POST",
+        "/api/cards/delete",
+        Some(json!({"ids": [ids[0], ids[2]]})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK);
+    assert_eq!(reply.body["deleted"], 2);
+    assert_eq!(names(&app, &me, &set).await, ["B#1", "D#2"]);
+}
+
+#[tokio::test]
+async fn cards_move_to_an_existing_set_a_new_one_or_are_copied() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let (from, ids) = set_with(&app, &me, "From", "FRM", &["A", "B", "C"]).await;
+    let (to, _) = set_with(&app, &me, "To", "TOO", &["X"]).await;
+
+    let moved = call(
+        &app,
+        "POST",
+        "/api/cards/transfer",
+        Some(json!({"ids": [ids[0]], "to": {"kind": "existing", "set": to}})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(moved.status, StatusCode::OK);
+    assert_eq!(moved.body["count"], 1);
+    assert_eq!(moved.body["set"]["card_count"], 2);
+    assert_eq!(names(&app, &me, &to).await, ["X#1", "A#2"]);
+    assert_eq!(names(&app, &me, &from).await, ["B#1", "C#2"]);
+
+    let copied = call(
+        &app,
+        "POST",
+        "/api/cards/transfer",
+        Some(json!({"ids": [ids[1]], "to": {"kind": "existing", "set": to}, "copy": true})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(copied.status, StatusCode::OK);
+    assert_eq!(names(&app, &me, &to).await, ["X#1", "A#2", "B#3"]);
+    assert_eq!(
+        names(&app, &me, &from).await,
+        ["B#1", "C#2"],
+        "a copy leaves the original"
+    );
+
+    let fresh = call(
+        &app,
+        "POST",
+        "/api/cards/transfer",
+        Some(json!({"ids": [ids[2]], "to": {"kind": "new", "name": "  Extras ", "code": "ext"}})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(fresh.status, StatusCode::OK);
+    assert_eq!(fresh.body["set"]["name"], "Extras");
+    assert_eq!(fresh.body["set"]["code"], "EXT");
+    assert_eq!(
+        names(&app, &me, fresh.body["set"]["id"].as_str().unwrap()).await,
+        ["C#1"]
+    );
+}
+
+#[tokio::test]
+async fn bad_bulk_requests_are_refused_with_a_reason() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let (set, ids) = set_with(&app, &me, "Dusk", "DSK", &["A"]).await;
+
+    let none = call(
+        &app,
+        "POST",
+        "/api/cards/delete",
+        Some(json!({"ids": []})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(none.status, StatusCode::BAD_REQUEST);
+    assert!(
+        none.body["error"]
+            .as_str()
+            .unwrap()
+            .contains("at least one")
+    );
+
+    let many: Vec<String> = (0..501).map(|_| Uuid::new_v4().to_string()).collect();
+    assert_eq!(
+        call(
+            &app,
+            "POST",
+            "/api/cards/delete",
+            Some(json!({"ids": many})),
+            Some(&me)
+        )
+        .await
+        .status,
+        StatusCode::BAD_REQUEST
+    );
+
+    let bad_code = call(
+        &app,
+        "POST",
+        "/api/cards/transfer",
+        Some(json!({"ids": [ids[0]], "to": {"kind": "new", "name": "Ok", "code": "x"}})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(bad_code.status, StatusCode::BAD_REQUEST);
+
+    let same = call(
+        &app,
+        "POST",
+        "/api/cards/transfer",
+        Some(json!({"ids": [ids[0]], "to": {"kind": "existing", "set": set}})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(same.status, StatusCode::BAD_REQUEST);
+    assert!(same.body["error"].as_str().unwrap().contains("already"));
+
+    // Every one of those left the card where it was.
+    assert_eq!(names(&app, &me, &set).await, ["A#1"]);
+}
+
+#[tokio::test]
+async fn bulk_edits_need_a_session_and_only_touch_your_own_cards() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let bob = register(&app, "Bob").await;
+    let (mine, ids) = set_with(&app, &ada, "Mine", "MNE", &["A", "B"]).await;
+    let (yours, _) = set_with(&app, &bob, "Yours", "YRS", &[]).await;
+
+    assert_eq!(
+        call(
+            &app,
+            "POST",
+            "/api/cards/delete",
+            Some(json!({"ids": ids})),
+            None
+        )
+        .await
+        .status,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        call(
+            &app,
+            "POST",
+            "/api/cards/transfer",
+            Some(json!({"ids": ids, "to": {"kind": "existing", "set": yours}})),
+            None
+        )
+        .await
+        .status,
+        StatusCode::UNAUTHORIZED
+    );
+
+    // Bob can neither delete Ada's cards nor carry them off into his own set.
+    assert_eq!(
+        call(
+            &app,
+            "POST",
+            "/api/cards/delete",
+            Some(json!({"ids": ids})),
+            Some(&bob)
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
+    let stolen = call(
+        &app,
+        "POST",
+        "/api/cards/transfer",
+        Some(json!({"ids": ids, "to": {"kind": "existing", "set": yours}})),
+        Some(&bob),
+    )
+    .await;
+    assert_eq!(stolen.status, StatusCode::NOT_FOUND);
+    let copied = call(&app, "POST", "/api/cards/transfer", Some(json!({"ids": ids, "to": {"kind": "new", "name": "Mine now", "code": "NOW"}, "copy": true})), Some(&bob)).await;
+    assert_eq!(copied.status, StatusCode::NOT_FOUND);
+
+    assert_eq!(names(&app, &ada, &mine).await, ["A#1", "B#2"]);
+    assert_eq!(
+        call(&app, "GET", "/api/sets", None, Some(&bob))
+            .await
+            .body
+            .as_array()
+            .unwrap()
+            .len(),
+        1,
+        "no stray set was left behind"
+    );
+}

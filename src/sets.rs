@@ -14,6 +14,8 @@ use uuid::Uuid;
 pub const MAX_SET_NAME: usize = 64;
 pub const MIN_CODE: usize = 3;
 pub const MAX_CODE: usize = 5;
+/// The most cards one bulk request may name.
+pub const MAX_BULK: usize = 500;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SetSummary {
@@ -30,6 +32,23 @@ pub struct StoredCard {
     pub position: i64,
     pub card: Card,
     pub updated_at: String,
+}
+
+/// Where a bulk transfer puts its cards.
+#[derive(Debug, Clone)]
+pub enum Destination {
+    /// A set the account already has.
+    Existing(Uuid),
+    /// A set made for the occasion; the name and code are already cleaned.
+    New { name: String, code: String },
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Transferred {
+    /// The destination, as it is after the cards arrived.
+    pub set: SetSummary,
+    /// How many cards moved or were copied.
+    pub count: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -95,6 +114,68 @@ fn stored_card(row: &rusqlite::Row<'_>) -> Result<StoredCard> {
         card: serde_json::from_str(&doc).context("card document is not valid")?,
         updated_at: row.get(3)?,
     })
+}
+
+/// Puts a set's cards back to 1..=n in their current order.
+fn renumber(tx: &rusqlite::Transaction<'_>, set: &str) -> Result<()> {
+    let mut stmt = tx.prepare("SELECT id FROM cards WHERE set_id = ?1 ORDER BY position")?;
+    let ids: Vec<String> = stmt
+        .query_map([set], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    for (index, id) in ids.iter().enumerate() {
+        tx.execute(
+            "UPDATE cards SET position = ?2 WHERE id = ?1",
+            params![id, index as i64 + 1],
+        )?;
+    }
+    Ok(())
+}
+
+/// One owned card: its id, set, place in the set and document. `None` if the
+/// account has no such card.
+struct Owned {
+    id: String,
+    set: String,
+    position: i64,
+    doc: String,
+}
+
+/// Every named card, in set-then-collector order, or `None` if even one is not
+/// this account's. All or nothing: a half-applied bulk edit is worse than none.
+fn owned_cards(
+    tx: &rusqlite::Transaction<'_>,
+    owner: Uuid,
+    ids: &[Uuid],
+) -> Result<Option<Vec<Owned>>> {
+    let mut found = Vec::with_capacity(ids.len());
+    for id in ids {
+        let row = tx
+            .query_row(
+                "SELECT c.id, c.set_id, c.position, c.doc FROM cards c
+                 JOIN sets s ON s.id = c.set_id WHERE c.id = ?1 AND s.owner_id = ?2",
+                [id.to_string(), owner.to_string()],
+                |row| {
+                    Ok(Owned {
+                        id: row.get(0)?,
+                        set: row.get(1)?,
+                        position: row.get(2)?,
+                        doc: row.get(3)?,
+                    })
+                },
+            )
+            .optional()?;
+        match row {
+            Some(card) => found.push(card),
+            None => return Ok(None),
+        }
+    }
+    found.sort_by(|a, b| (&a.set, a.position).cmp(&(&b.set, b.position)));
+    Ok(Some(found))
+}
+
+fn distinct(ids: Vec<Uuid>) -> Vec<Uuid> {
+    let mut seen = std::collections::HashSet::new();
+    ids.into_iter().filter(|id| seen.insert(*id)).collect()
 }
 
 #[derive(Clone)]
@@ -318,6 +399,124 @@ impl SetStore {
             })
             .await
     }
+
+    /// Deletes several cards at once and closes the gaps in every set they
+    /// were in. `None`, with nothing changed, if any of them is not this
+    /// account's or does not exist.
+    pub async fn delete_cards(&self, owner: Uuid, ids: Vec<Uuid>) -> Result<Option<usize>> {
+        let ids = distinct(ids);
+        self.db
+            .call(move |c| {
+                let tx = c.transaction()?;
+                let Some(cards) = owned_cards(&tx, owner, &ids)? else {
+                    return Ok(None);
+                };
+                let mut touched = std::collections::BTreeSet::new();
+                for card in &cards {
+                    tx.execute("DELETE FROM cards WHERE id = ?1", [&card.id])?;
+                    touched.insert(card.set.clone());
+                }
+                let at = now();
+                for set in &touched {
+                    renumber(&tx, set)?;
+                    tx.execute(
+                        "UPDATE sets SET updated_at = ?2 WHERE id = ?1",
+                        params![set, at],
+                    )?;
+                }
+                tx.commit()?;
+                Ok(Some(cards.len()))
+            })
+            .await
+    }
+
+    /// Moves cards to the end of another set, or copies them there, in the
+    /// order they had. A move closes the gaps it leaves behind; a copy changes
+    /// nothing where the originals are. `None`, with nothing changed, if a card
+    /// or the destination is not this account's.
+    ///
+    /// Moving a card to the set it is already in does nothing and is not
+    /// counted; copying it makes a duplicate at the end.
+    pub async fn transfer_cards(
+        &self,
+        owner: Uuid,
+        ids: Vec<Uuid>,
+        destination: Destination,
+        copy: bool,
+    ) -> Result<Option<Transferred>> {
+        let ids = distinct(ids);
+        self.db
+            .call(move |c| {
+                let tx = c.transaction()?;
+                let Some(cards) = owned_cards(&tx, owner, &ids)? else {
+                    return Ok(None);
+                };
+                let at = now();
+                let target = match destination {
+                    Destination::Existing(id) => {
+                        let id = id.to_string();
+                        let there = tx
+                            .query_row(
+                                "SELECT 1 FROM sets WHERE id = ?1 AND owner_id = ?2",
+                                [&id, &owner.to_string()],
+                                |_| Ok(()),
+                            )
+                            .optional()?;
+                        if there.is_none() {
+                            return Ok(None);
+                        }
+                        id
+                    }
+                    Destination::New { name, code } => {
+                        let id = Uuid::new_v4().to_string();
+                        tx.execute(
+                            "INSERT INTO sets (id, name, code, owner_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
+                            params![id, name, code, owner.to_string(), at],
+                        )?;
+                        id
+                    }
+                };
+                let mut next: i64 = tx.query_row(
+                    "SELECT COALESCE(MAX(position), 0) FROM cards WHERE set_id = ?1",
+                    [&target],
+                    |row| row.get(0),
+                )?;
+                let mut sources = std::collections::BTreeSet::new();
+                let mut count = 0;
+                for card in &cards {
+                    if copy {
+                        next += 1;
+                        tx.execute(
+                            "INSERT INTO cards (id, set_id, position, doc, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+                            params![Uuid::new_v4().to_string(), target, next, card.doc, at],
+                        )?;
+                    } else if card.set == target {
+                        continue;
+                    } else {
+                        next += 1;
+                        tx.execute(
+                            "UPDATE cards SET set_id = ?2, position = ?3, updated_at = ?4 WHERE id = ?1",
+                            params![card.id, target, next, at],
+                        )?;
+                        sources.insert(card.set.clone());
+                    }
+                    count += 1;
+                }
+                for set in &sources {
+                    renumber(&tx, set)?;
+                    tx.execute("UPDATE sets SET updated_at = ?2 WHERE id = ?1", params![set, at])?;
+                }
+                tx.execute("UPDATE sets SET updated_at = ?2 WHERE id = ?1", params![target, at])?;
+                let set = tx.query_row(
+                    &format!("{SUMMARY} WHERE s.id = ?1"),
+                    [&target],
+                    summary,
+                )?;
+                tx.commit()?;
+                Ok(Some(Transferred { set, count }))
+            })
+            .await
+    }
 }
 
 #[cfg(test)]
@@ -493,5 +692,255 @@ mod tests {
         assert_eq!(detail.set.name, "Dusk");
         assert_eq!(detail.cards.len(), 1);
         assert_eq!(detail.cards[0].card.name, "Mine");
+    }
+
+    /// A set of cards named by `names`, in order, and their ids.
+    async fn filled(
+        store: &SetStore,
+        owner: Uuid,
+        name: &str,
+        names: &[&str],
+    ) -> (SetSummary, Vec<Uuid>) {
+        let set = store
+            .create(owner, name.into(), "TST".into())
+            .await
+            .unwrap();
+        let mut ids = Vec::new();
+        for card in names {
+            ids.push(
+                store
+                    .add_card(owner, set.id, named(card))
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .id,
+            );
+        }
+        (set, ids)
+    }
+
+    async fn order(store: &SetStore, owner: Uuid, set: Uuid) -> Vec<(String, i64)> {
+        let detail = store.get(owner, set).await.unwrap().unwrap();
+        detail
+            .cards
+            .into_iter()
+            .map(|c| (c.card.name, c.position))
+            .collect()
+    }
+
+    fn pairs(list: &[(&str, i64)]) -> Vec<(String, i64)> {
+        list.iter().map(|(n, p)| (n.to_string(), *p)).collect()
+    }
+
+    #[tokio::test]
+    async fn bulk_delete_closes_the_gaps() {
+        let (_dir, store, me) = store().await;
+        let (set, ids) = filled(&store, me, "Dusk", &["A", "B", "C", "D", "E"]).await;
+        let deleted = store.delete_cards(me, vec![ids[1], ids[3]]).await.unwrap();
+        assert_eq!(deleted, Some(2));
+        assert_eq!(
+            order(&store, me, set.id).await,
+            pairs(&[("A", 1), ("C", 2), ("E", 3)])
+        );
+        assert_eq!(
+            store.get(me, set.id).await.unwrap().unwrap().set.card_count,
+            3
+        );
+    }
+
+    #[tokio::test]
+    async fn bulk_delete_is_all_or_nothing() {
+        let (_dir, store, me) = store().await;
+        let (set, ids) = filled(&store, me, "Dusk", &["A", "B", "C"]).await;
+        // One id that is not a card at all: nothing is deleted, not even the real ones.
+        assert_eq!(
+            store
+                .delete_cards(me, vec![ids[0], Uuid::new_v4()])
+                .await
+                .unwrap(),
+            None
+        );
+        assert_eq!(
+            order(&store, me, set.id).await,
+            pairs(&[("A", 1), ("B", 2), ("C", 3)])
+        );
+        // The same card named twice is one card.
+        assert_eq!(
+            store.delete_cards(me, vec![ids[0], ids[0]]).await.unwrap(),
+            Some(1)
+        );
+    }
+
+    #[tokio::test]
+    async fn moving_appends_in_order_and_closes_the_gap_behind() {
+        let (_dir, store, me) = store().await;
+        let (from, ids) = filled(&store, me, "From", &["A", "B", "C", "D"]).await;
+        let (to, _) = filled(&store, me, "To", &["X"]).await;
+        // Named out of order: they still arrive in the order they had.
+        let done = store
+            .transfer_cards(
+                me,
+                vec![ids[2], ids[0]],
+                Destination::Existing(to.id),
+                false,
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(done.count, 2);
+        assert_eq!(done.set.id, to.id);
+        assert_eq!(done.set.card_count, 3);
+        assert_eq!(
+            order(&store, me, to.id).await,
+            pairs(&[("X", 1), ("A", 2), ("C", 3)])
+        );
+        assert_eq!(
+            order(&store, me, from.id).await,
+            pairs(&[("B", 1), ("D", 2)])
+        );
+    }
+
+    #[tokio::test]
+    async fn copying_leaves_the_originals_and_makes_new_cards() {
+        let (_dir, store, me) = store().await;
+        let (from, ids) = filled(&store, me, "From", &["A", "B"]).await;
+        let (to, _) = filled(&store, me, "To", &[]).await;
+        let done = store
+            .transfer_cards(me, ids.clone(), Destination::Existing(to.id), true)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(done.count, 2);
+        assert_eq!(
+            order(&store, me, from.id).await,
+            pairs(&[("A", 1), ("B", 2)])
+        );
+        assert_eq!(order(&store, me, to.id).await, pairs(&[("A", 1), ("B", 2)]));
+        let copied = store.get(me, to.id).await.unwrap().unwrap().cards;
+        assert!(
+            copied.iter().all(|c| !ids.contains(&c.id)),
+            "a copy is a new card, not the same one"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_new_destination_is_made_in_the_same_step() {
+        let (_dir, store, me) = store().await;
+        let (from, ids) = filled(&store, me, "From", &["A", "B", "C"]).await;
+        let dest = Destination::New {
+            name: "Sideboard".into(),
+            code: "SID".into(),
+        };
+        let done = store
+            .transfer_cards(me, vec![ids[1]], dest, false)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            (done.set.name.as_str(), done.set.code.as_str(), done.count),
+            ("Sideboard", "SID", 1)
+        );
+        assert_eq!(order(&store, me, done.set.id).await, pairs(&[("B", 1)]));
+        assert_eq!(
+            order(&store, me, from.id).await,
+            pairs(&[("A", 1), ("C", 2)])
+        );
+        assert!(
+            store
+                .list(me)
+                .await
+                .unwrap()
+                .iter()
+                .any(|s| s.id == done.set.id)
+        );
+    }
+
+    #[tokio::test]
+    async fn moving_a_card_to_the_set_it_is_in_does_nothing() {
+        let (_dir, store, me) = store().await;
+        let (set, ids) = filled(&store, me, "Dusk", &["A", "B"]).await;
+        let moved = store
+            .transfer_cards(me, vec![ids[0]], Destination::Existing(set.id), false)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(moved.count, 0);
+        assert_eq!(
+            order(&store, me, set.id).await,
+            pairs(&[("A", 1), ("B", 2)])
+        );
+        // Copying it there is a duplicate at the end.
+        let copied = store
+            .transfer_cards(me, vec![ids[0]], Destination::Existing(set.id), true)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(copied.count, 1);
+        assert_eq!(
+            order(&store, me, set.id).await,
+            pairs(&[("A", 1), ("B", 2), ("A", 3)])
+        );
+    }
+
+    #[tokio::test]
+    async fn a_failed_transfer_changes_nothing_not_even_the_new_set() {
+        let (_dir, store, me) = store().await;
+        let (set, ids) = filled(&store, me, "Dusk", &["A"]).await;
+        let before = store.list(me).await.unwrap().len();
+        let dest = Destination::New {
+            name: "Ghost".into(),
+            code: "GST".into(),
+        };
+        assert!(
+            store
+                .transfer_cards(me, vec![ids[0], Uuid::new_v4()], dest, false)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert_eq!(
+            store.list(me).await.unwrap().len(),
+            before,
+            "the new set must not survive a failed transfer"
+        );
+        assert_eq!(order(&store, me, set.id).await, pairs(&[("A", 1)]));
+    }
+
+    #[tokio::test]
+    async fn another_account_can_do_nothing_in_bulk() {
+        let (_dir, store, me) = store().await;
+        let you = account(&store.db, "bob").await;
+        let (mine, my_ids) = filled(&store, me, "Mine", &["A", "B"]).await;
+        let (yours, your_ids) = filled(&store, you, "Yours", &["Z"]).await;
+
+        assert_eq!(store.delete_cards(you, my_ids.clone()).await.unwrap(), None);
+        // Neither moving my cards out, nor putting yours into my set.
+        assert!(
+            store
+                .transfer_cards(you, my_ids.clone(), Destination::Existing(yours.id), false)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            store
+                .transfer_cards(you, your_ids.clone(), Destination::Existing(mine.id), false)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            store
+                .transfer_cards(you, my_ids, Destination::Existing(yours.id), true)
+                .await
+                .unwrap()
+                .is_none()
+        );
+
+        assert_eq!(
+            order(&store, me, mine.id).await,
+            pairs(&[("A", 1), ("B", 2)])
+        );
+        assert_eq!(order(&store, you, yours.id).await, pairs(&[("Z", 1)]));
     }
 }
