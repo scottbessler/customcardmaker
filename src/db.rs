@@ -72,6 +72,10 @@ const MIGRATIONS: &[&str] = &[
         bytes        INTEGER NOT NULL,
         created_at   TEXT NOT NULL
     ) WITHOUT ROWID;",
+    // 6: a set can be published to the gallery. Private is the default, and a
+    // set made before this existed stays private.
+    "ALTER TABLE sets ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0;
+    CREATE INDEX sets_public ON sets (is_public, updated_at);",
 ];
 
 #[derive(Clone)]

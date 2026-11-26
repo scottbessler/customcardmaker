@@ -78,15 +78,32 @@ nothing about real Magic cards.
 - **U2.** The server believes the file's own signature, never the claimed type:
   only PNG, JPEG and WebP are accepted, up to 5 MB; anything else is `400`
   (`413` over the size). The response always carries `nosniff`.
-- **U3.** An upload belongs to the account that made it. Only its owner can
-  fetch it, anyone else gets `404` and a stranger `401`; a card can only
-  reference its owner's uploads, otherwise `400`.
+- **U3.** An upload belongs to the account that made it. Its owner can always fetch
+  it; anyone else, signed in or not, gets `404` unless a card in a *public* set
+  uses it (G3). A card can only reference its owner's uploads, otherwise `400`.
 - **U4.** An upload's id never changes what it names, so its response is cached
   by the owner's browser indefinitely (`private`, `immutable`).
 - **U5.** Removing art from a card drops the reference; the file is kept
   (cleanup is a known gap, see TODO.md).
 
-## 6. Behaviour
+## 6. The gallery
+
+- **G1.** A set is private when made. Its owner can mark it public from its settings,
+  and take it private again at any time; both take effect at once. Only the owner can
+  change it (anyone else gets `404`).
+- **G2.** `/gallery` lists public sets that have at least one card, most recently
+  touched first (at most 60), each with a sample card, its code, its card count and
+  its maker. `/gallery/<id>` shows one public set, all its cards, read-only. Both
+  are open to anyone, signed in or not. A private set's gallery page is `404`, the
+  same as one that does not exist.
+- **G3.** A card's art is visible to everyone exactly while a card in a public set uses
+  it. Publishing a set shows its art and no other upload of the owner's, and taking
+  it down hides that art again.
+- **G4.** A public page shows the maker's **display name**, never their login name, and
+  nothing else about them. Say so where the set is published.
+- **G5.** The gallery is linked from every page's header.
+
+## 7. Behaviour
 
 - **B1.** The editor autosaves ~500 ms after the last keystroke, flushes before
   switching cards, adding or deleting, and on page hide. The set page shows
@@ -136,7 +153,7 @@ nothing about real Magic cards.
   or not at all, and only into the signed-in account. A signed-out visitor to
   `/import` is sent to `/`.
 
-## 7. Not yet built
+## 8. Not yet built
 
 Roughly in the order they make sense:
 

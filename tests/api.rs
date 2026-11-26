@@ -431,9 +431,10 @@ async fn art_is_served_back_to_its_owner_alone() {
         raw(&app, "GET", &uri, vec![], Some(&bob)).await.0,
         StatusCode::NOT_FOUND
     );
+    // A stranger is told nothing: private art answers as if it were not there.
     assert_eq!(
         raw(&app, "GET", &uri, vec![], None).await.0,
-        StatusCode::UNAUTHORIZED
+        StatusCode::NOT_FOUND
     );
     assert_eq!(
         raw(&app, "POST", "/api/art", PNG.to_vec(), None).await.0,
@@ -783,5 +784,246 @@ async fn bulk_edits_need_a_session_and_only_touch_your_own_cards() {
             .len(),
         1,
         "no stray set was left behind"
+    );
+}
+
+// ---- the gallery ---------------------------------------------------------
+
+/// Registers with a display name that differs from the username, so a leak of
+/// the username into public pages is visible.
+async fn register_named(app: &Router, username: &str, display: &str) -> String {
+    let reply = call(
+        app,
+        "POST",
+        "/auth/register/begin",
+        Some(json!({"username": username, "display_name": display})),
+        None,
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK);
+    reply.cookie.unwrap()
+}
+
+async fn publish(app: &Router, who: &str, set: &str, public: bool) -> Reply {
+    call(
+        app,
+        "PATCH",
+        &format!("/api/sets/{set}"),
+        Some(json!({"public": public})),
+        Some(who),
+    )
+    .await
+}
+
+#[tokio::test]
+async fn a_set_is_private_until_its_owner_publishes_it() {
+    let app = app().await;
+    let ada = register_named(&app, "ada_private_login", "Ada L").await;
+    let bob = register(&app, "Bob").await;
+    let (set, _) = set_with(&app, &ada, "Dusk", "DSK", &["A", "B"]).await;
+
+    let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&ada)).await;
+    assert_eq!(detail.body["set"]["public"], false);
+    assert_eq!(
+        call(&app, "GET", "/api/gallery", None, None).await.body,
+        json!([])
+    );
+    assert_eq!(
+        call(&app, "GET", &format!("/api/gallery/{set}"), None, None)
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+
+    // Only the owner can publish it.
+    assert_eq!(
+        publish(&app, &bob, &set, true).await.status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(publish(&app, &ada, &set, true).await.body["public"], true);
+
+    // Anyone, signed in or not, can now list it and read it, and sees the
+    // display name, never the login name.
+    let list = call(&app, "GET", "/api/gallery", None, None).await;
+    assert_eq!(list.body.as_array().unwrap().len(), 1);
+    assert_eq!(list.body[0]["name"], "Dusk");
+    assert_eq!(list.body[0]["by"], "Ada L");
+    assert_eq!(list.body[0]["card_count"], 2);
+    assert_eq!(list.body[0]["preview"]["name"], "A");
+    let whole = call(&app, "GET", &format!("/api/gallery/{set}"), None, None).await;
+    assert_eq!(whole.status, StatusCode::OK);
+    assert_eq!(whole.body["cards"].as_array().unwrap().len(), 2);
+    for reply in [&list, &whole] {
+        assert!(
+            !reply.body.to_string().contains("ada_private_login"),
+            "the username must not reach a public page"
+        );
+    }
+
+    // And private again, at once.
+    publish(&app, &ada, &set, false).await;
+    assert_eq!(
+        call(&app, "GET", "/api/gallery", None, None).await.body,
+        json!([])
+    );
+    assert_eq!(
+        call(
+            &app,
+            "GET",
+            &format!("/api/gallery/{set}"),
+            None,
+            Some(&bob)
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[tokio::test]
+async fn a_public_set_with_nothing_in_it_is_not_listed_yet() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let (set, _) = set_with(&app, &ada, "Empty", "EMP", &[]).await;
+    publish(&app, &ada, &set, true).await;
+    assert_eq!(
+        call(&app, "GET", "/api/gallery", None, None).await.body,
+        json!([])
+    );
+    call(
+        &app,
+        "POST",
+        &format!("/api/sets/{set}/cards"),
+        None,
+        Some(&ada),
+    )
+    .await;
+    assert_eq!(
+        call(&app, "GET", "/api/gallery", None, None)
+            .await
+            .body
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn art_is_public_only_while_a_public_set_uses_it() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let bob = register(&app, "Bob").await;
+
+    // Two uploads: one goes on a card in a set, one is never used.
+    let used = upload(&app, &ada, PNG).await.1["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let unused = upload(&app, &ada, PNG).await.1["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let set = call(
+        &app,
+        "POST",
+        "/api/sets",
+        Some(json!({"name": "Art", "code": "ART"})),
+        Some(&ada),
+    )
+    .await
+    .body["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    call(
+        &app,
+        "POST",
+        &format!("/api/sets/{set}/cards"),
+        Some(json!({"name": "Pic", "art": used})),
+        Some(&ada),
+    )
+    .await;
+
+    let get = |who: Option<&str>, id: &str| {
+        let app = app.clone();
+        let uri = format!("/api/art/{id}");
+        let who = who.map(str::to_string);
+        async move { raw(&app, "GET", &uri, vec![], who.as_deref()).await.0 }
+    };
+    // Private: only the owner.
+    assert_eq!(get(Some(&ada), &used).await, StatusCode::OK);
+    assert_eq!(get(Some(&bob), &used).await, StatusCode::NOT_FOUND);
+    assert_eq!(get(None, &used).await, StatusCode::NOT_FOUND);
+
+    publish(&app, &ada, &set, true).await;
+    // The card's art is everyone's now; the other upload still is not.
+    assert_eq!(get(Some(&bob), &used).await, StatusCode::OK);
+    assert_eq!(get(None, &used).await, StatusCode::OK);
+    assert_eq!(
+        get(None, &unused).await,
+        StatusCode::NOT_FOUND,
+        "publishing a set must not publish the rest of the uploads"
+    );
+    assert_eq!(get(Some(&bob), &unused).await, StatusCode::NOT_FOUND);
+
+    publish(&app, &ada, &set, false).await;
+    assert_eq!(get(None, &used).await, StatusCode::NOT_FOUND);
+    assert_eq!(get(Some(&bob), &used).await, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn gallery_pages_are_for_everyone_but_only_for_public_sets() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let (public, _) = set_with(&app, &ada, "Out", "OUT", &["A"]).await;
+    let (private, _) = set_with(&app, &ada, "In", "INN", &["A"]).await;
+    publish(&app, &ada, &public, true).await;
+
+    let page = |uri: String, who: Option<String>| {
+        let app = app.clone();
+        async move {
+            let mut request = Request::get(uri);
+            if let Some(cookie) = who {
+                request = request.header(header::COOKIE, cookie);
+            }
+            let response = app
+                .oneshot(request.body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            let status = response.status();
+            let html = String::from_utf8(
+                to_bytes(response.into_body(), usize::MAX)
+                    .await
+                    .unwrap()
+                    .to_vec(),
+            )
+            .unwrap();
+            (status, html)
+        }
+    };
+    let (status, html) = page("/gallery".into(), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(html.contains("gallery-page"));
+    let (status, html) = page(format!("/gallery/{public}"), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(html.contains("gallery-set-page"));
+    // Even its owner reads her own private set through /sets, not here.
+    assert_eq!(
+        page(format!("/gallery/{private}"), None).await.0,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        page(format!("/gallery/{private}"), Some(ada.clone()))
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    // A signed-in visitor sees their own header on it.
+    assert!(
+        page("/gallery".into(), Some(ada))
+            .await
+            .1
+            .contains("Sign out")
     );
 }

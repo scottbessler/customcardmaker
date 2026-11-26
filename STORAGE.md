@@ -19,7 +19,7 @@ Everything lives in one SQLite file, `DATA_PATH/customcardmaker.db` (default
 | Table | Holds |
 | --- | --- |
 | `users` | username (unique, case-insensitive), display name, passkeys as one JSON document |
-| `sets` | name, code, `owner_id`, timestamps |
+| `sets` | name, code, `owner_id`, `is_public`, timestamps |
 | `art` | one row per uploaded image: owner, real content type, size |
 | `cards` | one JSON document per card, with `set_id` and collector `position` |
 
@@ -35,6 +35,12 @@ The file is written before its row, so a crash leaves a stray file, never a row
 with nothing behind it. Nothing deletes art yet: removing it from a card only
 drops the reference, so the file stays. **These files are not replicated.** The Litestream plan above covers the
 database only; until the files are backed up too, a lost volume loses every image.
+
+A public set is the one thing another account can read. The rule that makes an
+upload visible to everyone is a query, not a flag on the upload: it is public
+while some card in a public set names it, so unpublishing a set, or removing the
+art from the card, hides it with no second step to forget. (That query reads the
+card documents; if the gallery grows, give `cards` an `art_id` column to index.)
 
 Deleting an account cascades to its sets, and a set to its cards. Deleting a card renumbers the ones after
 it, so collector numbers are always `1..=n`.

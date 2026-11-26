@@ -65,7 +65,9 @@ Toolchain: Rust 1.90+ (edition 2024), bun 1.3.13, node 22 — see `.mise.toml`.
   register.
 - Every set belongs to one account. Store methods take the owner and filter on
   it, so someone else's set answers exactly like one that does not exist (404);
-  keep it that way for any new query.
+  keep it that way for any new query. The one exception is the public gallery
+  (`SetStore::gallery`, `public_set`, and the art rule in `ArtStore::read`): they
+  show only what is marked public, and never the owner's login name.
 - e2e tests sign in with `registerUser` from `tests/e2e/session.ts`; both
   projects share one server and database, so every name must be unique.
 - e2e snapshots live beside their specs: geometry baselines under

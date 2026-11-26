@@ -347,7 +347,7 @@ function SetPage() {
     <section class="set-bar">
       <div class="set-title">
         <h1>${set.name}</h1>
-        <p class="muted set-meta"><span class="set-code">${set.code}</span> · ${cards.length} ${cards.length === 1 ? "card" : "cards"}</p>
+        <p class="muted set-meta"><span class="set-code">${set.code}</span> · ${cards.length} ${cards.length === 1 ? "card" : "cards"}${set.public ? html` · <span class="public-badge">Public</span>` : null}</p>
       </div>
       <div class="set-tools">
         <p class="save-state" role="status">${status}</p>
@@ -362,6 +362,13 @@ function SetPage() {
           <label>Code<input name="set-code" defaultValue=${set.code} maxLength="5" onChange=${(e) => patchSet({ code: e.currentTarget.value })} /></label>
           <button type="button" class="danger delete-set" onClick=${() => setConfirming("set")}>Delete set</button>
         </div>
+        <label class="public-toggle">
+          <input type="checkbox" name="public" checked=${set.public} onChange=${(e) => patchSet({ public: e.currentTarget.checked })} />
+          <span>Show this set in the public gallery</span>
+        </label>
+        <p class="muted public-help">${set.public
+          ? html`Anyone can see this set, its cards and their art, with your display name on it. <a class="public-link" href=${`/gallery/${set.id}`}>View it as they do</a>.`
+          : "Anyone could then see this set, its cards and their art, with your display name on it. You can take it down again at any time."}</p>
       </details>
     </section>
     <p class="error" role="alert">${error}</p>

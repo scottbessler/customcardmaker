@@ -24,6 +24,8 @@ pub struct SetSummary {
     pub code: String,
     pub card_count: i64,
     pub updated_at: String,
+    /// Listed in the gallery for anyone to see.
+    pub public: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -98,12 +100,47 @@ fn summary(row: &rusqlite::Row<'_>) -> rusqlite::Result<SetSummary> {
         code: row.get(2)?,
         updated_at: row.get(3)?,
         card_count: row.get(4)?,
+        public: row.get::<_, i64>(5)? != 0,
     })
 }
 
 const SUMMARY: &str = "SELECT s.id, s.name, s.code, s.updated_at,
-        (SELECT COUNT(*) FROM cards c WHERE c.set_id = s.id)
+        (SELECT COUNT(*) FROM cards c WHERE c.set_id = s.id), s.is_public
     FROM sets s";
+
+/// How many sets the gallery's front page shows.
+pub const GALLERY_LIMIT: i64 = 60;
+
+/// A public set as the gallery lists it: enough to pick one to open.
+#[derive(Debug, Clone, Serialize)]
+pub struct GalleryEntry {
+    pub id: Uuid,
+    pub name: String,
+    pub code: String,
+    pub card_count: i64,
+    /// The owner's display name. Never the username, which may be private.
+    pub by: String,
+    pub updated_at: String,
+    /// The set's first card, for a thumbnail.
+    pub preview: Option<Card>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct GalleryCard {
+    pub position: i64,
+    pub card: Card,
+}
+
+/// A public set, whole, for anyone to read.
+#[derive(Debug, Clone, Serialize)]
+pub struct GalleryDetail {
+    pub id: Uuid,
+    pub name: String,
+    pub code: String,
+    pub by: String,
+    pub updated_at: String,
+    pub cards: Vec<GalleryCard>,
+}
 
 fn stored_card(row: &rusqlite::Row<'_>) -> Result<StoredCard> {
     let id: String = row.get(0)?;
@@ -294,13 +331,16 @@ impl SetStore {
         id: Uuid,
         name: Option<String>,
         code: Option<String>,
+        public: Option<bool>,
     ) -> Result<Option<SetSummary>> {
         self.db
             .call(move |c| {
                 let id = id.to_string();
                 let changed = c.execute(
-                    "UPDATE sets SET name = COALESCE(?2, name), code = COALESCE(?3, code), updated_at = ?4 WHERE id = ?1 AND owner_id = ?5",
-                    params![id, name, code, now(), owner.to_string()],
+                    "UPDATE sets SET name = COALESCE(?2, name), code = COALESCE(?3, code),
+                            is_public = COALESCE(?6, is_public), updated_at = ?4
+                     WHERE id = ?1 AND owner_id = ?5",
+                    params![id, name, code, now(), owner.to_string(), public],
                 )?;
                 if changed == 0 {
                     return Ok(None);
@@ -437,6 +477,92 @@ impl SetStore {
                 )?;
                 tx.commit()?;
                 Ok(true)
+            })
+            .await
+    }
+
+    /// Public sets with something in them, most recently touched first.
+    pub async fn gallery(&self) -> Result<Vec<GalleryEntry>> {
+        self.db
+            .call(|c| {
+                let mut stmt = c.prepare(
+                    "SELECT s.id, s.name, s.code, s.updated_at,
+                            (SELECT COUNT(*) FROM cards c WHERE c.set_id = s.id),
+                            u.display_name,
+                            (SELECT doc FROM cards c WHERE c.set_id = s.id ORDER BY position LIMIT 1)
+                     FROM sets s JOIN users u ON u.id = s.owner_id
+                     WHERE s.is_public = 1
+                       AND EXISTS (SELECT 1 FROM cards c WHERE c.set_id = s.id)
+                     ORDER BY s.updated_at DESC LIMIT ?1",
+                )?;
+                let mut rows = stmt.query([GALLERY_LIMIT])?;
+                let mut entries = Vec::new();
+                while let Some(row) = rows.next()? {
+                    let id: String = row.get(0)?;
+                    let doc: Option<String> = row.get(6)?;
+                    entries.push(GalleryEntry {
+                        id: id.parse().context("set id is not a uuid")?,
+                        name: row.get(1)?,
+                        code: row.get(2)?,
+                        updated_at: row.get(3)?,
+                        card_count: row.get(4)?,
+                        by: row.get(5)?,
+                        preview: doc
+                            .map(|doc| serde_json::from_str(&doc))
+                            .transpose()
+                            .context("card document is not valid")?,
+                    });
+                }
+                Ok(entries)
+            })
+            .await
+    }
+
+    /// A public set and all its cards. `None` for one that is private or does
+    /// not exist, which look the same on purpose.
+    pub async fn public_set(&self, id: Uuid) -> Result<Option<GalleryDetail>> {
+        self.db
+            .call(move |c| {
+                let id = id.to_string();
+                let head = c
+                    .query_row(
+                        "SELECT s.name, s.code, s.updated_at, u.display_name
+                         FROM sets s JOIN users u ON u.id = s.owner_id
+                         WHERE s.id = ?1 AND s.is_public = 1",
+                        [&id],
+                        |row| {
+                            Ok((
+                                row.get::<_, String>(0)?,
+                                row.get::<_, String>(1)?,
+                                row.get::<_, String>(2)?,
+                                row.get::<_, String>(3)?,
+                            ))
+                        },
+                    )
+                    .optional()?;
+                let Some((name, code, updated_at, by)) = head else {
+                    return Ok(None);
+                };
+                let mut stmt = c.prepare(
+                    "SELECT position, doc FROM cards WHERE set_id = ?1 ORDER BY position",
+                )?;
+                let mut rows = stmt.query([&id])?;
+                let mut cards = Vec::new();
+                while let Some(row) = rows.next()? {
+                    let doc: String = row.get(1)?;
+                    cards.push(GalleryCard {
+                        position: row.get(0)?,
+                        card: serde_json::from_str(&doc).context("card document is not valid")?,
+                    });
+                }
+                Ok(Some(GalleryDetail {
+                    id: id.parse().context("set id is not a uuid")?,
+                    name,
+                    code,
+                    by,
+                    updated_at,
+                    cards,
+                }))
             })
             .await
     }
@@ -707,7 +833,7 @@ mod tests {
         assert!(store.get(you, set.id).await.unwrap().is_none());
         assert!(
             store
-                .rename(you, set.id, Some("Stolen".into()), None)
+                .rename(you, set.id, Some("Stolen".into()), None, None)
                 .await
                 .unwrap()
                 .is_none()

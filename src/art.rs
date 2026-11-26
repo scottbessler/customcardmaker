@@ -94,14 +94,22 @@ impl ArtStore {
             .await
     }
 
-    /// `None` unless the image exists and is the owner's.
-    pub async fn read(&self, owner: Uuid, id: Uuid) -> Result<Option<(String, Vec<u8>)>> {
+    /// An image its owner may always read. Anyone else may read it only while a
+    /// card in a *public* set uses it: publishing a set shows its art, and
+    /// nothing else of the owner's. `None` otherwise, which is also what a
+    /// stranger gets for an image that does not exist.
+    pub async fn read(&self, viewer: Option<Uuid>, id: Uuid) -> Result<Option<(String, Vec<u8>)>> {
+        let viewer = viewer.map(|v| v.to_string()).unwrap_or_default();
         let content_type: Option<String> = self
             .db
             .call(move |c| {
                 Ok(c.query_row(
-                    "SELECT content_type FROM art WHERE id = ?1 AND owner_id = ?2",
-                    [id.to_string(), owner.to_string()],
+                    "SELECT a.content_type FROM art a
+                     WHERE a.id = ?1
+                       AND (a.owner_id = ?2
+                            OR EXISTS (SELECT 1 FROM cards c JOIN sets s ON s.id = c.set_id
+                                       WHERE s.is_public = 1 AND json_extract(c.doc, '$.art') = a.id))",
+                    [id.to_string(), viewer],
                     |row| row.get(0),
                 )
                 .optional()?)

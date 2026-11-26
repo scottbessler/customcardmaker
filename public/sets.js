@@ -52,7 +52,7 @@ function Sets() {
             ${sets.map((set) => html`<a class="set-card" href=${`/sets/${set.id}`}>
               <strong>${set.code}</strong>
               <span>${set.name}</span>
-              <small>${set.card_count} ${set.card_count === 1 ? "card" : "cards"}</small>
+              <small>${set.card_count} ${set.card_count === 1 ? "card" : "cards"}${set.public ? " · Public" : ""}</small>
             </a>`)}
           </div>`}
   `;
