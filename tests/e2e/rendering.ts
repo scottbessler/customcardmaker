@@ -99,6 +99,19 @@ export async function uncoveredGlyphs(page: Page): Promise<string[]> {
  */
 export const COMPARE_IMAGES = Boolean(process.env.CI || process.env.E2E_IMAGES);
 
+/**
+ * Waits until nothing about the page is still on its way: every web font
+ * loaded (text that wraps differently in a fallback face moves everything below
+ * it) and two frames painted. Every snapshot helper calls this first, so a spec
+ * cannot measure a page that is about to change under it.
+ */
+export async function settle(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+}
+
 /** Image comparison, skipped outside the environment that can reproduce it. */
 export async function expectImage(
   target: Page | Locator,
@@ -106,5 +119,6 @@ export async function expectImage(
   options?: { fullPage?: boolean },
 ): Promise<void> {
   if (!COMPARE_IMAGES) return;
+  await settle("page" in target ? target.page() : target);
   await expect(target).toHaveScreenshot(["images", name], options);
 }

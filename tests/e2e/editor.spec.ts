@@ -3,16 +3,14 @@ import { expectLayout } from "./layout";
 import { expectImage, uncoveredGlyphs } from "./rendering";
 import { registerUser } from "./session";
 
-// Both projects share one server and one database, so every run names its own set.
-let sets = 0;
-function uniqueSet() {
-  sets += 1;
-  const tag = `${Date.now().toString(36)}${sets}${Math.random().toString(36).slice(2, 5)}`;
-  return { name: `Test set ${tag}`, code: "TST" };
-}
+// A set's name only has to be unique within its account, and every test makes a
+// fresh account, so they can all share one short name. It must stay short and
+// fixed: on a phone a longer or random title wraps onto a second line some of
+// the time, which moves every box below it and made the layout snapshot flaky.
+const SET_NAME = "Test set";
 
 async function createSet(page) {
-  const set = uniqueSet();
+  const set = { name: SET_NAME, code: "TST" };
   await registerUser(page);
   await page.fill('.new-set input[name="name"]', set.name);
   await page.fill('.new-set input[name="code"]', set.code);
@@ -107,22 +105,6 @@ test("the symbol palette types into whichever field you were in", async ({ page 
   await key("T").click();
   await expect(rules).toHaveValue("Tap: {T}");
   await expect(page.locator(".preview .mtg-rules .ms-tap")).toHaveCount(1);
-});
-
-test("a type button swaps the card type and keeps the subtypes", async ({ page }) => {
-  await createSet(page);
-  await addCard(page, 1);
-  const line = page.locator('input[name="type_line"]');
-  const pick = (type: string) => page.locator(".type-pick", { hasText: type });
-
-  await pick("Creature").click();
-  await expect(line).toHaveValue("Creature");
-  await expect(pick("Creature")).toHaveAttribute("aria-pressed", "true");
-  await line.fill("Creature — Elf Druid");
-  await pick("Instant").click();
-  await expect(line).toHaveValue("Instant — Elf Druid");
-  await expect(pick("Creature")).toHaveAttribute("aria-pressed", "false");
-  await expect(page.locator(".preview .mtg-type")).toContainText("Instant — Elf Druid");
 });
 
 test("long fields count against the limit the server set", async ({ page }) => {

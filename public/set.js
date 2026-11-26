@@ -2,7 +2,7 @@ import { html, render, useCallback, useEffect, useLayoutEffect, useRef, useState
 import { api, uploadArt } from "/public/api.js";
 import { artUrl, prepareArt } from "/public/art.js";
 import { CardFace, Mana } from "/public/card-face.js";
-import { MAIN_TYPES, mainTypeOf, withMainType } from "/public/frame.js";
+import { TypeBuilder } from "/public/type-builder.js";
 
 const SAVE_DELAY_MS = 500;
 const RARITIES = ["common", "uncommon", "rare", "mythic"];
@@ -114,21 +114,13 @@ function Editor({ card, onChange }) {
     }
   }
 
-  const mainType = mainTypeOf(card.type_line);
   return html`<form class="panel card-form" onSubmit=${(e) => e.preventDefault()}>
     <fieldset class="form-section">
       <legend>Identity</legend>
       <${Field} label="Name"><input autocomplete="off" ...${text("name")} /><//>
       <${Field} label="Mana cost"><input placeholder="{2}{U}{U}" autocomplete="off" ...${text("mana_cost")} ...${watch("mana_cost")} /><//>
       <${Field} label="Type line"><input placeholder="Creature — Merfolk Wizard" autocomplete="off" ...${text("type_line")} /><//>
-      <div class="type-picks" role="group" aria-label="Card type">
-        ${MAIN_TYPES.map((type) => html`<button
-          type="button"
-          class="chip type-pick"
-          aria-pressed=${String(mainType.includes(type))}
-          onClick=${() => onChange({ ...card, type_line: withMainType(card.type_line, type) })}
-        >${type}</button>`)}
-      </div>
+      <${TypeBuilder} typeLine=${card.type_line} onChange=${(type_line) => onChange({ ...latest.current, type_line })} />
       <fieldset class="rarity">
         <legend>Rarity</legend>
         ${RARITIES.map((rarity) => html`<label class=${`rarity-option rarity-${rarity}`}>

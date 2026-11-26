@@ -27,6 +27,9 @@ fn import_map() -> String {
         "/public/art.js",
         "/public/card-face.js",
         "/public/frame.js",
+        "/public/type-builder.js",
+        "/public/type-data.js",
+        "/public/types.js",
         "/public/vendor/htm-preact.js",
     ]
     .iter()

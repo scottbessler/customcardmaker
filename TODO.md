@@ -22,10 +22,12 @@ that changes behaviour, not here.
   - [ ] Rules text: reminder text in italics, symbol sizing, line spacing
   - [ ] Set symbol by rarity in the type line; collector footer layout
   - [ ] Proper P/T box, and layouts for planeswalker, saga, split, transform
-- [ ] **3. Type line help** — dropdowns / typeahead for each part.
-  - [ ] Supertype, card type(s), and subtypes as separate parts
-  - [ ] Subtype typeahead filtered by the chosen card type
-  - [ ] Still editable as free text; round-trips with `type_line`
+- [x] **3. Type line help** — dropdowns / typeahead for each part.
+  - [x] Supertype, card type(s), and subtypes as separate parts
+  - [x] Subtype typeahead filtered by the chosen card type
+  - [x] Still editable as free text; round-trips with `type_line`
+  - [ ] Follow-up: planeswalker-style cards need a loyalty field; and the
+        non-standard card types (Conspiracy, Scheme, Plane...) are typed, not offered
 - [ ] **4. Import** — bring an existing set in, from MTG Nexus.
   - [ ] **Cockatrice XML** (`cockatrice_carddatabase`), which MTG Nexus can
         export: parse sets and cards into a new set
