@@ -1,30 +1,51 @@
-use crate::{db::Db, render, routes, sets::SetStore};
+use crate::{auth, db::Db, render, routes, sets::SetStore, users::UserStore};
 use anyhow::{Context, Result};
 use axum::{
     Router,
-    extract::Request,
+    extract::{FromRef, Request},
     http::{HeaderValue, header::CACHE_CONTROL},
     middleware::{Next, from_fn},
     response::Response,
     routing::{get, post, put},
 };
-use std::{env, io, time::Instant};
+use axum_extra::extract::cookie::Key;
+use std::{env, io, sync::Arc, time::Instant};
 use tokio::net::TcpListener;
 use tower_http::{services::ServeDir, trace::TraceLayer};
+use webauthn_rs::prelude::{Url, Webauthn, WebauthnBuilder};
 
 const DEFAULT_PORT: u16 = 8080;
 const PORT_SCAN_LIMIT: u16 = 100;
 
+const LOCAL_SESSION_SECRET: &str =
+    "customcardmaker-local-development-session-secret-v1-keep-browser-sessions-across-restarts";
+
 #[derive(Clone)]
 pub struct AppState {
     pub sets: SetStore,
+    pub users: UserStore,
+    pub webauthn: Arc<Webauthn>,
+    pub key: Key,
+    /// Sign in by username alone. For development and tests, where no
+    /// authenticator can be driven; never set in production.
+    pub passkey_disabled: bool,
+}
+
+impl FromRef<AppState> for Key {
+    fn from_ref(state: &AppState) -> Self {
+        state.key.clone()
+    }
 }
 
 impl AppState {
-    pub async fn open(data: impl AsRef<std::path::Path>) -> Result<Self> {
+    pub async fn open(data: impl AsRef<std::path::Path>, passkey_disabled: bool) -> Result<Self> {
         let db = Db::open(data).await?;
         Ok(Self {
-            sets: SetStore::new(db),
+            sets: SetStore::new(db.clone()),
+            users: UserStore::new(db),
+            webauthn: Arc::new(build_webauthn()?),
+            key: load_key(),
+            passkey_disabled,
         })
     }
 }
@@ -34,6 +55,11 @@ pub fn router(s: AppState) -> Router {
         .route("/", get(routes::index))
         .route("/sets/{id}", get(routes::set_page))
         .route("/healthcheck", get(routes::healthcheck))
+        .route("/auth/register/begin", post(auth::register_begin))
+        .route("/auth/register/finish", post(auth::register_finish))
+        .route("/auth/login/begin", post(auth::login_begin))
+        .route("/auth/login/finish", post(auth::login_finish))
+        .route("/auth/logout", post(auth::logout))
         .route("/sw.js", get(routes::service_worker))
         .route("/api/sets", get(routes::list_sets).post(routes::create_set))
         .route(
@@ -105,7 +131,7 @@ pub async fn run() -> Result<()> {
         .init();
     render::set_asset_version(asset_version());
     let data = env::var("DATA_PATH").unwrap_or_else(|_| "data".into());
-    let state = AppState::open(&data).await?;
+    let state = AppState::open(&data, env_flag("PASSKEY_DISABLED")).await?;
     let app = router(state);
     let listener = bind_listener().await?;
     let addr = listener
@@ -135,6 +161,36 @@ async fn bind_listener() -> Result<TcpListener> {
     TcpListener::bind("0.0.0.0:0")
         .await
         .context("failed to bind an ephemeral port")
+}
+
+pub fn build_webauthn() -> Result<Webauthn> {
+    let id = env::var("RP_ID").unwrap_or_else(|_| "localhost".into());
+    let origin =
+        Url::parse(&env::var("RP_ORIGIN").unwrap_or_else(|_| "http://localhost:8080".into()))
+            .context("RP_ORIGIN must be a valid URL")?;
+    WebauthnBuilder::new(&id, &origin)?
+        .rp_name("customcardmaker")
+        .build()
+        .context("failed to build WebAuthn")
+}
+
+fn env_flag(name: &str) -> bool {
+    matches!(
+        env::var(name).as_deref(),
+        Ok("1") | Ok("true") | Ok("TRUE") | Ok("True")
+    )
+}
+
+/// Production sets `SESSION_SECRET` (64+ bytes) so sessions survive a restart;
+/// without it a release build mints a fresh key each boot, which signs
+/// everyone out rather than trusting a key anybody could read in this file.
+fn load_key() -> Key {
+    match env::var("SESSION_SECRET") {
+        Ok(secret) if secret.len() >= 64 => Key::from(secret.as_bytes()),
+        Ok(_) => Key::generate(),
+        Err(_) if cfg!(debug_assertions) => Key::from(LOCAL_SESSION_SECRET.as_bytes()),
+        Err(_) => Key::generate(),
+    }
 }
 
 /// A hash of everything under `public/`, so a release busts the cache for

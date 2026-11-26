@@ -7,6 +7,9 @@ kill_timeout = '5s'
 [env]
   DATA_PATH = '/data'
   PORT = '8080'
+  # Set before deploying: RP_ID (the site's host) and RP_ORIGIN (https://host),
+  # or passkeys will not register. SESSION_SECRET is a Fly secret, 64+ bytes.
+  # Never set PASSKEY_DISABLED here.
 [processes]
   app = '/app/customcardmaker'
 [[mounts]]

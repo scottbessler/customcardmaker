@@ -2,11 +2,12 @@
 //! source rather than a running page.
 
 const RENDER_RS: &str = include_str!("../src/render.rs");
-const INDEX_CSS: [&str; 4] = [
+const INDEX_CSS: [&str; 5] = [
     include_str!("../public/css/01-tokens.css"),
     include_str!("../public/css/02-base.css"),
     include_str!("../public/css/03-controls.css"),
     include_str!("../public/css/04-cards.css"),
+    include_str!("../public/css/05-pages.css"),
 ];
 
 /// Assets normally get their version from `asset()`. A font can't: the
@@ -53,6 +54,7 @@ fn every_stylesheet_the_shell_links_exists() {
         "02-base.css",
         "03-controls.css",
         "04-cards.css",
+        "05-pages.css",
     ] {
         assert!(
             RENDER_RS.contains(&format!("/public/css/{sheet}")),
@@ -65,7 +67,7 @@ fn every_stylesheet_the_shell_links_exists() {
 /// one file. Hex literals anywhere else are a token that was never named.
 #[test]
 fn colours_are_only_defined_in_tokens() {
-    for (name, css) in ["02-base", "03-controls", "04-cards"]
+    for (name, css) in ["02-base", "03-controls", "04-cards", "05-pages"]
         .iter()
         .zip(&INDEX_CSS[1..])
     {

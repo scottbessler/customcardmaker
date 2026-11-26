@@ -4,6 +4,7 @@ WATCH_PATHS="${WATCH_PATHS:-src public Cargo.toml Cargo.lock}"
 POLL_INTERVAL="${POLL_INTERVAL:-1}"
 DEV_CMD="${DEV_CMD:-cargo run}"
 STAT_STYLE="$(uname -s)"
+export PASSKEY_DISABLED="${PASSKEY_DISABLED:-1}"
 if [ "${1:-}" = "--" ]; then shift; DEV_CMD="$*"; fi
 child_pid=""
 file_stamp() { case "$STAT_STYLE" in Darwin|FreeBSD|OpenBSD|NetBSD) stat -f "%m:%z" "$1";; *) stat -c "%Y:%s" "$1";; esac; }

@@ -18,8 +18,9 @@ Everything lives in one SQLite file, `DATA_PATH/customcardmaker.db` (default
 
 | Table | Holds |
 | --- | --- |
-| `sets` | name, code, timestamps |
+| `users` | username (unique, case-insensitive), display name, passkeys as one JSON document |
+| `sets` | name, code, `owner_id`, timestamps |
 | `cards` | one JSON document per card, with `set_id` and collector `position` |
 
-Deleting a set cascades to its cards. Deleting a card renumbers the ones after
+Deleting an account cascades to its sets, and a set to its cards. Deleting a card renumbers the ones after
 it, so collector numbers are always `1..=n`.

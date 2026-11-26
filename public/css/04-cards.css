@@ -37,22 +37,3 @@ button.mtg-card{cursor:pointer}
 .mana-hybrid{background:linear-gradient(135deg,var(--mana-w) 50%,var(--mana-u) 50%)}
 .mana-t{background:var(--card-text);color:var(--card-foot-ink)}
 .mtg-name .mana{vertical-align:baseline;margin:0}
-
-/* Sets page */
-.set-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--space-12);align-items:start}
-.set-card{display:grid;gap:var(--space-4);align-content:start;padding:var(--space-12);text-align:left;background:var(--ink-700);color:var(--text);border:1px solid var(--line-1);border-radius:var(--radius-control);text-decoration:none;font-weight:600}
-.set-card strong{color:var(--gold-hi);font-size:var(--text-title)}
-.set-card small{color:var(--text-muted);font-size:var(--text-small);font-weight:500}
-
-/* Set editor: grid of cards beside the editor and a large live preview. */
-.set-page{display:grid;gap:var(--space-16);grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "editor" "cards"}
-.set-head{grid-area:head;display:grid;gap:var(--space-8)}
-.set-editor{grid-area:editor;display:grid;gap:var(--space-16);align-content:start}
-.set-cards{grid-area:cards;display:grid;gap:var(--space-12);align-content:start}
-.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:var(--space-12)}
-.preview{width:min(100%,22rem);margin:0 auto}
-.save-state{color:var(--text-muted);font-size:var(--text-small)}
-@media(min-width:860px){
-  .set-page{grid-template-columns:minmax(0,1fr) 26rem;grid-template-areas:"head head" "cards editor";align-items:start}
-  .set-editor{position:sticky;top:var(--space-16)}
-}

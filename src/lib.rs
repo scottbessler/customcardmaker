@@ -1,7 +1,10 @@
 pub mod app;
+pub mod auth;
 pub mod card;
 pub mod db;
 pub mod error;
 pub mod render;
 pub mod routes;
+pub mod session;
 pub mod sets;
+pub mod users;

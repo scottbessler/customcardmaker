@@ -69,3 +69,19 @@ export function rulesSize(card) {
   if (weight <= 450) return 3.0;
   return 2.6;
 }
+
+/** The card types the editor offers as one-tap choices. */
+export const MAIN_TYPES = ["Creature", "Instant", "Sorcery", "Enchantment", "Artifact", "Land", "Planeswalker"];
+
+const TYPE_SEPARATOR = " — ";
+
+/** Everything left of the dash: `Legendary Creature` in `Legendary Creature — Elf`. */
+export function mainTypeOf(typeLine) {
+  return String(typeLine ?? "").split(TYPE_SEPARATOR)[0];
+}
+
+/** Swaps the card type, keeping the subtypes: `Creature — Elf` + Instant -> `Instant — Elf`. */
+export function withMainType(typeLine, type) {
+  const [, ...subtypes] = String(typeLine ?? "").split(TYPE_SEPARATOR);
+  return subtypes.length ? `${type}${TYPE_SEPARATOR}${subtypes.join(TYPE_SEPARATOR)}` : type;
+}

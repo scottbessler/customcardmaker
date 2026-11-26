@@ -107,25 +107,27 @@ impl SetStore {
         Self { db }
     }
 
-    /// Most recently touched first.
-    pub async fn list(&self) -> Result<Vec<SetSummary>> {
+    /// An account's sets, most recently touched first.
+    pub async fn list(&self, owner: Uuid) -> Result<Vec<SetSummary>> {
         self.db
-            .call(|c| {
-                let mut stmt = c.prepare(&format!("{SUMMARY} ORDER BY s.updated_at DESC"))?;
-                let rows = stmt.query_map([], summary)?;
+            .call(move |c| {
+                let mut stmt = c.prepare(&format!(
+                    "{SUMMARY} WHERE s.owner_id = ?1 ORDER BY s.updated_at DESC"
+                ))?;
+                let rows = stmt.query_map([owner.to_string()], summary)?;
                 Ok(rows.collect::<rusqlite::Result<_>>()?)
             })
             .await
     }
 
-    pub async fn create(&self, name: String, code: String) -> Result<SetSummary> {
+    pub async fn create(&self, owner: Uuid, name: String, code: String) -> Result<SetSummary> {
         let id = Uuid::new_v4();
         self.db
             .call(move |c| {
                 let at = now();
                 c.execute(
-                    "INSERT INTO sets (id, name, code, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?4)",
-                    params![id.to_string(), name, code, at],
+                    "INSERT INTO sets (id, name, code, owner_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
+                    params![id.to_string(), name, code, owner.to_string(), at],
                 )?;
                 Ok(c.query_row(
                     &format!("{SUMMARY} WHERE s.id = ?1"),
@@ -136,12 +138,16 @@ impl SetStore {
             .await
     }
 
-    pub async fn get(&self, id: Uuid) -> Result<Option<SetDetail>> {
+    pub async fn get(&self, owner: Uuid, id: Uuid) -> Result<Option<SetDetail>> {
         self.db
             .call(move |c| {
                 let id = id.to_string();
                 let Some(set) = c
-                    .query_row(&format!("{SUMMARY} WHERE s.id = ?1"), [&id], summary)
+                    .query_row(
+                        &format!("{SUMMARY} WHERE s.id = ?1 AND s.owner_id = ?2"),
+                        [&id, &owner.to_string()],
+                        summary,
+                    )
                     .optional()?
                 else {
                     return Ok(None);
@@ -162,6 +168,7 @@ impl SetStore {
     /// `None` when there is no such set.
     pub async fn rename(
         &self,
+        owner: Uuid,
         id: Uuid,
         name: Option<String>,
         code: Option<String>,
@@ -170,8 +177,8 @@ impl SetStore {
             .call(move |c| {
                 let id = id.to_string();
                 let changed = c.execute(
-                    "UPDATE sets SET name = COALESCE(?2, name), code = COALESCE(?3, code), updated_at = ?4 WHERE id = ?1",
-                    params![id, name, code, now()],
+                    "UPDATE sets SET name = COALESCE(?2, name), code = COALESCE(?3, code), updated_at = ?4 WHERE id = ?1 AND owner_id = ?5",
+                    params![id, name, code, now(), owner.to_string()],
                 )?;
                 if changed == 0 {
                     return Ok(None);
@@ -185,21 +192,35 @@ impl SetStore {
             .await
     }
 
-    pub async fn delete(&self, id: Uuid) -> Result<bool> {
+    pub async fn delete(&self, owner: Uuid, id: Uuid) -> Result<bool> {
         self.db
-            .call(move |c| Ok(c.execute("DELETE FROM sets WHERE id = ?1", [id.to_string()])? > 0))
+            .call(move |c| {
+                Ok(c.execute(
+                    "DELETE FROM sets WHERE id = ?1 AND owner_id = ?2",
+                    [id.to_string(), owner.to_string()],
+                )? > 0)
+            })
             .await
     }
 
     /// Appends to the end of the set. `None` when there is no such set.
-    pub async fn add_card(&self, set_id: Uuid, card: Card) -> Result<Option<StoredCard>> {
+    pub async fn add_card(
+        &self,
+        owner: Uuid,
+        set_id: Uuid,
+        card: Card,
+    ) -> Result<Option<StoredCard>> {
         let id = Uuid::new_v4();
         self.db
             .call(move |c| {
                 let tx = c.transaction()?;
                 let set = set_id.to_string();
                 let exists = tx
-                    .query_row("SELECT 1 FROM sets WHERE id = ?1", [&set], |_| Ok(()))
+                    .query_row(
+                        "SELECT 1 FROM sets WHERE id = ?1 AND owner_id = ?2",
+                        [&set, &owner.to_string()],
+                        |_| Ok(()),
+                    )
                     .optional()?
                     .is_some();
                 if !exists {
@@ -228,14 +249,20 @@ impl SetStore {
     }
 
     /// Replaces the whole document. `None` when there is no such card.
-    pub async fn save_card(&self, id: Uuid, card: Card) -> Result<Option<StoredCard>> {
+    pub async fn save_card(&self, owner: Uuid, id: Uuid, card: Card) -> Result<Option<StoredCard>> {
         self.db
             .call(move |c| {
                 let tx = c.transaction()?;
                 let at = now();
                 let changed = tx.execute(
-                    "UPDATE cards SET doc = ?2, updated_at = ?3 WHERE id = ?1",
-                    params![id.to_string(), serde_json::to_string(&card)?, at],
+                    "UPDATE cards SET doc = ?2, updated_at = ?3
+                     WHERE id = ?1 AND set_id IN (SELECT id FROM sets WHERE owner_id = ?4)",
+                    params![
+                        id.to_string(),
+                        serde_json::to_string(&card)?,
+                        at,
+                        owner.to_string()
+                    ],
                 )?;
                 if changed == 0 {
                     return Ok(None);
@@ -261,15 +288,16 @@ impl SetStore {
     }
 
     /// Removes a card and closes the gap, so collector numbers stay 1..=n.
-    pub async fn delete_card(&self, id: Uuid) -> Result<bool> {
+    pub async fn delete_card(&self, owner: Uuid, id: Uuid) -> Result<bool> {
         self.db
             .call(move |c| {
                 let tx = c.transaction()?;
                 let id = id.to_string();
                 let Some((set, position)) = tx
                     .query_row(
-                        "SELECT set_id, position FROM cards WHERE id = ?1",
-                        [&id],
+                        "SELECT c.set_id, c.position FROM cards c JOIN sets s ON s.id = c.set_id
+                         WHERE c.id = ?1 AND s.owner_id = ?2",
+                        [&id, &owner.to_string()],
                         |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)),
                     )
                     .optional()?
@@ -295,12 +323,27 @@ impl SetStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::tests::tempdir;
+    use crate::{db::tests::tempdir, users::User, users::UserStore};
 
-    async fn store() -> (tempdir::Dir, SetStore) {
+    /// A store plus an account to own its sets (`owner_id` is a foreign key).
+    async fn store() -> (tempdir::Dir, SetStore, Uuid) {
         let dir = tempdir::Dir::new();
         let db = Db::open(dir.path()).await.unwrap();
-        (dir, SetStore::new(db))
+        let owner = account(&db, "ada").await;
+        (dir, SetStore::new(db), owner)
+    }
+
+    async fn account(db: &Db, name: &str) -> Uuid {
+        let id = Uuid::new_v4();
+        let user = User {
+            id,
+            username: name.into(),
+            display_name: name.into(),
+            credentials: vec![],
+            created_at: Utc::now(),
+        };
+        assert!(UserStore::new(db.clone()).insert(user).await.unwrap());
+        id
     }
 
     fn named(name: &str) -> Card {
@@ -326,15 +369,27 @@ mod tests {
 
     #[tokio::test]
     async fn cards_take_collector_numbers_in_order_and_close_gaps() {
-        let (_dir, store) = store().await;
-        let set = store.create("Dusk".into(), "DSK".into()).await.unwrap();
-        let a = store.add_card(set.id, named("A")).await.unwrap().unwrap();
-        let b = store.add_card(set.id, named("B")).await.unwrap().unwrap();
-        let c = store.add_card(set.id, named("C")).await.unwrap().unwrap();
+        let (_dir, store, me) = store().await;
+        let set = store.create(me, "Dusk".into(), "DSK".into()).await.unwrap();
+        let a = store
+            .add_card(me, set.id, named("A"))
+            .await
+            .unwrap()
+            .unwrap();
+        let b = store
+            .add_card(me, set.id, named("B"))
+            .await
+            .unwrap()
+            .unwrap();
+        let c = store
+            .add_card(me, set.id, named("C"))
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!([a.position, b.position, c.position], [1, 2, 3]);
 
-        assert!(store.delete_card(a.id).await.unwrap());
-        let detail = store.get(set.id).await.unwrap().unwrap();
+        assert!(store.delete_card(me, a.id).await.unwrap());
+        let detail = store.get(me, set.id).await.unwrap().unwrap();
         let order: Vec<_> = detail
             .cards
             .iter()
@@ -346,10 +401,10 @@ mod tests {
 
     #[tokio::test]
     async fn saving_replaces_the_document_whole() {
-        let (_dir, store) = store().await;
-        let set = store.create("Dusk".into(), "DSK".into()).await.unwrap();
+        let (_dir, store, me) = store().await;
+        let set = store.create(me, "Dusk".into(), "DSK".into()).await.unwrap();
         let card = store
-            .add_card(set.id, named("Draft"))
+            .add_card(me, set.id, named("Draft"))
             .await
             .unwrap()
             .unwrap();
@@ -359,15 +414,15 @@ mod tests {
             ..Card::default()
         };
         store
-            .save_card(card.id, saved.clone())
+            .save_card(me, card.id, saved.clone())
             .await
             .unwrap()
             .unwrap();
-        let detail = store.get(set.id).await.unwrap().unwrap();
+        let detail = store.get(me, set.id).await.unwrap().unwrap();
         assert_eq!(detail.cards[0].card, saved);
         assert!(
             store
-                .save_card(Uuid::new_v4(), saved)
+                .save_card(me, Uuid::new_v4(), saved)
                 .await
                 .unwrap()
                 .is_none()
@@ -376,12 +431,67 @@ mod tests {
 
     #[tokio::test]
     async fn deleting_a_set_takes_its_cards_with_it() {
-        let (_dir, store) = store().await;
-        let set = store.create("Dusk".into(), "DSK".into()).await.unwrap();
-        let card = store.add_card(set.id, named("A")).await.unwrap().unwrap();
-        assert!(store.delete(set.id).await.unwrap());
-        assert!(store.get(set.id).await.unwrap().is_none());
-        assert!(!store.delete_card(card.id).await.unwrap());
-        assert!(store.add_card(set.id, named("B")).await.unwrap().is_none());
+        let (_dir, store, me) = store().await;
+        let set = store.create(me, "Dusk".into(), "DSK".into()).await.unwrap();
+        let card = store
+            .add_card(me, set.id, named("A"))
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(store.delete(me, set.id).await.unwrap());
+        assert!(store.get(me, set.id).await.unwrap().is_none());
+        assert!(!store.delete_card(me, card.id).await.unwrap());
+        assert!(
+            store
+                .add_card(me, set.id, named("B"))
+                .await
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    /// Someone else's set is not forbidden, it is simply not there: every
+    /// lookup that would reveal it answers as if it did not exist.
+    #[tokio::test]
+    async fn another_account_cannot_see_or_touch_a_set() {
+        let (_dir, store, me) = store().await;
+        let you = account(&store.db, "bob").await;
+        let set = store.create(me, "Dusk".into(), "DSK".into()).await.unwrap();
+        let card = store
+            .add_card(me, set.id, named("Mine"))
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert!(store.list(you).await.unwrap().is_empty());
+        assert!(store.get(you, set.id).await.unwrap().is_none());
+        assert!(
+            store
+                .rename(you, set.id, Some("Stolen".into()), None)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            store
+                .add_card(you, set.id, named("Planted"))
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            store
+                .save_card(you, card.id, named("Edited"))
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(!store.delete_card(you, card.id).await.unwrap());
+        assert!(!store.delete(you, set.id).await.unwrap());
+
+        let detail = store.get(me, set.id).await.unwrap().unwrap();
+        assert_eq!(detail.set.name, "Dusk");
+        assert_eq!(detail.cards.len(), 1);
+        assert_eq!(detail.cards[0].card.name, "Mine");
     }
 }
