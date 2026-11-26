@@ -107,6 +107,9 @@ test("a finished card holds its layout", async ({ page }) => {
   await page.fill('textarea[name="flavor_text"]', "It sees the tide before the moon does.");
   await page.fill('input[name="power_toughness"]', "2/3");
   await fillAndSave(page, 'input[name="artist"]', "A. Painter");
+  // Boxes are viewport-relative, so measure from a fixed scroll position:
+  // wherever the last `fill` left the page would otherwise leak into every `y`.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectLayout(page, "finished-card", [
     ".preview .mtg-card",
     ".preview .mtg-name",

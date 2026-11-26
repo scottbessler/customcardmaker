@@ -1,7 +1,7 @@
 {
   ".preview .mtg-card": {
     "x": 21,
-    "y": -379,
+    "y": 364,
     "width": 352,
     "height": 492,
     "display": "block",
@@ -16,7 +16,7 @@
   },
   ".preview .mtg-name": {
     "x": 43,
-    "y": -358,
+    "y": 385,
     "width": 307,
     "height": 26,
     "display": "flex",
@@ -31,7 +31,7 @@
   },
   ".preview .mtg-art": {
     "x": 43,
-    "y": -327,
+    "y": 416,
     "width": 307,
     "height": 144,
     "display": "block",
@@ -46,7 +46,7 @@
   },
   ".preview .mtg-type": {
     "x": 43,
-    "y": -177,
+    "y": 566,
     "width": 307,
     "height": 23,
     "display": "flex",
@@ -61,7 +61,7 @@
   },
   ".preview .mtg-box": {
     "x": 43,
-    "y": -149,
+    "y": 594,
     "width": 307,
     "height": 222,
     "display": "flex",
@@ -76,7 +76,7 @@
   },
   ".preview .mtg-pt": {
     "x": 290,
-    "y": 46,
+    "y": 789,
     "width": 53,
     "height": 25,
     "display": "block",
@@ -91,7 +91,7 @@
   },
   ".preview .mtg-foot": {
     "x": 54,
-    "y": 76,
+    "y": 819,
     "width": 286,
     "height": 10,
     "display": "flex",
