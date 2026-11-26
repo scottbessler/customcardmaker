@@ -358,3 +358,181 @@ async fn a_set_page_is_only_for_its_owner() {
         "a stranger is sent to sign in"
     );
 }
+
+// ---- uploaded art -------------------------------------------------------
+
+/// The 8-byte PNG signature is all the server looks at.
+const PNG: &[u8] = b"\x89PNG\r\n\x1a\n not really a picture, and that is fine";
+
+async fn raw(
+    app: &Router,
+    method: &str,
+    uri: &str,
+    body: Vec<u8>,
+    who: Option<&str>,
+) -> (StatusCode, axum::http::HeaderMap, Vec<u8>) {
+    let mut request = Request::builder().method(method).uri(uri);
+    if let Some(cookie) = who {
+        request = request.header(header::COOKIE, cookie);
+    }
+    let response = app
+        .clone()
+        .oneshot(request.body(Body::from(body)).unwrap())
+        .await
+        .unwrap();
+    let (status, headers) = (response.status(), response.headers().clone());
+    (
+        status,
+        headers,
+        to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap()
+            .to_vec(),
+    )
+}
+
+async fn upload(app: &Router, who: &str, body: &[u8]) -> (StatusCode, Value) {
+    let (status, _, bytes) = raw(app, "POST", "/api/art", body.to_vec(), Some(who)).await;
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+    )
+}
+
+#[tokio::test]
+async fn art_is_served_back_to_its_owner_alone() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let bob = register(&app, "Bob").await;
+
+    let (status, body) = upload(&app, &ada, PNG).await;
+    assert_eq!(status, StatusCode::CREATED);
+    let uri = format!("/api/art/{}", body["id"].as_str().unwrap());
+
+    let (status, headers, bytes) = raw(&app, "GET", &uri, vec![], Some(&ada)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(bytes, PNG);
+    assert_eq!(headers[header::CONTENT_TYPE], "image/png");
+    assert_eq!(headers[header::X_CONTENT_TYPE_OPTIONS], "nosniff");
+    assert!(
+        headers[header::CACHE_CONTROL]
+            .to_str()
+            .unwrap()
+            .contains("immutable")
+    );
+    assert!(
+        headers[header::CACHE_CONTROL]
+            .to_str()
+            .unwrap()
+            .contains("private")
+    );
+
+    assert_eq!(
+        raw(&app, "GET", &uri, vec![], Some(&bob)).await.0,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        raw(&app, "GET", &uri, vec![], None).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        raw(&app, "POST", "/api/art", PNG.to_vec(), None).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+}
+
+#[tokio::test]
+async fn only_images_of_a_known_kind_and_size_are_accepted() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+
+    let (status, body) = upload(&app, &ada, b"<html><script>alert(1)</script>").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(body["error"].as_str().unwrap().contains("PNG"));
+    assert_eq!(upload(&app, &ada, b"").await.0, StatusCode::BAD_REQUEST);
+
+    let mut huge = PNG.to_vec();
+    huge.resize(customcardmaker::art::MAX_BYTES + 1, 0);
+    assert_eq!(
+        upload(&app, &ada, &huge).await.0,
+        StatusCode::PAYLOAD_TOO_LARGE
+    );
+}
+
+#[tokio::test]
+async fn a_card_may_only_use_art_its_owner_uploaded() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let bob = register(&app, "Bob").await;
+    let (ada, bob) = (Some(ada.as_str()), Some(bob.as_str()));
+
+    let art = upload(&app, ada.unwrap(), PNG).await.1["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let theirs = call(
+        &app,
+        "POST",
+        "/api/sets",
+        Some(json!({"name": "Bobs", "code": "BOB"})),
+        bob,
+    )
+    .await;
+    let set = theirs.body["id"].as_str().unwrap().to_string();
+
+    let stolen = call(
+        &app,
+        "POST",
+        &format!("/api/sets/{set}/cards"),
+        Some(json!({"art": art})),
+        bob,
+    )
+    .await;
+    assert_eq!(
+        stolen.status,
+        StatusCode::BAD_REQUEST,
+        "bob cannot point at ada's upload"
+    );
+    let made_up = call(
+        &app,
+        "POST",
+        &format!("/api/sets/{set}/cards"),
+        Some(json!({"art": Uuid::new_v4()})),
+        bob,
+    )
+    .await;
+    assert_eq!(made_up.status, StatusCode::BAD_REQUEST);
+
+    let mine = call(
+        &app,
+        "POST",
+        "/api/sets",
+        Some(json!({"name": "Mine", "code": "MNE"})),
+        ada,
+    )
+    .await;
+    let set = mine.body["id"].as_str().unwrap().to_string();
+    let card = call(
+        &app,
+        "POST",
+        &format!("/api/sets/{set}/cards"),
+        Some(json!({"art": art})),
+        ada,
+    )
+    .await;
+    assert_eq!(card.status, StatusCode::CREATED);
+    assert_eq!(card.body["card"]["art"], art.as_str());
+
+    // Taking it off again is just saving the card without it.
+    let id = card.body["id"].as_str().unwrap();
+    let cleared = call(
+        &app,
+        "PUT",
+        &format!("/api/cards/{id}"),
+        Some(json!({"art": null})),
+        ada,
+    )
+    .await;
+    assert_eq!(cleared.status, StatusCode::OK);
+    assert!(cleared.body["card"]["art"].is_null());
+}

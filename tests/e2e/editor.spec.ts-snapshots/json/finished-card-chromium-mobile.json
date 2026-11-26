@@ -1,7 +1,22 @@
 {
+  ".site-header": {
+    "x": 16,
+    "y": 16,
+    "width": 361,
+    "height": 95,
+    "display": "flex",
+    "position": "static",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "color": "rgb(242, 238, 226)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "borderRadius": "0px",
+    "gridTemplateColumns": "none",
+    "flexDirection": "row"
+  },
   ".filmstrip": {
     "x": 16,
-    "y": 284,
+    "y": 273,
     "width": 361,
     "height": 176,
     "display": "flex",
@@ -16,7 +31,7 @@
   },
   ".filmstrip .strip-item": {
     "x": 20,
-    "y": 292,
+    "y": 281,
     "width": 112,
     "height": 156,
     "display": "block",
@@ -31,7 +46,7 @@
   },
   ".add-card": {
     "x": 144,
-    "y": 292,
+    "y": 281,
     "width": 112,
     "height": 156,
     "display": "grid",
@@ -46,7 +61,7 @@
   },
   ".stage": {
     "x": 16,
-    "y": 473,
+    "y": 461,
     "width": 361,
     "height": 560,
     "display": "grid",
@@ -61,7 +76,7 @@
   },
   ".preview .mtg-card": {
     "x": 16,
-    "y": 473,
+    "y": 461,
     "width": 361,
     "height": 504,
     "display": "block",
@@ -76,7 +91,7 @@
   },
   ".preview .mtg-name": {
     "x": 39,
-    "y": 495,
+    "y": 483,
     "width": 315,
     "height": 27,
     "display": "flex",
@@ -91,7 +106,7 @@
   },
   ".preview .mtg-art": {
     "x": 39,
-    "y": 526,
+    "y": 515,
     "width": 315,
     "height": 148,
     "display": "block",
@@ -106,7 +121,7 @@
   },
   ".preview .mtg-type": {
     "x": 39,
-    "y": 679,
+    "y": 668,
     "width": 315,
     "height": 24,
     "display": "flex",
@@ -121,7 +136,7 @@
   },
   ".preview .mtg-box": {
     "x": 39,
-    "y": 708,
+    "y": 697,
     "width": 315,
     "height": 228,
     "display": "flex",
@@ -136,7 +151,7 @@
   },
   ".preview .mtg-pt": {
     "x": 293,
-    "y": 908,
+    "y": 897,
     "width": 54,
     "height": 26,
     "display": "block",
@@ -151,7 +166,7 @@
   },
   ".preview .mtg-foot": {
     "x": 50,
-    "y": 939,
+    "y": 928,
     "width": 293,
     "height": 10,
     "display": "flex",
@@ -166,9 +181,9 @@
   },
   ".card-form": {
     "x": 16,
-    "y": 1049,
+    "y": 1037,
     "width": 361,
-    "height": 1156,
+    "height": 1379,
     "display": "grid",
     "position": "static",
     "fontSize": "15px",
@@ -182,7 +197,7 @@
   ".form-section": [
     {
       "x": 37,
-      "y": 1070,
+      "y": 1058,
       "width": 319,
       "height": 511,
       "display": "grid",
@@ -197,7 +212,7 @@
     },
     {
       "x": 37,
-      "y": 1598,
+      "y": 1586,
       "width": 319,
       "height": 457,
       "display": "grid",
@@ -212,7 +227,22 @@
     },
     {
       "x": 37,
-      "y": 2071,
+      "y": 2059,
+      "width": 319,
+      "height": 207,
+      "display": "grid",
+      "position": "static",
+      "fontSize": "15px",
+      "fontWeight": "400",
+      "color": "rgb(242, 238, 226)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "borderRadius": "16px",
+      "gridTemplateColumns": "none",
+      "flexDirection": "row"
+    },
+    {
+      "x": 37,
+      "y": 2282,
       "width": 319,
       "height": 114,
       "display": "grid",
@@ -228,7 +258,7 @@
   ],
   ".palette": {
     "x": 50,
-    "y": 1782,
+    "y": 1771,
     "width": 293,
     "height": 163,
     "display": "grid",
@@ -244,7 +274,7 @@
   ".symbol-key": [
     {
       "x": 50,
-      "y": 1809,
+      "y": 1797,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -259,7 +289,7 @@
     },
     {
       "x": 98,
-      "y": 1809,
+      "y": 1797,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -274,7 +304,7 @@
     },
     {
       "x": 146,
-      "y": 1809,
+      "y": 1797,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -289,7 +319,7 @@
     },
     {
       "x": 194,
-      "y": 1809,
+      "y": 1797,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -304,7 +334,7 @@
     },
     {
       "x": 242,
-      "y": 1809,
+      "y": 1797,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -319,7 +349,7 @@
     },
     {
       "x": 290,
-      "y": 1809,
+      "y": 1797,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -334,7 +364,7 @@
     },
     {
       "x": 50,
-      "y": 1857,
+      "y": 1845,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -349,7 +379,7 @@
     },
     {
       "x": 98,
-      "y": 1857,
+      "y": 1845,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -364,7 +394,7 @@
     },
     {
       "x": 146,
-      "y": 1857,
+      "y": 1845,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -379,7 +409,7 @@
     },
     {
       "x": 194,
-      "y": 1857,
+      "y": 1845,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -394,7 +424,7 @@
     },
     {
       "x": 242,
-      "y": 1857,
+      "y": 1845,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -409,7 +439,7 @@
     },
     {
       "x": 290,
-      "y": 1857,
+      "y": 1845,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -424,7 +454,7 @@
     },
     {
       "x": 50,
-      "y": 1905,
+      "y": 1893,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -439,7 +469,7 @@
     },
     {
       "x": 98,
-      "y": 1905,
+      "y": 1893,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -454,7 +484,7 @@
     },
     {
       "x": 146,
-      "y": 1905,
+      "y": 1893,
       "width": 40,
       "height": 40,
       "display": "grid",

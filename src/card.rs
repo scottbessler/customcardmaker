@@ -8,6 +8,7 @@
 
 use crate::error::AppError;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 pub const MAX_NAME: usize = 80;
 pub const MAX_MANA_COST: usize = 40;
@@ -64,6 +65,9 @@ pub struct Card {
     /// `2/3` for a creature, empty otherwise.
     pub power_toughness: String,
     pub artist: String,
+    /// An upload (`/api/art/<id>`) shown in the art box. Only the owner's own
+    /// uploads may be referenced; the route checks, the document just holds it.
+    pub art: Option<Uuid>,
 }
 
 fn within(field: &str, value: &str, max: usize, multiline: bool) -> Result<(), AppError> {

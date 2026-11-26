@@ -6,12 +6,13 @@ that changes behaviour, not here.
 
 ## Queue
 
-- [ ] **1. Image upload** — art on a card.
-  - [ ] Upload from the creator; downscaled in the browser before it is sent
-  - [ ] Stored on the volume under `DATA_PATH/art/`, row in `art`, owner-only
-  - [ ] Shown in the card's art box (preview, filmstrip)
-  - [ ] Remove art from a card
-  - [ ] Follow-ups: crop / focal point, garbage-collect orphaned files
+- [x] **1. Image upload** — art on a card.
+  - [x] Upload from the creator; downscaled in the browser before it is sent
+  - [x] Stored on the volume under `DATA_PATH/art/`, row in `art`, owner-only
+  - [x] Shown in the card's art box (preview, filmstrip)
+  - [x] Remove art from a card
+  - [ ] Follow-ups: crop / focal point, garbage-collect orphaned files, back up
+        the art files (they are not replicated; see `STORAGE.md`)
 - [ ] **2. Official-looking cards** — mana icons and the rest of the frame.
   - [ ] Mana / tap symbols from an icon font or SVG set (see licensing note)
   - [ ] Real frame art per colour: borders, textured boxes, name/type plates
@@ -22,11 +23,26 @@ that changes behaviour, not here.
   - [ ] Supertype, card type(s), and subtypes as separate parts
   - [ ] Subtype typeahead filtered by the chosen card type
   - [ ] Still editable as free text; round-trips with `type_line`
-- [ ] **4. MTG Nexus import** — bring an existing set in.
-  - [ ] Blocked on a sample export; see the note below
+- [ ] **4. Import** — bring an existing set in, from MTG Nexus.
+  - [ ] **Cockatrice XML** (`cockatrice_carddatabase`), which MTG Nexus can
+        export: parse sets and cards into a new set
+  - [ ] Map every field we have; keep what we cannot map and say so
   - [ ] Preview what will be created before it is, and report what was skipped
+  - [ ] More requirements are expected once we have a real MTG Nexus export;
+        see the note below
+  - [ ] Maybe later: export *to* Cockatrice XML, so sets round-trip
 - [ ] **5. Bulk delete** — select several cards, delete them together.
 - [ ] **6. Bulk move** — move or copy selected cards to a new or different set.
+- [ ] **7. Export for proxy printing** — MakePlayingCards (MPC).
+  - [ ] Render each card to a print-resolution PNG (and the card back)
+  - [ ] Output MPC can take, or that
+        [MPC Autofill](https://mpcfill.com/editor) can: use whichever is less
+        work for the user; read both sites' current requirements first
+  - [ ] Dimensions and bleed per MPC's own template, confirmed against it
+  - [ ] Open question: render server-side or in the browser (the card is HTML/CSS,
+        so the browser is where it is already drawn correctly)
+  - [ ] Depends on 1 and 2: art and official frames are what make a proxy worth
+        printing
 
 ## Notes
 
@@ -34,8 +50,12 @@ that changes behaviour, not here.
   Coast's. The community font *Mana* (Andrew Gioia, SIL OFL) redraws the
   symbols and is what most fan tools use; check its licence file is vendored
   with it. Frames are our own drawings in the same style, not scans.
-- **Import (item 4).** MTG Nexus's export format isn't documented anywhere we
-  can reach. Need one real exported set (any size) before this can be built.
+- **Import (item 4).** Cockatrice's card database XML is a public format, so
+  that part can be built without a sample. MTG Nexus quirks (how it writes
+  custom sets, rarities, split/double-faced cards, art) will not be known until
+  we have one real export; ask for one before finishing the item.
+- **Proxy export (item 7).** Do not assume MPC's or MPC Autofill's required
+  sizes, bleed, or file naming from memory; they change. Check them at build time.
 - **Selection (items 5 and 6)** share one multi-select mode in the filmstrip;
   build it once for 5 and 6 reuses it.
 

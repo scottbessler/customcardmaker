@@ -62,6 +62,16 @@ const MIGRATIONS: &[&str] = &[
     // which is the right outcome for one made before accounts existed.
     "ALTER TABLE sets ADD COLUMN owner_id TEXT REFERENCES users(id) ON DELETE CASCADE;
     CREATE INDEX sets_by_owner ON sets (owner_id, updated_at);",
+    // 5: uploaded card art. The image bytes live in a file beside the database
+    // (`art/<id>`), not in it: a few megabytes read through the single
+    // connection would stall every other request. The row says whose it is.
+    "CREATE TABLE art (
+        id           TEXT PRIMARY KEY,
+        owner_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content_type TEXT NOT NULL,
+        bytes        INTEGER NOT NULL,
+        created_at   TEXT NOT NULL
+    ) WITHOUT ROWID;",
 ];
 
 #[derive(Clone)]

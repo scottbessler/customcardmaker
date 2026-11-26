@@ -1,5 +1,6 @@
 import { html, render, useCallback, useEffect, useLayoutEffect, useRef, useState } from "/public/vendor/htm-preact.js";
-import { api } from "/public/api.js";
+import { api, uploadArt } from "/public/api.js";
+import { artUrl, prepareArt } from "/public/art.js";
 import { CardFace, Mana } from "/public/card-face.js";
 import { MAIN_TYPES, mainTypeOf, withMainType } from "/public/frame.js";
 
@@ -59,6 +60,12 @@ function Palette({ target, onInsert }) {
 
 function Editor({ card, onChange }) {
   const [target, setTarget] = useState("mana_cost");
+  const [uploading, setUploading] = useState(false);
+  const [artError, setArtError] = useState("");
+  // An upload outlives the render that started it; apply it to the card as it
+  // is when it lands, not as it was, so typing in the meantime is not lost.
+  const latest = useRef(card);
+  latest.current = card;
   const inputs = useRef({});
   // Where the caret goes once the next render has put the new value in the field.
   const caret = useRef(null);
@@ -88,6 +95,23 @@ function Editor({ card, onChange }) {
     // The controlled value resets the caret, so put it back after the token.
     caret.current = { key: target, position: start + token.length };
     onChange({ ...card, [target]: value });
+  }
+
+  async function chooseArt(event) {
+    const input = event.currentTarget;
+    const file = input.files[0];
+    input.value = "";
+    if (!file) return;
+    setUploading(true);
+    setArtError("");
+    try {
+      const { id } = await uploadArt(await prepareArt(file));
+      onChange({ ...latest.current, art: id });
+    } catch (e) {
+      setArtError(e.message);
+    } finally {
+      setUploading(false);
+    }
   }
 
   const mainType = mainTypeOf(card.type_line);
@@ -123,6 +147,22 @@ function Editor({ card, onChange }) {
       <${Field} label="Flavor text" count=${`${card.flavor_text.length}/${limits.flavor_text}`}>
         <textarea rows="2" ...${text("flavor_text")}></textarea>
       <//>
+    </fieldset>
+
+    <fieldset class="form-section">
+      <legend>Art</legend>
+      <div class="art-row">
+        <div class="art-thumb" style=${card.art ? `background-image:url(${artUrl(card.art)})` : undefined}></div>
+        <div class="art-actions">
+          <label class="file-button" aria-busy=${String(uploading)}>
+            ${uploading ? "Uploading…" : card.art ? "Replace image" : "Upload image"}
+            <input type="file" name="art" accept="image/png,image/jpeg,image/webp" disabled=${uploading} onChange=${chooseArt} />
+          </label>
+          <button type="button" class="quiet remove-art" disabled=${!card.art} onClick=${() => onChange({ ...card, art: null })}>Remove</button>
+          <p class="art-hint muted">PNG, JPEG or WebP. It is shrunk to fit before it is sent.</p>
+        </div>
+      </div>
+      <p class="error" role="alert">${artError}</p>
     </fieldset>
 
     <fieldset class="form-section">

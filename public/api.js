@@ -18,3 +18,12 @@ export async function api(method, path, body) {
   if (!response.ok) throw new Error(await failure(response));
   return response.status === 204 ? null : response.json();
 }
+
+/** Sends an image's bytes as the body; the server decides what it really is. */
+export async function uploadArt(blob) {
+  const response = await fetch("/api/art", { method: "POST", headers: { "content-type": blob.type }, body: blob });
+  if (!response.ok) {
+    throw new Error(response.status === 413 ? "That image is too large." : await failure(response));
+  }
+  return response.json();
+}

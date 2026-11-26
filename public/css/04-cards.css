@@ -19,6 +19,7 @@ button.mtg-card{cursor:pointer}
 .mtg-title em{font-weight:600;opacity:.5}
 .mtg-cost{display:flex;gap:.5cqw;flex:none}
 .mtg-art{border-radius:1cqw;background:repeating-linear-gradient(135deg,var(--art-placeholder) 0 3cqw,color-mix(in srgb,var(--art-placeholder) 85%,white) 3cqw 6cqw);box-shadow:0 0 0 .6cqw var(--card-border)}
+.mtg-art.has-art{background-size:cover;background-position:center}
 .mtg-type span{font-size:4cqw;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mtg-pip{flex:none;width:3.6cqw;height:3.6cqw;border-radius:50%;background:var(--rarity-common);box-shadow:0 0 0 .5cqw var(--card-border)}
 .rarity-uncommon .mtg-pip{background:var(--rarity-uncommon)}

@@ -1,4 +1,19 @@
 {
+  ".site-header": {
+    "x": 136,
+    "y": 16,
+    "width": 1168,
+    "height": 36,
+    "display": "flex",
+    "position": "static",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "color": "rgb(242, 238, 226)",
+    "backgroundColor": "rgba(0, 0, 0, 0)",
+    "borderRadius": "0px",
+    "gridTemplateColumns": "none",
+    "flexDirection": "row"
+  },
   ".filmstrip": {
     "x": 136,
     "y": 173,
@@ -168,7 +183,7 @@
     "x": 536,
     "y": 362,
     "width": 768,
-    "height": 982,
+    "height": 1116,
     "display": "grid",
     "position": "static",
     "fontSize": "15px",
@@ -213,6 +228,21 @@
     {
       "x": 557,
       "y": 1209,
+      "width": 726,
+      "height": 118,
+      "display": "grid",
+      "position": "static",
+      "fontSize": "15px",
+      "fontWeight": "400",
+      "color": "rgb(242, 238, 226)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "borderRadius": "16px",
+      "gridTemplateColumns": "none",
+      "flexDirection": "row"
+    },
+    {
+      "x": 557,
+      "y": 1343,
       "width": 726,
       "height": 114,
       "display": "grid",
