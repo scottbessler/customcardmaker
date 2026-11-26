@@ -1,20 +1,27 @@
+# fly.toml app configuration file generated for customcardmaker on 2026-11-26T21:52:36Z
+#
+# See https://docs.fly.io/reference/configuration for information about how to use this file.
+#
+
 app = 'customcardmaker'
-primary_region = 'sjc'
+primary_region = 'iad'
 kill_signal = 'SIGINT'
 kill_timeout = '5s'
+
 [build]
   dockerfile = 'Dockerfile'
+
 [env]
   DATA_PATH = '/data'
   PORT = '8080'
-  # Set before deploying: RP_ID (the site's host) and RP_ORIGIN (https://host),
-  # or passkeys will not register. SESSION_SECRET is a Fly secret, 64+ bytes.
-  # Never set PASSKEY_DISABLED here.
+
 [processes]
   app = '/app/customcardmaker'
+
 [[mounts]]
   source = 'data'
   destination = '/data'
+
 [http_service]
   internal_port = 8080
   force_https = true
@@ -22,6 +29,7 @@ kill_timeout = '5s'
   auto_start_machines = true
   min_machines_running = 1
   processes = ['app']
+
   [[http_service.checks]]
     interval = '10s'
     timeout = '2s'
@@ -29,7 +37,8 @@ kill_timeout = '5s'
     method = 'GET'
     path = '/healthcheck'
     protocol = 'http'
+
 [[vm]]
-  memory = '512mb'
+  memory = '256mb'
   cpu_kind = 'shared'
   cpus = 1
