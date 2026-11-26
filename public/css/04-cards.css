@@ -33,8 +33,10 @@ button.mtg-card{cursor:pointer}
 .mtg-pt{position:absolute;right:5cqw;bottom:8.6cqw;min-width:15cqw;padding:.8cqw 2.6cqw;border-radius:2cqw;background:var(--box);font-size:5cqw;font-weight:800;text-align:center;line-height:1.1;box-shadow:inset 0 0 0 .5cqw var(--card-text),0 0 0 .6cqw var(--card-border)}
 .mtg-foot{position:absolute;left:6cqw;right:6cqw;bottom:4.4cqw;display:flex;justify-content:space-between;gap:2cqw;color:var(--card-foot-ink);font-size:2.7cqw;font-weight:700;line-height:1;letter-spacing:.02em;white-space:nowrap}
 .mtg-foot span:last-child{overflow:hidden;text-overflow:ellipsis}
-.mana{display:inline-grid;place-items:center;width:4.6cqw;height:4.6cqw;border-radius:50%;background:var(--mana-n);color:var(--card-text);font-size:3.2cqw;font-weight:800;font-style:normal;line-height:1;box-shadow:-.25cqw .35cqw 0 var(--card-border);vertical-align:-.9cqw;margin:0 .15cqw}
-.mana-w{background:var(--mana-w)}.mana-u{background:var(--mana-u)}.mana-b{background:var(--mana-b)}.mana-r{background:var(--mana-r)}.mana-g{background:var(--mana-g)}
-.mana-hybrid{background:linear-gradient(135deg,var(--mana-w) 50%,var(--mana-u) 50%)}
-.mana-t{background:var(--card-text);color:var(--card-foot-ink)}
-.mtg-name .mana{vertical-align:baseline;margin:0}
+/* Symbols are the Mana font's (vendor/mana-*.css); here they only take the
+   card's scale. The font's own sizes are in em, so one font-size sizes the
+   whole symbol -- circle, glyph and shadow together. */
+.mtg-card .mana{font-size:3.6cqw;margin:0 .08em;vertical-align:-.28em}
+.mtg-name .mana{vertical-align:baseline}
+.mtg-card .ms-cost.ms-tap{background-color:var(--card-text);color:var(--card-foot-ink)}
+.mana-unknown{opacity:.6}

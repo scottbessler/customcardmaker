@@ -1,6 +1,10 @@
 /* Page layouts: the account header, the welcome page, the sets list and the
    card creator. The printed card itself lives in 04-cards.css. */
 
+/* Footer */
+.site-footer{margin-top:var(--space-32);color:var(--text-faint);font-size:var(--text-small);line-height:1.4}
+.site-footer p{margin:0;max-width:44rem}
+
 /* Account */
 .account{display:flex;align-items:center;gap:var(--space-12);min-width:0}
 /* A long name gives way to an ellipsis instead of wrapping the header onto a
@@ -60,7 +64,7 @@
 .palette-hint{margin:0;color:var(--text-muted);font-size:var(--text-small)}
 .palette-keys{display:flex;flex-wrap:wrap;gap:var(--space-8)}
 .symbol-key{display:grid;place-items:center;width:40px;height:40px;min-height:0;padding:0;border-radius:50%;background:var(--ink-800);border:1px solid var(--line-2)}
-.symbol-key .mana{width:28px;height:28px;font-size:var(--text-body);box-shadow:none;margin:0;vertical-align:baseline}
+.symbol-key .mana{font-size:var(--text-action);vertical-align:baseline}
 .symbol-key:disabled{opacity:.3}
 .art-row{display:grid;grid-template-columns:7.5rem minmax(0,1fr);gap:var(--space-12);align-items:center}
 .art-thumb{aspect-ratio:2.1;border-radius:var(--radius-control);border:1px solid var(--line-2);background:repeating-linear-gradient(135deg,var(--art-placeholder) 0 8px,color-mix(in srgb,var(--art-placeholder) 85%,white) 8px 16px) center/cover}

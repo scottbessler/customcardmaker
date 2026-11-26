@@ -44,7 +44,8 @@ pub fn escape(s: &str) -> String {
         .replace('\'', "&#39;")
 }
 
-const STYLESHEETS: [&str; 5] = [
+const STYLESHEETS: [&str; 6] = [
+    "/public/vendor/mana-v1-18-0.css",
     "/public/css/01-tokens.css",
     "/public/css/02-base.css",
     "/public/css/03-controls.css",
@@ -73,7 +74,7 @@ pub fn layout(title: &str, body: &str, island: Option<&str>, user: Option<&str>)
         )
     });
     format!(
-        r##"<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#1a1630"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>{title}</title><link rel="manifest" href="{manifest}"><link rel="icon" href="{icon}"><link rel="apple-touch-icon" href="{touch}"><link rel="preload" href="/public/vendor/bitter-v42-latin.woff2" as="font" type="font/woff2" crossorigin>{styles}{import_map}</head><body><main class="page"><header class="site-header"><a class="brand" href="/">customcardmaker</a>{account}</header>{body}</main>{script}</body></html>"##,
+        r##"<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#1a1630"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>{title}</title><link rel="manifest" href="{manifest}"><link rel="icon" href="{icon}"><link rel="apple-touch-icon" href="{touch}"><link rel="preload" href="/public/vendor/bitter-v42-latin.woff2" as="font" type="font/woff2" crossorigin>{styles}{import_map}</head><body><main class="page"><header class="site-header"><a class="brand" href="/">customcardmaker</a>{account}</header>{body}<footer class="site-footer"><p>An unofficial fan tool. Magic: The Gathering, its mana and tap symbols, and related marks are property of Wizards of the Coast; this site is not approved or endorsed by Wizards.</p></footer></main>{script}</body></html>"##,
         title = escape(title),
         manifest = asset("/public/manifest.webmanifest"),
         icon = asset("/public/icon.svg"),

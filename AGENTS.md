@@ -82,6 +82,11 @@ Toolchain: Rust 1.90+ (edition 2024), bun 1.3.13, node 22 — see `.mise.toml`.
   not regenerating: it rewrites correct baselines with this host's numbers.
 - The `chromium-mobile` project emulates an iPhone 15/16 Pro, safe-area insets
   included — don't relax the geometry or image tolerance to make a snapshot pass.
+- Mana and tap symbols come from the vendored Mana font
+  (`public/vendor/mana-v1-18-0.*`, licence notes in `MANA-LICENSE.md`). Its CSS
+  is vendored as-is, so it is exempt from the raw-colour check. `SYMBOL_KEYS` in
+  `public/frame.js` is the list of symbols we claim; an e2e test checks each
+  against the font. To update the font, follow `MANA-LICENSE.md`.
 - The UI font is Bitter, vendored as variable woff2 subsets in
   `public/vendor/bitter-v42-*.woff2`. The version lives in the filename because
   the `@font-face` src sits in static CSS that `asset()` never rewrites — to

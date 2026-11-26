@@ -1,9 +1,15 @@
 import { html } from "/public/vendor/htm-preact.js";
 import { artUrl } from "/public/art.js";
-import { costSymbols, frameOf, rulesSize, symbolClass, symbolLabel, tokenize } from "/public/frame.js";
+import { costSymbols, frameOf, rulesSize, symbolKey, tokenize } from "/public/frame.js";
 
+/**
+ * One symbol, drawn by the Mana font. Something the font has no glyph for is
+ * shown as typed, braces and all, so a typo is visible rather than a blank disc.
+ */
 export function Mana({ symbol }) {
-  return html`<i class=${`mana ${symbolClass(symbol)}`} data-symbol=${symbol}>${symbolLabel(symbol)}</i>`;
+  const key = symbolKey(symbol);
+  if (!key) return html`<span class="mana-unknown">{${symbol}}</span>`;
+  return html`<i class=${`mana ms ms-cost ms-shadow ms-${key}`} data-symbol=${symbol} role="img" aria-label=${symbol}></i>`;
 }
 
 function Line({ text }) {
