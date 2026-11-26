@@ -20,7 +20,7 @@ nothing about real Magic cards.
   an owner, and an ordered list of cards. A set belongs to exactly one account.
 - **Card** — one document: `name`, `mana_cost`, `type_line`, `rarity`
   (`common` | `uncommon` | `rare` | `mythic`), `rules_text`, `flavor_text`,
-  `power_toughness`, `artist`. Every field may be empty: a blank card is a valid
+  `power_toughness`, `artist`, `art` (an uploaded image, or none). Every field may be empty: a blank card is a valid
   draft. Text fields are length-bounded (see `src/card.rs`); only `rules_text`
   and `flavor_text` may contain line breaks.
 - **Collector number** — a card's 1-based position in its set. Adding appends;
@@ -53,8 +53,27 @@ nothing about real Magic cards.
   inside is measured in px. Rules text steps down in size with its length rather
   than measuring, so a card looks the same on every host.
 - **R4.** The footer reads `NNN/TTT • CODE` and the artist credit.
+- **R5.** A card's art fills the art box, cropped to cover it and centred; a card
+  with none shows the striped placeholder.
 
-## 5. Behaviour
+## 5. Art
+
+- **U1.** An image is chosen in the creator, shrunk (longest side 1400px) and
+  re-encoded as a JPEG in the browser, then sent as the request body. The
+  browser's re-draw also drops metadata such as location and applies the
+  photo's rotation.
+- **U2.** The server believes the file's own signature, never the claimed type:
+  only PNG, JPEG and WebP are accepted, up to 5 MB; anything else is `400`
+  (`413` over the size). The response always carries `nosniff`.
+- **U3.** An upload belongs to the account that made it. Only its owner can
+  fetch it, anyone else gets `404` and a stranger `401`; a card can only
+  reference its owner's uploads, otherwise `400`.
+- **U4.** An upload's id never changes what it names, so its response is cached
+  by the owner's browser indefinitely (`private`, `immutable`).
+- **U5.** Removing art from a card drops the reference; the file is kept
+  (cleanup is a known gap, see TODO.md).
+
+## 6. Behaviour
 
 - **B1.** The editor autosaves ~500 ms after the last keystroke, flushes before
   switching cards, adding or deleting, and on page hide. The set page shows
@@ -73,15 +92,15 @@ nothing about real Magic cards.
 - **B3.** `/api/*` failures are JSON `{"error": "..."}`; page failures are pages.
   Internal errors never put the database's message in a response.
 
-## 6. Not yet built
+## 7. Not yet built
 
 Roughly in the order they make sense:
 
 1. **Account recovery and more passkeys.** An account has the one passkey it
    registered with; losing it loses the account. Add a second device, and a
    recovery path.
-2. **Card art.** Upload (or link) an image per card; storage is an open question
-   (volume vs. object storage).
+2. **Art follow-ups.** Crop / focal point, cleaning up orphaned files, and
+   replicating the files off the volume.
 3. **Export.** A printable sheet (PDF at 63×88 mm, 3×3 per page), per-card PNG,
    and a set JSON for backup/import.
 4. **Richer frames.** Multicolour/hybrid blends, land colour identity, planeswalker,

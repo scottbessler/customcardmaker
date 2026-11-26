@@ -205,6 +205,7 @@ test("a finished card holds its layout", async ({ page }) => {
   // wherever the last `fill` left the page would otherwise leak into every `y`.
   await page.evaluate(() => window.scrollTo(0, 0));
   await expectLayout(page, "finished-card", [
+    ".site-header",
     ".filmstrip",
     ".filmstrip .strip-item",
     ".add-card",

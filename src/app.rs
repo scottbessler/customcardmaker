@@ -1,8 +1,15 @@
-use crate::{auth, db::Db, render, routes, sets::SetStore, users::UserStore};
+use crate::{
+    art::{self, ArtStore},
+    auth,
+    db::Db,
+    render, routes,
+    sets::SetStore,
+    users::UserStore,
+};
 use anyhow::{Context, Result};
 use axum::{
     Router,
-    extract::{FromRef, Request},
+    extract::{DefaultBodyLimit, FromRef, Request},
     http::{HeaderValue, header::CACHE_CONTROL},
     middleware::{Next, from_fn},
     response::Response,
@@ -24,6 +31,7 @@ const LOCAL_SESSION_SECRET: &str =
 pub struct AppState {
     pub sets: SetStore,
     pub users: UserStore,
+    pub art: ArtStore,
     pub webauthn: Arc<Webauthn>,
     pub key: Key,
     /// Sign in by username alone. For development and tests, where no
@@ -42,7 +50,8 @@ impl AppState {
         let db = Db::open(data).await?;
         Ok(Self {
             sets: SetStore::new(db.clone()),
-            users: UserStore::new(db),
+            users: UserStore::new(db.clone()),
+            art: ArtStore::open(db).await?,
             webauthn: Arc::new(build_webauthn()?),
             key: load_key(),
             passkey_disabled,
@@ -69,6 +78,11 @@ pub fn router(s: AppState) -> Router {
                 .delete(routes::delete_set),
         )
         .route("/api/sets/{id}/cards", post(routes::add_card))
+        .route(
+            "/api/art",
+            post(routes::upload_art).layer(DefaultBodyLimit::max(art::MAX_BYTES)),
+        )
+        .route("/api/art/{id}", get(routes::get_art))
         .route(
             "/api/cards/{id}",
             put(routes::save_card).delete(routes::delete_card),
@@ -100,8 +114,11 @@ fn cache_directive(path: &str, query: Option<&str>, release: bool) -> &'static s
 async fn cache_control(req: Request, next: Next) -> Response {
     let directive = cache_directive(req.uri().path(), req.uri().query(), !cfg!(debug_assertions));
     let mut r = next.run(req).await;
-    r.headers_mut()
-        .insert(CACHE_CONTROL, HeaderValue::from_static(directive));
+    // A handler that knows better says so: uploaded art is immutable per id.
+    if !r.headers().contains_key(CACHE_CONTROL) {
+        r.headers_mut()
+            .insert(CACHE_CONTROL, HeaderValue::from_static(directive));
+    }
     r
 }
 

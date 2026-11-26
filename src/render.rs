@@ -24,6 +24,7 @@ fn asset(p: &str) -> String {
 fn import_map() -> String {
     let entries = [
         "/public/api.js",
+        "/public/art.js",
         "/public/card-face.js",
         "/public/frame.js",
         "/public/vendor/htm-preact.js",

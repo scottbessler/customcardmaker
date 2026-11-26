@@ -1,5 +1,6 @@
 use crate::{
     app::AppState,
+    art,
     card::Card,
     error::{ApiError, AppError},
     render,
@@ -9,6 +10,7 @@ use crate::{
 };
 use axum::{
     Json,
+    body::Bytes,
     extract::{Path, State},
     http::{StatusCode, header},
     response::{Html, IntoResponse, Redirect, Response},
@@ -144,6 +146,7 @@ pub async fn add_card(
 ) -> Result<(StatusCode, Json<StoredCard>), ApiError> {
     let card = body.map(|Json(card)| card).unwrap_or_default();
     card.validate()?;
+    own_art(&s, me, &card).await?;
     let stored = s
         .sets
         .add_card(me, set_id, card)
@@ -159,6 +162,7 @@ pub async fn save_card(
     Json(card): Json<Card>,
 ) -> Api<StoredCard> {
     card.validate()?;
+    own_art(&s, me, &card).await?;
     s.sets
         .save_card(me, id, card)
         .await?
@@ -176,4 +180,52 @@ pub async fn delete_card(
     } else {
         Err(no_card())
     }
+}
+
+/// A card may only point at art its owner uploaded.
+async fn own_art(s: &AppState, me: Uuid, card: &Card) -> Result<(), ApiError> {
+    match card.art {
+        Some(id) if !s.art.owned_by(me, id).await? => {
+            Err(AppError::bad_request("That image is not in your uploads.").into())
+        }
+        _ => Ok(()),
+    }
+}
+
+/// The body is the image itself, not a form: the browser has already shrunk it.
+pub async fn upload_art(
+    State(s): State<AppState>,
+    ApiUser(me): ApiUser,
+    body: Bytes,
+) -> Result<(StatusCode, Json<serde_json::Value>), ApiError> {
+    let content_type = art::sniff(&body)
+        .ok_or_else(|| AppError::bad_request("That is not a PNG, JPEG or WebP image."))?;
+    let id = s.art.save(me, content_type, &body).await?;
+    Ok((StatusCode::CREATED, Json(serde_json::json!({ "id": id }))))
+}
+
+pub async fn get_art(
+    State(s): State<AppState>,
+    ApiUser(me): ApiUser,
+    Path(id): Path<Uuid>,
+) -> Result<Response, ApiError> {
+    let (content_type, bytes) = s
+        .art
+        .read(me, id)
+        .await?
+        .ok_or_else(|| AppError::not_found("There is no such image."))?;
+    Ok((
+        [
+            (header::CONTENT_TYPE, content_type),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_string()),
+            // An id names one upload forever, so the browser may keep it; only
+            // the owner's browser, because the response depends on the cookie.
+            (
+                header::CACHE_CONTROL,
+                "private, max-age=31536000, immutable".to_string(),
+            ),
+        ],
+        bytes,
+    )
+        .into_response())
 }

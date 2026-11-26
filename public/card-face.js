@@ -1,4 +1,5 @@
 import { html } from "/public/vendor/htm-preact.js";
+import { artUrl } from "/public/art.js";
 import { costSymbols, frameOf, rulesSize, symbolClass, symbolLabel, tokenize } from "/public/frame.js";
 
 export function Mana({ symbol }) {
@@ -31,7 +32,7 @@ export function CardFace({ card, code = "", number = 0, total = 0, selected = fa
         <span class="mtg-title">${card.name || html`<em>Untitled</em>`}</span>
         <span class="mtg-cost">${costSymbols(card.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>
       </header>
-      <div class="mtg-art"></div>
+      <div class=${`mtg-art${card.art ? " has-art" : ""}`} style=${card.art ? `background-image:url(${artUrl(card.art)})` : undefined}></div>
       <div class="mtg-type"><span>${card.type_line}</span><i class="mtg-pip"></i></div>
       <div class="mtg-box">
         <div class="mtg-rules" style=${`font-size:${rulesSize(card)}cqw`}>

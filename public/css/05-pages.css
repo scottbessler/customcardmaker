@@ -2,10 +2,12 @@
    card creator. The printed card itself lives in 04-cards.css. */
 
 /* Account */
-.account{display:flex;align-items:center;gap:var(--space-12)}
-.who{color:var(--text-muted);font-size:var(--text-small);font-weight:600}
-.sign-out{margin:0}
-.sign-out button{min-height:36px;padding:.25rem .7rem;font-size:var(--text-small)}
+.account{display:flex;align-items:center;gap:var(--space-12);min-width:0}
+/* A long name gives way to an ellipsis instead of wrapping the header onto a
+   second line, so the header is one height whoever is signed in. */
+.who{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);font-size:var(--text-small);font-weight:600}
+.sign-out{flex:none;margin:0}
+.sign-out button{white-space:nowrap;min-height:36px;padding:.25rem .7rem;font-size:var(--text-small)}
 
 /* Welcome */
 .welcome{max-width:44rem;margin:0 auto;display:grid;gap:var(--space-16)}
@@ -60,6 +62,14 @@
 .symbol-key{display:grid;place-items:center;width:40px;height:40px;min-height:0;padding:0;border-radius:50%;background:var(--ink-800);border:1px solid var(--line-2)}
 .symbol-key .mana{width:28px;height:28px;font-size:var(--text-body);box-shadow:none;margin:0;vertical-align:baseline}
 .symbol-key:disabled{opacity:.3}
+.art-row{display:grid;grid-template-columns:7.5rem minmax(0,1fr);gap:var(--space-12);align-items:center}
+.art-thumb{aspect-ratio:2.1;border-radius:var(--radius-control);border:1px solid var(--line-2);background:repeating-linear-gradient(135deg,var(--art-placeholder) 0 8px,color-mix(in srgb,var(--art-placeholder) 85%,white) 8px 16px) center/cover}
+.art-actions{display:flex;flex-wrap:wrap;gap:var(--space-8);align-items:center}
+.file-button{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h);padding:.45rem .9rem;border-radius:var(--radius-control);background:var(--gold);color:var(--ink-on-gold);font-size:var(--text-action);font-weight:700;cursor:pointer}
+.file-button input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.file-button:has(input:focus-visible){outline:2px solid var(--gold-hi);outline-offset:1px}
+.file-button[aria-busy=true]{opacity:.6;pointer-events:none}
+.art-hint{flex-basis:100%;margin:0;font-size:var(--text-small)}
 @media(min-width:860px){
   .creator{grid-template-columns:24rem minmax(0,1fr);align-items:start}
   .stage{position:sticky;top:var(--space-16)}

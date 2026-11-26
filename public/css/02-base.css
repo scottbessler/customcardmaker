@@ -7,7 +7,7 @@ body{margin:0;background:radial-gradient(circle at top,var(--ink-600),var(--ink-
    indicator below without each one remembering to. */
 .page{--gutter-left:calc(1rem + var(--safe-left));--gutter-right:calc(1rem + var(--safe-right));max-width:1200px;margin:0 auto;padding:1rem var(--gutter-right) calc(1rem + var(--safe-bottom)) var(--gutter-left)}
 .site-header{padding-top:var(--safe-top);display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem}
-.brand{font-weight:700;color:var(--gold);text-decoration:none;font-size:var(--text-title)}
+.brand{flex:none;white-space:nowrap;font-weight:700;color:var(--gold);text-decoration:none;font-size:var(--text-title)}
 h1,h2{color:var(--gold);margin:0 0 var(--space-8)}
 h1{font-size:var(--text-display);font-weight:700}
 h2{font-size:var(--text-title);font-weight:700}

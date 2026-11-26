@@ -1,4 +1,5 @@
 pub mod app;
+pub mod art;
 pub mod auth;
 pub mod card;
 pub mod db;

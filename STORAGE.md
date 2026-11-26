@@ -20,7 +20,21 @@ Everything lives in one SQLite file, `DATA_PATH/customcardmaker.db` (default
 | --- | --- |
 | `users` | username (unique, case-insensitive), display name, passkeys as one JSON document |
 | `sets` | name, code, `owner_id`, timestamps |
+| `art` | one row per uploaded image: owner, real content type, size |
 | `cards` | one JSON document per card, with `set_id` and collector `position` |
+
+## Files
+
+Uploaded art is **not** in the database. The bytes are files under
+`DATA_PATH/art/<id>`, beside `customcardmaker.db` on the same volume, and the
+`art` row says whose each one is. A few megabytes read through the single
+connection would stall every other request, which is the one thing the
+connection arrangement above cannot absorb.
+
+The file is written before its row, so a crash leaves a stray file, never a row
+with nothing behind it. Nothing deletes art yet: removing it from a card only
+drops the reference, so the file stays. **These files are not replicated.** The Litestream plan above covers the
+database only; until the files are backed up too, a lost volume loses every image.
 
 Deleting an account cascades to its sets, and a set to its cards. Deleting a card renumbers the ones after
 it, so collector numbers are always `1..=n`.
