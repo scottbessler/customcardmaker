@@ -24,10 +24,17 @@
   --card-aspect:63/88;
   --card-border:#0d0b14;
   --card-text:#16130f;
-  --frame-w:#f4efd6;--frame-u:#9cc3de;--frame-b:#7a706c;--frame-r:#d98a6b;--frame-g:#8cb890;
-  --frame-gold:#d6b560;--frame-artifact:#a9b4bd;--frame-land:#b9a687;--frame-colorless:#b8b2ab;
-  --box-w:#fbf8ea;--box-u:#e3eef6;--box-b:#d8d2cd;--box-r:#f5dcd0;--box-g:#dcebdc;
-  --box-gold:#f2e8c4;--box-artifact:#e6eaee;--box-land:#ece3d0;--box-colorless:#ebe8e4;
+  /* Each frame is two tones (light edge, dark edge) and a tint for the text
+     box; the card CSS makes every bevel, plate and border out of those three. */
+  --frame-w-hi:#f6f1db;--frame-w-lo:#d9d0b0;--box-w:#fbf8ea;
+  --frame-u-hi:#b9d6ea;--frame-u-lo:#5f93b8;--box-u:#e3eef6;
+  --frame-b-hi:#9a918f;--frame-b-lo:#453d3b;--box-b:#d9d3cf;
+  --frame-r-hi:#eaa88b;--frame-r-lo:#b25a40;--box-r:#f5dccf;
+  --frame-g-hi:#a8d0ab;--frame-g-lo:#4f8a5c;--box-g:#dcebdc;
+  --frame-gold-hi:#ecd58c;--frame-gold-lo:#a98a3c;--box-gold:#f2e8c4;
+  --frame-artifact-hi:#cdd5db;--frame-artifact-lo:#7f8e9a;--box-artifact:#e6eaee;
+  --frame-land-hi:#d6c5a2;--frame-land-lo:#8f7a52;--box-land:#ece3d0;
+  --frame-colorless-hi:#d9d3cb;--frame-colorless-lo:#8f877d;--box-colorless:#ebe8e4;
   --art-placeholder:#524a7a;
   --rarity-common:#1a1a1a;--rarity-uncommon:#a9bcc8;--rarity-rare:#d6b04a;--rarity-mythic:#e0623a;
 }

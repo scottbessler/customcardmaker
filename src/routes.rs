@@ -42,6 +42,10 @@ async fn account(s: &AppState, MaybeUser(id): MaybeUser) -> Result<Option<User>,
     }
 }
 
+pub async fn frames() -> Html<String> {
+    Html(render::frames_page())
+}
+
 pub async fn index(State(s): State<AppState>, user: MaybeUser) -> Result<Html<String>, AppError> {
     Ok(Html(match account(&s, user).await? {
         Some(user) => render::sets_page(&user.display_name),

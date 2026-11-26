@@ -16,7 +16,9 @@ that changes behaviour, not here.
         the art files (they are not replicated; see `STORAGE.md`)
 - [ ] **2. Official-looking cards** — mana icons and the rest of the frame.
   - [x] Mana / tap symbols from the Mana font (see licensing note)
-  - [ ] Real frame art per colour: borders, textured boxes, name/type plates
+  - [x] Real frame art per colour: borders, textured boxes, name/type plates
+        (`/frames` shows every frame; collector line and P/T box are placed as
+        on a printed card)
   - [ ] Rules text: reminder text in italics, symbol sizing, line spacing
   - [ ] Set symbol by rarity in the type line; collector footer layout
   - [ ] Proper P/T box, and layouts for planeswalker, saga, split, transform

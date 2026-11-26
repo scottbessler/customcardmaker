@@ -60,7 +60,12 @@ nothing about real Magic cards.
 - **R3.** A card renders at any size from its container's width alone; nothing
   inside is measured in px. Rules text steps down in size with its length rather
   than measuring, so a card looks the same on every host.
-- **R4.** The footer reads `NNN/TTT • CODE` and the artist credit.
+- **R4.** The footer sits on the black border, bottom left, as two lines: `NNN/TTT • CODE`
+  and the artist credit. The P/T box straddles the frame's lower right corner.
+- **R7.** Each frame is drawn from three colours (a light edge, a dark edge, and a
+  tint for the text box): bevelled plates for name and type, a tinted text box,
+  and a hairline round each piece. Ink on every plate and text box keeps a WCAG
+  contrast of at least 7. `/frames` shows one card per frame.
 - **R5.** A card's art fills the art box, cropped to cover it and centred; a card
   with none shows the striped placeholder.
 
