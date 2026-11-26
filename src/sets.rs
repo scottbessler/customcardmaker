@@ -219,6 +219,47 @@ impl SetStore {
             .await
     }
 
+    /// Creates a set and appends every card in one transaction, so a bulk
+    /// import is all or nothing rather than a half-made set.
+    pub async fn create_with_cards(
+        &self,
+        owner: Uuid,
+        name: String,
+        code: String,
+        cards: Vec<Card>,
+    ) -> Result<SetSummary> {
+        let id = Uuid::new_v4();
+        self.db
+            .call(move |c| {
+                let tx = c.transaction()?;
+                let at = now();
+                tx.execute(
+                    "INSERT INTO sets (id, name, code, owner_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
+                    params![id.to_string(), name, code, owner.to_string(), at],
+                )?;
+                for (index, card) in cards.iter().enumerate() {
+                    tx.execute(
+                        "INSERT INTO cards (id, set_id, position, doc, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+                        params![
+                            Uuid::new_v4().to_string(),
+                            id.to_string(),
+                            index as i64 + 1,
+                            serde_json::to_string(card)?,
+                            at
+                        ],
+                    )?;
+                }
+                let summary = tx.query_row(
+                    &format!("{SUMMARY} WHERE s.id = ?1"),
+                    [id.to_string()],
+                    summary,
+                )?;
+                tx.commit()?;
+                Ok(summary)
+            })
+            .await
+    }
+
     pub async fn get(&self, owner: Uuid, id: Uuid) -> Result<Option<SetDetail>> {
         self.db
             .call(move |c| {

@@ -63,6 +63,7 @@ pub fn router(s: AppState) -> Router {
     Router::new()
         .route("/", get(routes::index))
         .route("/frames", get(routes::frames))
+        .route("/import", get(routes::import_cockatrice_ui))
         .route("/sets/{id}", get(routes::set_page))
         .route("/healthcheck", get(routes::healthcheck))
         .route("/auth/register/begin", post(auth::register_begin))
@@ -79,6 +80,10 @@ pub fn router(s: AppState) -> Router {
                 .delete(routes::delete_set),
         )
         .route("/api/sets/{id}/cards", post(routes::add_card))
+        .route(
+            "/api/import/cockatrice",
+            post(routes::import_cockatrice).layer(DefaultBodyLimit::max(8 * 1024 * 1024)),
+        )
         .route(
             "/api/art",
             post(routes::upload_art).layer(DefaultBodyLimit::max(art::MAX_BYTES)),

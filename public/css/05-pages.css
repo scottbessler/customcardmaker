@@ -27,10 +27,21 @@
 
 /* Sets */
 .sets-page{display:grid;gap:var(--space-16)}
+.sets-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-8)}
+.sets-bar h1{margin:0}
+.sets-bar .chip{display:inline-flex;align-items:center;text-decoration:none}
 .set-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--space-12);align-items:start}
 .set-card{display:grid;gap:var(--space-4);align-content:start;padding:var(--space-12);text-align:left;background:var(--ink-700);color:var(--text);border:1px solid var(--line-1);border-radius:var(--radius-control);text-decoration:none;font-weight:600}
 .set-card strong{color:var(--gold-hi);font-size:var(--text-title)}
 .set-card small{color:var(--text-muted);font-size:var(--text-small);font-weight:500}
+
+/* Import */
+.import-page{max-width:44rem;margin:0 auto;display:grid;gap:var(--space-16)}
+.import-page p{margin:0}
+.import-page form{display:grid;gap:var(--space-12)}
+.import-page textarea{min-height:14rem}
+.import-page .actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-12)}
+.import-page .actions a{color:var(--text-muted);font-size:var(--text-small);font-weight:600}
 
 /* The card creator: a filmstrip of the set, then the live card beside its form. */
 .set-page{display:grid;gap:var(--space-12)}

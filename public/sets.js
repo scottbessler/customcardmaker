@@ -38,7 +38,10 @@ function Sets() {
     api("GET", "/api/sets").then(setSets, (e) => setError(e.message));
   }, []);
   return html`
-    <h1>Your sets</h1>
+    <div class="sets-bar">
+      <h1>Your sets</h1>
+      <a class="chip" href="/import">Import from Cockatrice</a>
+    </div>
     <p class="error" role="alert">${error}</p>
     <${NewSet} onCreated=${(set) => { location.href = `/sets/${set.id}`; }} />
     ${sets === null
