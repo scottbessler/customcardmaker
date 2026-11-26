@@ -4,35 +4,39 @@
 .mtg-card{display:block;position:relative;container-type:inline-size;width:100%;aspect-ratio:var(--card-aspect);padding:0;border:0;border-radius:4.8% / 3.4%;background:var(--card-border);color:var(--card-text);font-family:var(--font-ui);text-align:left;box-shadow:0 6px 18px var(--shadow-40);min-height:0;overflow:hidden}
 button.mtg-card{cursor:pointer}
 .mtg-card.selected{outline:3px solid var(--gold-hi);outline-offset:2px}
-.mtg-frame{position:absolute;inset:3.4cqw;display:grid;grid-template-rows:7.4cqw 41cqw 6.6cqw 1fr;gap:1.4cqw;padding:2.6cqw 3cqw 8cqw;border-radius:3cqw;background:var(--frame)}
-.mtg-card:is(.frame-w){--frame:var(--frame-w);--box:var(--box-w)}
-.mtg-card:is(.frame-u){--frame:var(--frame-u);--box:var(--box-u)}
-.mtg-card:is(.frame-b){--frame:var(--frame-b);--box:var(--box-b)}
-.mtg-card:is(.frame-r){--frame:var(--frame-r);--box:var(--box-r)}
-.mtg-card:is(.frame-g){--frame:var(--frame-g);--box:var(--box-g)}
-.mtg-card:is(.frame-gold){--frame:var(--frame-gold);--box:var(--box-gold)}
-.mtg-card:is(.frame-artifact){--frame:var(--frame-artifact);--box:var(--box-artifact)}
-.mtg-card:is(.frame-land){--frame:var(--frame-land);--box:var(--box-land)}
-.mtg-card:is(.frame-colorless){--frame:var(--frame-colorless);--box:var(--box-colorless)}
-.mtg-name,.mtg-type{grid-area:auto;display:flex;align-items:center;justify-content:space-between;gap:1.5cqw;padding:0 2.4cqw;border-radius:2.4cqw / 1.8cqw;background:var(--box);box-shadow:inset 0 0 0 .5cqw color-mix(in srgb,var(--card-text) 45%,transparent)}
+.mtg-frame{position:absolute;inset:3.4cqw 3.4cqw 7.4cqw;display:grid;grid-template-rows:7.4cqw 41cqw 6.6cqw 1fr;gap:1.2cqw;padding:2.4cqw 3cqw 3cqw;border-radius:2.6cqw;background-color:var(--lo);background-image:repeating-linear-gradient(90deg,color-mix(in srgb,var(--white) 5%,transparent) 0 .3cqw,transparent .3cqw .9cqw),linear-gradient(160deg,var(--hi),var(--lo) 72%,color-mix(in srgb,var(--lo) 80%,black));box-shadow:inset 0 0 0 .4cqw color-mix(in srgb,var(--lo) 45%,black),inset .5cqw .6cqw .9cqw color-mix(in srgb,var(--white) 35%,transparent)}
+.mtg-card.frame-w{--hi:var(--frame-w-hi);--lo:var(--frame-w-lo);--box:var(--box-w)}
+.mtg-card.frame-u{--hi:var(--frame-u-hi);--lo:var(--frame-u-lo);--box:var(--box-u)}
+.mtg-card.frame-b{--hi:var(--frame-b-hi);--lo:var(--frame-b-lo);--box:var(--box-b)}
+.mtg-card.frame-r{--hi:var(--frame-r-hi);--lo:var(--frame-r-lo);--box:var(--box-r)}
+.mtg-card.frame-g{--hi:var(--frame-g-hi);--lo:var(--frame-g-lo);--box:var(--box-g)}
+.mtg-card.frame-gold{--hi:var(--frame-gold-hi);--lo:var(--frame-gold-lo);--box:var(--box-gold)}
+.mtg-card.frame-artifact{--hi:var(--frame-artifact-hi);--lo:var(--frame-artifact-lo);--box:var(--box-artifact)}
+.mtg-card.frame-land{--hi:var(--frame-land-hi);--lo:var(--frame-land-lo);--box:var(--box-land)}
+.mtg-card.frame-colorless{--hi:var(--frame-colorless-hi);--lo:var(--frame-colorless-lo);--box:var(--box-colorless)}
+/* The frame is the containing block for the P/T box and the footer, so their
+   offsets are from the frame's edge: negative means out onto the black border,
+   which is where a printed card keeps its collector line. */
+/* A plate is the text box's tint, lit from above, with a dark hairline round it. */
+.mtg-name,.mtg-type{display:flex;align-items:center;justify-content:space-between;gap:1.5cqw;padding:0 2.4cqw;border-radius:2.4cqw / 1.8cqw;background-color:var(--box);background-image:linear-gradient(180deg,color-mix(in srgb,var(--box) 65%,white),var(--box) 50%,color-mix(in srgb,var(--box) 85%,var(--lo)));box-shadow:0 0 0 .45cqw color-mix(in srgb,var(--lo) 40%,black),inset 0 .3cqw .2cqw color-mix(in srgb,var(--white) 60%,transparent),0 .4cqw .6cqw var(--shadow-40)}
 .mtg-title{font-size:4.6cqw;font-weight:800;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
 .mtg-title em{font-weight:600;opacity:.5}
 .mtg-cost{display:flex;gap:.5cqw;flex:none}
-.mtg-art{border-radius:1cqw;background:repeating-linear-gradient(135deg,var(--art-placeholder) 0 3cqw,color-mix(in srgb,var(--art-placeholder) 85%,white) 3cqw 6cqw);box-shadow:0 0 0 .6cqw var(--card-border)}
+.mtg-art{border-radius:.8cqw;background:repeating-linear-gradient(135deg,var(--art-placeholder) 0 3cqw,color-mix(in srgb,var(--art-placeholder) 85%,white) 3cqw 6cqw);box-shadow:0 0 0 .45cqw color-mix(in srgb,var(--lo) 40%,black),0 .5cqw .9cqw .5cqw var(--shadow-40)}
 .mtg-art.has-art{background-size:cover;background-position:center}
 .mtg-type span{font-size:4cqw;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mtg-pip{flex:none;width:3.6cqw;height:3.6cqw;border-radius:50%;background:var(--rarity-common);box-shadow:0 0 0 .5cqw var(--card-border)}
 .rarity-uncommon .mtg-pip{background:var(--rarity-uncommon)}
 .rarity-rare .mtg-pip{background:var(--rarity-rare)}
 .rarity-mythic .mtg-pip{background:var(--rarity-mythic)}
-.mtg-box{border-radius:1cqw;background:var(--box);padding:2.4cqw 3cqw;box-shadow:inset 0 0 0 .5cqw color-mix(in srgb,var(--card-text) 45%,transparent);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.mtg-box{border-radius:.9cqw;background-color:var(--box);background-image:radial-gradient(ellipse at 50% 35%,var(--box),color-mix(in srgb,var(--box) 88%,var(--lo)));padding:2.4cqw 3cqw;box-shadow:0 0 0 .45cqw color-mix(in srgb,var(--lo) 40%,black),inset 0 0 2.6cqw color-mix(in srgb,var(--lo) 22%,transparent);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
 .mtg-rules{line-height:1.22}
 .mtg-rules p{margin:0 0 .6em}
 .mtg-rules p:last-child{margin-bottom:0}
 .mtg-flavor{margin-top:.7em;font-style:italic}
-.mtg-pt{position:absolute;right:5cqw;bottom:8.6cqw;min-width:15cqw;padding:.8cqw 2.6cqw;border-radius:2cqw;background:var(--box);font-size:5cqw;font-weight:800;text-align:center;line-height:1.1;box-shadow:inset 0 0 0 .5cqw var(--card-text),0 0 0 .6cqw var(--card-border)}
-.mtg-foot{position:absolute;left:6cqw;right:6cqw;bottom:4.4cqw;display:flex;justify-content:space-between;gap:2cqw;color:var(--card-foot-ink);font-size:2.7cqw;font-weight:700;line-height:1;letter-spacing:.02em;white-space:nowrap}
-.mtg-foot span:last-child{overflow:hidden;text-overflow:ellipsis}
+.mtg-pt{position:absolute;right:2cqw;bottom:-2.8cqw;min-width:15cqw;padding:.8cqw 2.6cqw;border-radius:2cqw;background-color:var(--box);background-image:linear-gradient(180deg,color-mix(in srgb,var(--box) 65%,white),var(--box) 55%,color-mix(in srgb,var(--box) 85%,var(--lo)));font-size:5cqw;font-weight:800;text-align:center;line-height:1.1;box-shadow:0 0 0 .5cqw var(--card-text),0 0 0 1cqw color-mix(in srgb,var(--lo) 55%,black),0 .6cqw .8cqw 1cqw var(--shadow-40)}
+.mtg-foot{position:absolute;left:2cqw;right:19cqw;bottom:-6.1cqw;display:flex;flex-direction:column;align-items:flex-start;gap:.5cqw;color:var(--card-foot-ink);font-size:2.5cqw;font-weight:700;line-height:1;letter-spacing:.02em;white-space:nowrap}
+.mtg-foot span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
 /* Symbols are the Mana font's (vendor/mana-*.css); here they only take the
    card's scale. The font's own sizes are in em, so one font-size sizes the
    whole symbol -- circle, glyph and shadow together. */

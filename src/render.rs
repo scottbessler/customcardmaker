@@ -136,3 +136,14 @@ pub fn set_page(id: Uuid, name: &str, user: &str) -> String {
         Some(user),
     )
 }
+
+/// Every frame at once. Not linked from anywhere: it is where a frame is
+/// designed, and what its regression test looks at.
+pub fn frames_page() -> String {
+    layout(
+        "Frames",
+        r#"<div id="app" class="frames-page"></div>"#,
+        Some("/public/frames.js"),
+        None,
+    )
+}

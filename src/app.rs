@@ -62,6 +62,7 @@ impl AppState {
 pub fn router(s: AppState) -> Router {
     Router::new()
         .route("/", get(routes::index))
+        .route("/frames", get(routes::frames))
         .route("/sets/{id}", get(routes::set_page))
         .route("/healthcheck", get(routes::healthcheck))
         .route("/auth/register/begin", post(auth::register_begin))
