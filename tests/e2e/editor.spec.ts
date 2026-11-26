@@ -70,7 +70,7 @@ test("the preview follows the form and the frame follows the mana cost", async (
   await expect(preview.locator(".mtg-title")).toHaveText("Mist Warden");
   await expect(preview.locator(".mtg-cost .mana")).toHaveCount(2);
   await expect(preview.locator(".mtg-rules p")).toHaveCount(2);
-  await expect(preview.locator(".mtg-rules .mana-t")).toHaveCount(1);
+  await expect(preview.locator(".mtg-rules .ms-tap")).toHaveCount(1);
   await expect(preview.locator(".mtg-pt")).toHaveText("2/3");
 
   await page.fill('input[name="mana_cost"]', "{W}{U}");
@@ -106,7 +106,7 @@ test("the symbol palette types into whichever field you were in", async ({ page 
   await rules.fill("Tap: ");
   await key("T").click();
   await expect(rules).toHaveValue("Tap: {T}");
-  await expect(page.locator(".preview .mtg-rules .mana-t")).toHaveCount(1);
+  await expect(page.locator(".preview .mtg-rules .ms-tap")).toHaveCount(1);
 });
 
 test("a type button swaps the card type and keeps the subtypes", async ({ page }) => {

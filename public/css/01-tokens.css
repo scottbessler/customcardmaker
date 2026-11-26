@@ -30,7 +30,6 @@
   --box-gold:#f2e8c4;--box-artifact:#e6eaee;--box-land:#ece3d0;--box-colorless:#ebe8e4;
   --art-placeholder:#524a7a;
   --rarity-common:#1a1a1a;--rarity-uncommon:#a9bcc8;--rarity-rare:#d6b04a;--rarity-mythic:#e0623a;
-  --mana-w:#f8f2d0;--mana-u:#aad3ec;--mana-b:#c3b9b2;--mana-r:#f0a98a;--mana-g:#a5d0ae;--mana-n:#d2c9c2;
 }
 /* WebKit reports a zero bottom inset in standalone mode on phones that do have
    a home indicator, so an installed PWA floors the clearance itself. */

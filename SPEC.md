@@ -44,7 +44,15 @@ nothing about real Magic cards.
 ## 4. Rendering
 
 - **R1.** Mana symbols are written in braces: `{2}{U}{U}`, `{W/U}`, `{G/P}`, `{T}`,
-  `{X}`. The same notation works in `mana_cost` and inside `rules_text`.
+  `{X}`. The same notation works in `mana_cost` and inside `rules_text`. Supported:
+  generic 0–20, `W U B R G C`, `X Y Z`, `S` (snow), `E` (energy), `P`, `CHAOS`,
+  `T` (tap) and `Q` (untap), hybrid (`W/U`, either order), two-colour generic
+  (`2/W`), colourless hybrid (`C/W`), Phyrexian (`W/P`) and Phyrexian hybrid
+  (`G/U/P`, either order). They are drawn with the Mana font (R6).
+- **R6.** Symbols are the Mana font's, vendored under `public/vendor/`. Something
+  typed in braces that the font has no symbol for is shown as typed, never as a
+  blank disc. The footer says this is an unofficial fan tool and whose symbols
+  they are; the sets are for personal, non-commercial use.
 - **R2.** The frame is derived, never stored: one colour in the cost → that colour;
   two or more → gold; none → land if the type line says Land, else artifact if it
   says Artifact, else colourless. Hybrid and Phyrexian symbols count for each

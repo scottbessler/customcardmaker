@@ -42,19 +42,34 @@ export function tokenize(line) {
   return tokens;
 }
 
-/** Which CSS class paints a symbol: a colour, tap, or plain generic. */
-export function symbolClass(symbol) {
-  if (symbol === "T") return "mana-t";
-  if (symbol === "X") return "mana-n";
-  const colors = colorsOf(`{${symbol}}`);
-  if (colors.length > 1) return "mana-hybrid";
-  if (colors.length === 1) return `mana-${colors[0].toLowerCase()}`;
-  return "mana-n";
-}
+/**
+ * The symbols the Mana font draws, by its own names: `w`, `2`, `wu` (hybrid),
+ * `2w`, `wp` (Phyrexian), `tap`. The `every symbol has a glyph` e2e test checks
+ * each one against the font, so this list cannot drift from it.
+ */
+export const SYMBOL_KEYS = [
+  ...Array.from({ length: 21 }, (_, n) => String(n)),
+  "w", "u", "b", "r", "g", "c", "x", "y", "z", "s", "e", "p", "tap", "untap", "chaos",
+  "wu", "wb", "ub", "ur", "br", "bg", "rw", "rg", "gw", "gu",
+  "2w", "2u", "2b", "2r", "2g", "cw", "cu", "cb", "cr", "cg",
+  "wp", "up", "bp", "rp", "gp",
+  "wup", "wbp", "ubp", "urp", "brp", "bgp", "rwp", "rgp", "gwp", "gup",
+];
+const KNOWN = new Set(SYMBOL_KEYS);
+const ALIASES = { t: "tap", q: "untap" };
 
-/** What a symbol says on the symbol itself. */
-export function symbolLabel(symbol) {
-  return symbol.includes("/") ? symbol.split("/")[0] : symbol;
+/**
+ * The font's name for what was typed between braces, or `null` if it has none.
+ * `{T}` is tap, `{W/U}` and `{U/W}` are one hybrid symbol, `{G/U/P}` and
+ * `{U/G/P}` one Phyrexian hybrid.
+ */
+export function symbolKey(symbol) {
+  const raw = String(symbol).toLowerCase().replaceAll("/", "");
+  const key = ALIASES[raw] ?? raw;
+  if (KNOWN.has(key)) return key;
+  // Either order of a pair names the same symbol; the font only has one.
+  const swapped = key.length >= 2 ? key[1] + key[0] + key.slice(2) : key;
+  return KNOWN.has(swapped) ? swapped : null;
 }
 
 /**

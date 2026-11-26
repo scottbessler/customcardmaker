@@ -50,6 +50,7 @@ fn preloaded_font_matches_the_font_face_it_preloads() {
 #[test]
 fn every_stylesheet_the_shell_links_exists() {
     for sheet in [
+        "vendor/mana-v1-18-0.css",
         "01-tokens.css",
         "02-base.css",
         "03-controls.css",
@@ -57,7 +58,14 @@ fn every_stylesheet_the_shell_links_exists() {
         "05-pages.css",
     ] {
         assert!(
-            RENDER_RS.contains(&format!("/public/css/{sheet}")),
+            RENDER_RS.contains(&format!(
+                "/public/{}{sheet}",
+                if sheet.starts_with("vendor/") {
+                    ""
+                } else {
+                    "css/"
+                }
+            )),
             "{sheet} is not linked by the shell"
         );
     }

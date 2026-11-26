@@ -1,6 +1,7 @@
 # TODO
 
-Worked top to bottom, one item per pull request. An item is done when it is in
+Worked top to bottom, one pull request per item; a big item (2) is split into
+one pull request per sub-item. An item is done when it is in
 `main` with its tests; tick it and move on. `SPEC.md` is updated by the item
 that changes behaviour, not here.
 
@@ -14,7 +15,7 @@ that changes behaviour, not here.
   - [ ] Follow-ups: crop / focal point, garbage-collect orphaned files, back up
         the art files (they are not replicated; see `STORAGE.md`)
 - [ ] **2. Official-looking cards** — mana icons and the rest of the frame.
-  - [ ] Mana / tap symbols from an icon font or SVG set (see licensing note)
+  - [x] Mana / tap symbols from the Mana font (see licensing note)
   - [ ] Real frame art per colour: borders, textured boxes, name/type plates
   - [ ] Rules text: reminder text in italics, symbol sizing, line spacing
   - [ ] Set symbol by rarity in the type line; collector footer layout
@@ -46,10 +47,14 @@ that changes behaviour, not here.
 
 ## Notes
 
-- **Licensing (item 2).** The Magic symbols and frame art are Wizards of the
-  Coast's. The community font *Mana* (Andrew Gioia, SIL OFL) redraws the
-  symbols and is what most fan tools use; check its licence file is vendored
-  with it. Frames are our own drawings in the same style, not scans.
+- **Licensing (item 2).** The Magic symbols are Wizards of the Coast's artwork.
+  The *Mana* font (Andrew Gioia; font SIL OFL, CSS MIT) draws them and is what
+  most fan tools use; the symbols themselves are not covered by its licence.
+  The sets are for personal, non-commercial use, which is the footing the owner
+  has taken from Wizards' proxies policy
+  (https://magic.wizards.com/en/news/announcements/proxies-policy-and-communication-2016-01-14).
+  Keep it that way: nothing here should sell or monetise cards. Frames are our
+  own drawings in the same style, not scans.
 - **Import (item 4).** Cockatrice's card database XML is a public format, so
   that part can be built without a sample. MTG Nexus quirks (how it writes
   custom sets, rarities, split/double-faced cards, art) will not be known until
