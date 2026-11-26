@@ -89,6 +89,7 @@ test("another account cannot fetch your art", async ({ page, browser }) => {
   await other.context().close();
 
   const stranger = await browser.newContext({ baseURL });
-  expect((await stranger.request.get(`/api/art/${id}`)).status()).toBe(401);
+  // A stranger is told no more than another account: it is simply not there.
+  expect((await stranger.request.get(`/api/art/${id}`)).status()).toBe(404);
   await stranger.close();
 });

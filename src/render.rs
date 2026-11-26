@@ -78,7 +78,7 @@ pub fn layout(title: &str, body: &str, island: Option<&str>, user: Option<&str>)
         )
     });
     format!(
-        r##"<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#1a1630"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>{title}</title><link rel="manifest" href="{manifest}"><link rel="icon" href="{icon}"><link rel="apple-touch-icon" href="{touch}"><link rel="preload" href="/public/vendor/bitter-v42-latin.woff2" as="font" type="font/woff2" crossorigin>{styles}{import_map}</head><body><main class="page"><header class="site-header"><a class="brand" href="/">customcardmaker</a>{account}</header>{body}<footer class="site-footer"><p>An unofficial fan tool. Magic: The Gathering, its mana and tap symbols, and related marks are property of Wizards of the Coast; this site is not approved or endorsed by Wizards.</p></footer></main>{script}</body></html>"##,
+        r##"<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#1a1630"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>{title}</title><link rel="manifest" href="{manifest}"><link rel="icon" href="{icon}"><link rel="apple-touch-icon" href="{touch}"><link rel="preload" href="/public/vendor/bitter-v42-latin.woff2" as="font" type="font/woff2" crossorigin>{styles}{import_map}</head><body><main class="page"><header class="site-header"><a class="brand" href="/">customcardmaker</a><nav class="site-nav"><a href="/gallery">Gallery</a></nav>{account}</header>{body}<footer class="site-footer"><p>An unofficial fan tool. Magic: The Gathering, its mana and tap symbols, and related marks are property of Wizards of the Coast; this site is not approved or endorsed by Wizards.</p></footer></main>{script}</body></html>"##,
         title = escape(title),
         manifest = asset("/public/manifest.webmanifest"),
         icon = asset("/public/icon.svg"),
@@ -160,5 +160,23 @@ pub fn import_page(user: &str) -> String {
         r#"<section class="import-page"><h1>Import from Cockatrice</h1><p class="muted">Paste a Cockatrice card database XML file — the kind MTG Nexus exports. Every card becomes a card in a new set, and you can edit them afterwards.</p><form id="import-form" class="panel"><div class="row"><label>Set code<input name="set_code" required minlength="3" maxlength="5" pattern="[A-Za-z0-9]{3,5}" placeholder="RND" autocomplete="off" autocapitalize="characters"></label><label>Set name<input name="set_name" maxlength="64" placeholder="From the file" autocomplete="off"></label></div><label>XML<textarea name="xml" required rows="14" spellcheck="false" placeholder="Paste the whole carddatabase XML file here"></textarea></label><p class="muted">Leave the set name blank to use the name in the file. The code is always required.</p><div class="actions"><button type="submit">Import cards</button><a href="/">Cancel</a></div><p id="import-error" class="error" role="alert" hidden></p><p id="import-result" class="muted" role="status" hidden></p></form></section>"#,
         Some("/public/import.js"),
         Some(user),
+    )
+}
+
+pub fn gallery_page(user: Option<&str>) -> String {
+    layout(
+        "Gallery",
+        r#"<div id="app" class="gallery-page"></div>"#,
+        Some("/public/gallery.js"),
+        user,
+    )
+}
+
+pub fn gallery_set_page(id: Uuid, name: &str, user: Option<&str>) -> String {
+    layout(
+        name,
+        &format!(r#"<div id="app" class="gallery-set-page" data-set-id="{id}"></div>"#),
+        Some("/public/gallery-set.js"),
+        user,
     )
 }

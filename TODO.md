@@ -51,11 +51,11 @@ that changes behaviour, not here.
   - [ ] Depends on 1 and 2: art and official frames are what make a proxy worth
         printing
 
-- [ ] **8. Public sets and a gallery** — publish a set; anyone can browse them.
-  - [ ] A set can be marked public (and taken private again, instantly)
-  - [ ] `/gallery`: every public set, newest first, with a sample card; and a
+- [x] **8. Public sets and a gallery** — publish a set; anyone can browse them.
+  - [x] A set can be marked public (and taken private again, instantly)
+  - [x] `/gallery`: every public set, newest first, with a sample card; and a
         read-only page per set, for anyone, signed in or not
-  - [ ] The art of a card in a public set is visible to everyone; no other art is
+  - [x] The art of a card in a public set is visible to everyone; no other art is
   - [ ] Follow-ups: copy a public set into your own account; pagination and search;
         a way to report a set (needed before this is open to people you don't know)
 - [ ] **9. Creative Commons art search** — find art without leaving the app.

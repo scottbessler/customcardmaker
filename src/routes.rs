@@ -113,6 +113,8 @@ pub async fn get_set(
 pub struct SetPatch {
     name: Option<String>,
     code: Option<String>,
+    /// Publish to the gallery, or take it back.
+    public: Option<bool>,
 }
 
 pub async fn patch_set(
@@ -124,7 +126,7 @@ pub async fn patch_set(
     let name = body.name.as_deref().map(sets::clean_name).transpose()?;
     let code = body.code.as_deref().map(sets::clean_code).transpose()?;
     s.sets
-        .rename(me, id, name, code)
+        .rename(me, id, name, code, body.public)
         .await?
         .map(Json)
         .ok_or_else(no_set)
@@ -211,12 +213,12 @@ pub async fn upload_art(
 
 pub async fn get_art(
     State(s): State<AppState>,
-    ApiUser(me): ApiUser,
+    MaybeUser(viewer): MaybeUser,
     Path(id): Path<Uuid>,
 ) -> Result<Response, ApiError> {
     let (content_type, bytes) = s
         .art
-        .read(me, id)
+        .read(viewer, id)
         .await?
         .ok_or_else(|| AppError::not_found("There is no such image."))?;
     Ok((
@@ -224,7 +226,7 @@ pub async fn get_art(
             (header::CONTENT_TYPE, content_type),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_string()),
             // An id names one upload forever, so the browser may keep it; only
-            // the owner's browser, because the response depends on the cookie.
+            // that browser, because who may see it depends on the cookie.
             (
                 header::CACHE_CONTROL,
                 "private, max-age=31536000, immutable".to_string(),
@@ -381,4 +383,48 @@ pub async fn transfer_cards(
         return Err(AppError::bad_request("Those cards are already in that set.").into());
     }
     Ok(Json(done))
+}
+
+/// The gallery's front page: every public set, for anyone.
+pub async fn gallery_page(
+    State(s): State<AppState>,
+    user: MaybeUser,
+) -> Result<Html<String>, AppError> {
+    let who = account(&s, user).await?;
+    Ok(Html(render::gallery_page(
+        who.as_ref().map(|u| u.display_name.as_str()),
+    )))
+}
+
+pub async fn gallery_set_page(
+    State(s): State<AppState>,
+    user: MaybeUser,
+    Path(id): Path<Uuid>,
+) -> Result<Html<String>, AppError> {
+    let who = account(&s, user).await?;
+    let set = s
+        .sets
+        .public_set(id)
+        .await?
+        .ok_or_else(|| AppError::not_found("There is no such public set."))?;
+    Ok(Html(render::gallery_set_page(
+        id,
+        &set.name,
+        who.as_ref().map(|u| u.display_name.as_str()),
+    )))
+}
+
+pub async fn gallery_list(State(s): State<AppState>) -> Api<Vec<sets::GalleryEntry>> {
+    Ok(Json(s.sets.gallery().await?))
+}
+
+pub async fn gallery_set(
+    State(s): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Api<sets::GalleryDetail> {
+    s.sets
+        .public_set(id)
+        .await?
+        .map(Json)
+        .ok_or_else(|| AppError::not_found("There is no such public set.").into())
 }

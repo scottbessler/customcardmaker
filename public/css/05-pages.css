@@ -7,6 +7,26 @@
 .frame-sample{display:grid;gap:var(--space-8);margin:0}
 .frame-sample figcaption{color:var(--text-muted);font-size:var(--text-small);text-align:center}
 
+.site-nav{margin-right:auto;margin-left:var(--space-16);display:flex;gap:var(--space-12)}
+.site-nav a{color:var(--text-muted);font-size:var(--text-small);font-weight:600;text-decoration:none;padding:var(--space-4) 0}
+.site-nav a:hover,.site-nav a:focus-visible{color:var(--gold-hi)}
+
+/* The gallery */
+.gallery-page,.gallery-set-page{display:grid;gap:var(--space-12);align-content:start}
+.gallery-page p,.gallery-set-page p{margin:0}
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(9rem,1fr));gap:var(--space-24) var(--space-16);align-items:start}
+.gallery-tile{display:grid;gap:var(--space-4);align-content:start;color:var(--text);text-decoration:none}
+.gallery-thumb{margin-bottom:var(--space-8)}
+.gallery-name{color:var(--gold-hi);font-size:var(--text-action);overflow-wrap:anywhere}
+.gallery-meta,.gallery-by{color:var(--text-muted);font-size:var(--text-small);overflow-wrap:anywhere}
+.gallery-tile:hover .gallery-name,.gallery-tile:focus-visible .gallery-name{text-decoration:underline}
+.back{margin:0}
+.public-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:var(--space-24) var(--space-16);align-items:start}
+.public-badge{color:var(--gold-hi);font-weight:700}
+.public-toggle{display:flex;flex-direction:row;align-items:center;gap:var(--space-8);margin-top:var(--space-12);color:var(--text)}
+.public-toggle input{width:22px;height:22px;padding:0;accent-color:var(--gold)}
+.public-help{margin:var(--space-4) 0 0;font-size:var(--text-small)}
+
 /* Footer */
 .site-footer{margin-top:var(--space-32);color:var(--text-faint);font-size:var(--text-small);line-height:1.4}
 .site-footer p{margin:0;max-width:44rem}
