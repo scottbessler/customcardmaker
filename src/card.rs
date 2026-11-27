@@ -214,6 +214,16 @@ impl Card {
         self.features.iter().any(|id| id == feature)
     }
 
+    /// What the card has, for a template to check its `requires` against: the features it
+    /// turned on, plus a second face when it has one.
+    pub fn has_all(&self) -> Vec<String> {
+        let mut ids = self.features.clone();
+        if self.back.is_some() {
+            ids.push(template::SECOND_FACE.to_string());
+        }
+        ids
+    }
+
     /// The required fields that are still empty: what stands between this card and a
     /// finished one. A draft may be missing any of them.
     pub fn missing(&self) -> Vec<&'static str> {
@@ -247,7 +257,7 @@ impl Card {
         for field in cardtype::fields_for(&card.features) {
             card.set(field.key, self.get(field.key));
         }
-        if template::get(&card.template).is_some_and(|t| !t.works_with(&card.features)) {
+        if template::get(&card.template).is_some_and(|t| !t.works_with(&card.has_all())) {
             card.template.clear();
         }
         card
@@ -299,7 +309,7 @@ impl Card {
         if !self.template.is_empty() {
             let template = template::get(&self.template)
                 .ok_or_else(|| AppError::bad_request("That is not a card template."))?;
-            if !template.works_with(&self.features) {
+            if !template.works_with(&self.has_all()) {
                 return Err(AppError::bad_request(format!(
                     "The {} template does not work with this card's fields.",
                     template.label

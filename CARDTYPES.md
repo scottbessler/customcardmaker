@@ -111,14 +111,17 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
   `box` (the text box), `art`, `stat` (a badge showing the first of its fields the card has a
   value for). A `stat` may leave out `w` and `h` — both or neither — and is then as big as its
   value, anchored by its bottom-right corner, which is how a printed card's P/T box grows.
-  Unknown elements and attributes are an error, not ignored.
+  An element may say `face="back"`, and draws the second face's fields in that place — that is
+  how a split, adventure or prepared card is one card with two halves. Unknown elements and
+  attributes are an error, not ignored.
 - **`<field name="…"/>`** draws one field of the card, in the element that holds it. `as` picks
   a reader for the rules text: `as="abilities"` (loyalty costs beside each line),
   `as="chapters"` (a saga's numerals), plain by default. A template may name any field of the
   base and of the features it has not `excludes`; a card without the feature shows it empty. A
   template that names any other field is rejected when it is loaded, which is what keeps the
   rule honest.
-- **`requires` / `excludes`** are space-separated feature ids.
+- **`requires` / `excludes`** are space-separated ids. An id is a feature, or the reserved
+  `back` — the card has a second face — which is what the two-halved layouts need.
 - **`frame`** is `modern` (a frame of its own), or `inherit` (the card's own look, else the
   set's).
 - **A body is the layout.** Every built-in template has one: `modern` places the name
@@ -132,19 +135,32 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
 
 ### Built-in templates
 
-`requires` / `excludes` are features; a card can wear a template when it has every `requires`
-and none of the `excludes`.
+`requires` / `excludes` are features (or `back`); a card can wear a template when it has every
+`requires` and none of the `excludes`.
 
 | Id | Requires | Excludes | What it is |
 | --- | --- | --- | --- |
 | `modern` | | | the standard frame, laid out as a real card is (the one look so far) |
 | `saga` | | stats | chapters down the left, art on the right |
 | `token` | | cost | picture behind everything, centred name |
+| `textless-token` | | cost | the picture, a name and a stat, and nothing else |
+| `game-marker` | | cost | a name and a box for what it does; no art |
 | `planeswalker` | loyalty | | tall art, abilities over its foot, loyalty badge |
+| `battle` | defense | stats | the standard frame with a defense badge |
+| `adventure` | back cost | | the card, with the adventure's own name and text beside it |
+| `prepared` | back | | the card, with the prepared spell's text beside it |
+| `omen` | back | | as prepared, with the omen's text given the wider box |
+| `split` | back cost | | two halves, each a card, the art beside its name and text |
+| `fuse` | back cost | | the same two halves, each art on its outer edge |
+| `aftermath` | back cost | | two halves one above the other, each across the width |
+| `semi-split` | back cost | | one art column down the card, both halves' plates beside it |
+| `landscape` | back cost | | two halves side by side, each a card down the card |
 
-MTG Nexus offers more layouts than these (dual face, prepared, adventure, omen, split, fuse,
-aftermath, battle, textless token, game marker, semi-split, landscape); each is another
-template file plus, for the two-halved ones, a card with two faces. Not built yet.
+The two-halved ones draw both faces at once, so the card is one document with a `back`
+(see `card.back` above) and neither face gets the transform marker.
+
+The layouts are our own drawings in Nexus's arrangement, not their artwork: a place is a
+fraction of the card, and any of them can be tuned later.
 
 A **scan** (a card whose picture is a whole card, `art_is_card`) needs no templates of its own:
 it is drawn by the same template as any card, over its picture with no frame of its own, so a
@@ -157,11 +173,13 @@ written yet.
 
 ### A card chooses its template
 
-`card.template` names one, and it must be able to draw the card's features (a `400`
-otherwise, checked against the registry). Empty means the set's default look: only a template
-with no `requires` and no `excludes` can be a set's default, since it must suit every card.
-Stage 2 lets a set keep a default per kind of card. A picture that is a whole card picks the
-matching `scan-*` template, which is what `art_is_card` selects today.
+`card.template` names one, and it must be able to draw what the card has (a `400` otherwise,
+checked against the registry). Empty means the set's default look: only a template with no
+`requires` and no `excludes` can be a set's default, since it must suit every card. A card
+whose features only one layout can draw is given it (a card with loyalty is a planeswalker); a
+layout that wants a second face is the author's to pick, never automatic, because a card that
+can be turned over is not a card that is split in two. A picture that is a whole card is drawn
+by the same template as any card, over its picture.
 
 ## Staging
 
@@ -171,10 +189,10 @@ matching `scan-*` template, which is what `art_is_card` selects today.
 2. **Templates** (in progress). Done: the XML format, its loader and checker (`src/template.rs`),
    the renderer (`public/templates.js`, `card-face.js`), the standard layout as a template
    (measured off a real card, so the art is the top half and the text box the bottom third),
-   and planeswalker, saga and token as data. One look so far: what used to be the classic,
-   borderless, full-art and Nexus looks are all `modern` now. To do: the rest of the layouts
-   MTG Nexus offers (dual face, prepared, adventure, omen, split, fuse, aftermath, battle,
-   textless token, game marker, semi-split, landscape), a default template per kind of card in
-   a set, and a template that draws both stats at once.
+   one look, and MTG Nexus's layouts as data — saga, token, textless token, game marker,
+   planeswalker, battle, adventure, prepared, omen, split, fuse, aftermath, semi-split and
+   landscape, the two-halved ones drawing the card's second face beside its own. To do: a
+   default template per kind of card in a set, a template that draws both stats at once, and
+   the transform crown on a scan.
 3. **Later.** Custom templates per account (an editor, storage, and the whitelist enforced on
    save).

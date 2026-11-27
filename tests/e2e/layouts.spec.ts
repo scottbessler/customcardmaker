@@ -102,9 +102,9 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
   await feature(page, "power_toughness").uncheck();
 
   // A token is a card with no mana cost, drawn by the Token template.
-  await expect(page.locator(".look-option", { hasText: "Token" })).toHaveCount(0);
+  await expect(page.locator(".look-option", { hasText: /Token/ })).toHaveCount(0);
   await feature(page, "cost").uncheck();
-  await page.locator(".look-option", { hasText: "Token" }).click();
+  await page.locator(".look-option", { hasText: /Token/ }).click();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-token/);
   await expect(page.locator('input[name="mana_cost"]')).toHaveCount(0);
   await expect(page.locator(".preview .mtg-cost")).toBeHidden();
@@ -136,6 +136,39 @@ test("every layout keeps its parts on the card", async ({ page }) => {
     ".frame-sample:nth-child(4) .mtg-art",
   ]);
   await expectImage(page.locator(".frames-grid"), "layouts-modern.png");
+});
+
+test("every template keeps its parts on the card", async ({ page }) => {
+  await page.goto("/dev/frames?templates=1");
+  await expect(page.locator(".frame-sample .mtg-card")).toHaveCount(15);
+  await page.evaluate(() => document.fonts.ready);
+  const problems = await page.evaluate(() =>
+    [...document.querySelectorAll(".frame-sample")].flatMap((sample) => {
+      const card = sample.querySelector(".mtg-card")!;
+      const bounds = card.getBoundingClientRect();
+      const label = (sample as HTMLElement).dataset.template;
+      // A template draws the parts it has a place for, and may have none of some.
+      const parts = [...card.querySelectorAll(".mtg-name, .mtg-type, .mtg-box, .mtg-art")];
+      if (!parts.length) return [`${label}: nothing drawn`];
+      return parts.flatMap((box) => {
+        const b = box.getBoundingClientRect();
+        const inside = b.left >= bounds.left - 0.5 && b.right <= bounds.right + 0.5 && b.top >= bounds.top - 0.5 && b.bottom <= bounds.bottom + 0.5;
+        return inside ? [] : [`${label}: ${box.className} leaves the card`];
+      });
+    }),
+  );
+  expect(problems).toEqual([]);
+  await expectLayout(page, "templates", [
+    '.frame-sample[data-template="modern"] .mtg-art',
+    '.frame-sample[data-template="battle"] .mtg-pt',
+    '.frame-sample[data-template="textless-token"] .mtg-name',
+    '.frame-sample[data-template="split"] .mtg-art',
+    '.frame-sample[data-template="split"] .mtg-box',
+    '.frame-sample[data-template="aftermath"] .mtg-box',
+    '.frame-sample[data-template="adventure"] .mtg-box',
+    '.frame-sample[data-template="semi-split"] .mtg-art',
+  ]);
+  await expectImage(page.locator(".frames-grid"), "templates.png");
 });
 
 test("a standard card is split the way a real one is", async ({ page }) => {

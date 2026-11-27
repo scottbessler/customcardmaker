@@ -1,0 +1,26 @@
+<!-- Split: a card in two halves, the second half on the back face. Each half is a card of
+     its own, the art beside its name, type and text, and the halves are stacked. -->
+<template id="split" label="Split" requires="back cost" frame="inherit">
+  <art x="5" y="4.5" w="44" h="63"/>
+  <plate role="name" x="51" y="5" w="45" h="7.2">
+    <field name="name"/>
+    <field name="mana_cost"/>
+  </plate>
+  <plate role="type" x="51" y="13" w="45" h="6.4">
+    <field name="type_line"/>
+  </plate>
+  <box x="51" y="20" w="45" h="47.5">
+    <field name="rules_text"/>
+  </box>
+  <art x="5" y="73" w="44" h="62" face="back"/>
+  <plate role="name" x="51" y="73.5" w="45" h="7.2" face="back">
+    <field name="name"/>
+    <field name="mana_cost"/>
+  </plate>
+  <plate role="type" x="51" y="81.5" w="45" h="6.4" face="back">
+    <field name="type_line"/>
+  </plate>
+  <box x="51" y="88.5" w="45" h="46" face="back">
+    <field name="rules_text"/>
+  </box>
+</template>

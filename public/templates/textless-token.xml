@@ -1,0 +1,10 @@
+<!-- Textless token: full-art with no mana and no text — a picture, a name and a stat. -->
+<template id="textless-token" label="Textless token" excludes="cost" frame="inherit">
+  <art x="0" y="0" w="100" h="139.68"/>
+  <plate role="name" x="5" y="4.4" w="90" h="8">
+    <field name="name"/>
+  </plate>
+  <stat x="78" y="124.5" w="16.4" h="9.2">
+    <field name="power_toughness"/>
+  </stat>
+</template>

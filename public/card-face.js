@@ -68,36 +68,40 @@ function Rules({ card, as }) {
   return (card.rules_text ? card.rules_text.split("\n") : []).map((text) => html`<${Line} text=${text} />`);
 }
 
-/** One element of a template's body, drawn with the card's own fields. */
-function Part({ part, card, turned, whole }) {
+/**
+ * One element of a template's body, drawn with the card's own fields — or the second
+ * face's, when the element says `face="back"` (the split and adventure layouts).
+ */
+function Part({ part, card, turned, whole, marker }) {
   const style = place(part);
+  const source = part.face === "back" && whole.back ? whole.back : card;
   const field = (name) => part.fields.find((f) => f.name === name);
   if (part.tag === "art") {
-    return html`<div class=${`mtg-art${card.art ? " has-art" : ""}`} style=${`${style}${card.art ? `;background-image:url(${artUrl(card.art)})` : ""}`}></div>`;
+    return html`<div class=${`mtg-art${source.art ? " has-art" : ""}`} style=${`${style}${source.art ? `;background-image:url(${artUrl(source.art)})` : ""}`}></div>`;
   }
   if (part.tag === "plate" && part.role === "name") {
     return html`<header class="mtg-name" style=${style}>
-      ${whole.back ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
-      <span class="mtg-title">${card.name || html`<em>Untitled</em>`}</span>
-      ${field("mana_cost") ? html`<span class="mtg-cost">${costSymbols(card.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>` : null}
+      ${marker ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
+      <span class="mtg-title">${source.name || html`<em>Untitled</em>`}</span>
+      ${field("mana_cost") ? html`<span class="mtg-cost">${costSymbols(source.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>` : null}
     </header>`;
   }
-  if (part.tag === "plate") return html`<div class="mtg-type" style=${style}><span>${card.type_line}</span><i class="mtg-pip"></i></div>`;
+  if (part.tag === "plate") return html`<div class="mtg-type" style=${style}><span>${source.type_line}</span><i class="mtg-pip"></i></div>`;
   if (part.tag === "box") {
     const rules = field("rules_text");
     const flavor = field("flavor_text");
-    const lines = flavor && card.flavor_text ? card.flavor_text.split("\n") : [];
+    const lines = flavor && source.flavor_text ? source.flavor_text.split("\n") : [];
     return html`<div class="mtg-box" style=${style}>
-      <div class="mtg-rules" style=${`font-size:${rulesSize(card)}cqw`}>
-        ${rules ? html`<${Rules} card=${card} as=${rules.as} />` : null}
+      <div class="mtg-rules" style=${`font-size:${rulesSize(source)}cqw`}>
+        ${rules ? html`<${Rules} card=${source} as=${rules.as} />` : null}
         ${lines.length ? html`<div class="mtg-flavor">${lines.map((text) => html`<p>${text}</p>`)}</div>` : null}
       </div>
     </div>`;
   }
   // A stat: the first of its fields the card has a value for.
-  const stat = part.fields.find((f) => card[f.name]);
+  const stat = part.fields.find((f) => source[f.name]);
   if (!stat) return null;
-  return html`<div class=${`mtg-pt${stat.name === "loyalty" ? " mtg-loyalty" : ""}`} style=${style}>${card[stat.name]}</div>`;
+  return html`<div class=${`mtg-pt${stat.name === "loyalty" ? " mtg-loyalty" : ""}`} style=${style}>${source[stat.name]}</div>`;
 }
 
 /**
@@ -114,6 +118,10 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
   // A whole-card picture is the card; the plates and text box go on top of it.
   const scan = card.art && card.art_is_card;
   const { layout, look } = resolveTemplate(card.template ? card : { ...card, template: whole.template }, template);
+  // A layout that places the second face draws both at once (a split card), so neither
+  // gets the transform marker; one that does not is a card you turn over.
+  const paired = layout.body.some((part) => part.face === "back");
+  const marker = Boolean(whole.back && !paired);
   const collector = number ? `${String(number).padStart(3, "0")}${total ? `/${String(total).padStart(3, "0")}` : ""}` : "";
   const label = card.name || "Untitled card";
   const Tag = onClick ? "button" : "article";
@@ -126,7 +134,7 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
     onClick=${onClick}
   >
     <div class="mtg-frame">
-      ${layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} whole=${whole} />`)}
+      ${layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} whole=${whole} marker=${marker} />`)}
       <footer class="mtg-foot">
         <span>${collector}${collector && code ? " • " : ""}${code}</span>
         <span>${card.artist ? `Illus. ${card.artist}` : ""}</span>

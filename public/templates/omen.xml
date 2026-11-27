@@ -1,0 +1,17 @@
+<!-- Omen: like prepared, with the omen's own text given the wider box. -->
+<template id="omen" label="Omen" requires="back" frame="inherit">
+  <plate role="name" x="4.6" y="6.9" w="90.8" h="7.9">
+    <field name="name"/>
+    <field name="mana_cost"/>
+  </plate>
+  <art x="7.7" y="15.5" w="84.6" h="55"/>
+  <plate role="type" x="4.6" y="71.5" w="90.8" h="8.4">
+    <field name="type_line"/>
+  </plate>
+  <box x="6.8" y="80.5" w="34" h="47.5">
+    <field name="rules_text"/>
+  </box>
+  <box x="43" y="80.5" w="52" h="47.5" face="back">
+    <field name="rules_text"/>
+  </box>
+</template>

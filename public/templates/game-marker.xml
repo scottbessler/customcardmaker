@@ -1,0 +1,9 @@
+<!-- Game marker: a marker card — a name, and a box for what it does. No art, no mana. -->
+<template id="game-marker" label="Game marker" excludes="cost" frame="inherit">
+  <plate role="name" x="4.6" y="6.9" w="90.8" h="7.9">
+    <field name="name"/>
+  </plate>
+  <box x="6.8" y="86.1" w="86.4" h="43.4">
+    <field name="rules_text"/>
+  </box>
+</template>

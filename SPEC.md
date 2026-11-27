@@ -71,13 +71,15 @@ nothing about real Magic cards.
   and a hairline round each piece. Ink on every plate and text box keeps a WCAG
   contrast of at least 7. A development build serves `/dev/frames?template=<id>`, one card
   per frame; a production build has no such page.
-- **R8.** A card wears a **template**: `modern` (the one look so far), or `saga`, `token` or
-  `planeswalker` (`card.template`; empty means the set's `default_template`, itself
-  `modern`, and only ever a look every card can wear). A template names the
-  features it needs and the ones it cannot draw, and a card may not name one that cannot draw
-  its features (400). The editor shows a thumbnail of the card in each, and a colour chip for each
-  frame colour plus Auto. An unknown template or frame is a 400. The gallery draws a
-  public set with its default. (`src/card.rs`, `public/card-face.js`)
+- **R8.** A card wears a **template**: `modern` (the one look so far), or a layout — `saga`,
+  `token`, `textless-token`, `game-marker`, `planeswalker`, `battle`, `adventure`, `prepared`,
+  `omen`, `split`, `fuse`, `aftermath`, `semi-split`, `landscape` (`card.template`; empty means
+  the set's `default_template`, itself `modern`, and only ever a look every card can wear). A
+  template names what the card needs and what it cannot draw, and a card may not name one that
+  cannot draw what it has (400). A two-halved layout draws the card's second face beside its
+  own, so the card is one document with a `back`. The editor shows a thumbnail of the card in
+  each, and a colour chip for each frame colour plus Auto. An unknown template or frame is a
+  400. The gallery draws a public set with its default. (`src/card.rs`, `public/card-face.js`)
 - **R12.** The standard layout is a real card's: the art box is the top half of the card
   and the text box the bottom third, with the name plate above the art and the type line
   between, all in card-width units so it renders at any size. (Its places are in
