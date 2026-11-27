@@ -18,7 +18,7 @@ function Gallery() {
         ? html`<p class="muted empty">Nothing here yet. Mark a set public from its settings to put it here.</p>`
         : html`<div class="gallery-grid">
             ${sets.map((set) => html`<a class="gallery-tile" href=${`/gallery/${set.id}`} key=${set.id}>
-              <div class="gallery-thumb">${set.preview ? html`<${CardFace} card=${set.preview} code=${set.code} number=${1} total=${set.card_count} />` : null}</div>
+              <div class="gallery-thumb">${set.preview ? html`<${CardFace} card=${set.preview} template=${set.default_template} code=${set.code} number=${1} total=${set.card_count} />` : null}</div>
               <strong class="gallery-name">${set.name}</strong>
               <span class="gallery-meta">${set.code} · ${set.card_count} ${set.card_count === 1 ? "card" : "cards"}</span>
               <span class="gallery-by">by ${set.by}</span>

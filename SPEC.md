@@ -53,7 +53,8 @@ nothing about real Magic cards.
   typed in braces that the font has no symbol for is shown as typed, never as a
   blank disc. The footer says this is an unofficial fan tool and whose symbols
   they are; the sets are for personal, non-commercial use.
-- **R2.** The frame is derived, never stored: one colour in the cost → that colour;
+- **R2.** The frame defaults to what the cost says, and the author may override it with
+  any of the nine (`card.frame`; empty means Auto). From the cost: one colour in the cost → that colour;
   two or more → gold; none → land if the type line says Land, else artifact if it
   says Artifact, else colourless. Hybrid and Phyrexian symbols count for each
   colour they name. (`public/frame.js`)
@@ -65,7 +66,13 @@ nothing about real Magic cards.
 - **R7.** Each frame is drawn from three colours (a light edge, a dark edge, and a
   tint for the text box): bevelled plates for name and type, a tinted text box,
   and a hairline round each piece. Ink on every plate and text box keeps a WCAG
-  contrast of at least 7. `/frames` shows one card per frame.
+  contrast of at least 7. A development build serves `/dev/frames?template=<id>`, one card
+  per frame; a production build has no such page.
+- **R8.** A card wears a **template**: `modern`, `classic`, `borderless` or `full-art`
+  (`card.template`; empty means the set's `default_template`, itself `modern` until
+  changed). The editor shows a thumbnail of the card in each, and a colour chip for each
+  frame colour plus Auto. An unknown template or frame is a 400. The gallery draws a
+  public set with its default. (`src/card.rs`, `public/card-face.js`)
 - **R5.** A card's art fills the art box, cropped to cover it and centred; a card
   with none shows the striped placeholder.
 

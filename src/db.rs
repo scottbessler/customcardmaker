@@ -76,6 +76,9 @@ const MIGRATIONS: &[&str] = &[
     // set made before this existed stays private.
     "ALTER TABLE sets ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0;
     CREATE INDEX sets_public ON sets (is_public, updated_at);",
+    // 7: the look a set's cards wear unless a card says otherwise. Text, not a
+    // foreign key: the list of templates lives in code and grows without a migration.
+    "ALTER TABLE sets ADD COLUMN default_template TEXT NOT NULL DEFAULT 'modern';",
 ];
 
 #[derive(Clone)]

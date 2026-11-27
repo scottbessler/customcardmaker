@@ -1,7 +1,7 @@
 use crate::{
     app::AppState,
     art,
-    card::Card,
+    card::{self, Card},
     cockatrice,
     error::{ApiError, AppError},
     render,
@@ -117,6 +117,8 @@ pub struct SetPatch {
     code: Option<String>,
     /// Publish to the gallery, or take it back.
     public: Option<bool>,
+    /// The template a card with none of its own wears in this set.
+    default_template: Option<String>,
 }
 
 pub async fn patch_set(
@@ -127,8 +129,19 @@ pub async fn patch_set(
 ) -> Api<SetSummary> {
     let name = body.name.as_deref().map(sets::clean_name).transpose()?;
     let code = body.code.as_deref().map(sets::clean_code).transpose()?;
+    if let Some(template) = body.default_template.as_deref()
+        && !card::is_template(template)
+    {
+        return Err(AppError::bad_request("That is not a card template.").into());
+    }
+    let changes = sets::SetChanges {
+        name,
+        code,
+        public: body.public,
+        default_template: body.default_template,
+    };
     s.sets
-        .rename(me, id, name, code, body.public)
+        .rename(me, id, changes)
         .await?
         .map(Json)
         .ok_or_else(no_set)

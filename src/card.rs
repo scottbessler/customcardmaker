@@ -18,6 +18,54 @@ pub const MAX_FLAVOR_TEXT: usize = 600;
 pub const MAX_POWER_TOUGHNESS: usize = 12;
 pub const MAX_ARTIST: usize = 80;
 
+/// The looks a card can wear, as (id, label). One list: the picker in the editor
+/// and the check on what a card may name both read it, so they cannot disagree.
+pub const TEMPLATES: &[(&str, &str)] = &[
+    ("modern", "Modern"),
+    ("classic", "Classic"),
+    ("borderless", "Borderless"),
+    ("full-art", "Full art"),
+];
+
+/// What a card with no template of its own, in a set with no choice, looks like.
+pub const DEFAULT_TEMPLATE: &str = "modern";
+
+/// Frame colours an author may force, as (id, label). A card that names none takes
+/// its frame from its mana cost (see `public/frame.js`).
+pub const FRAMES: &[(&str, &str)] = &[
+    ("w", "White"),
+    ("u", "Blue"),
+    ("b", "Black"),
+    ("r", "Red"),
+    ("g", "Green"),
+    ("gold", "Gold"),
+    ("artifact", "Artifact"),
+    ("land", "Land"),
+    ("colorless", "Colourless"),
+];
+
+pub fn is_template(id: &str) -> bool {
+    TEMPLATES.iter().any(|(known, _)| *known == id)
+}
+
+pub fn is_frame(id: &str) -> bool {
+    FRAMES.iter().any(|(known, _)| *known == id)
+}
+
+/// The choices the editor offers, sent to the page alongside the limits.
+#[derive(Debug, Serialize)]
+pub struct Choices {
+    pub templates: &'static [(&'static str, &'static str)],
+    pub frames: &'static [(&'static str, &'static str)],
+    pub default_template: &'static str,
+}
+
+pub const CHOICES: Choices = Choices {
+    templates: TEMPLATES,
+    frames: FRAMES,
+    default_template: DEFAULT_TEMPLATE,
+};
+
 /// The bounds the editor enforces, sent to the page so the form never has a
 /// second, hand-copied idea of how long a field may be.
 #[derive(Debug, Serialize)]
@@ -68,6 +116,10 @@ pub struct Card {
     /// An upload (`/api/art/<id>`) shown in the art box. Only the owner's own
     /// uploads may be referenced; the route checks, the document just holds it.
     pub art: Option<Uuid>,
+    /// A frame colour forced by the author; empty means "from the mana cost".
+    pub frame: String,
+    /// The look of the card; empty means "the set's default".
+    pub template: String,
 }
 
 fn within(field: &str, value: &str, max: usize, multiline: bool) -> Result<(), AppError> {
@@ -101,6 +153,12 @@ impl Card {
             false,
         )?;
         within("artist", &self.artist, MAX_ARTIST, false)?;
+        if !self.frame.is_empty() && !is_frame(&self.frame) {
+            return Err(AppError::bad_request("That is not a frame colour."));
+        }
+        if !self.template.is_empty() && !is_template(&self.template) {
+            return Err(AppError::bad_request("That is not a card template."));
+        }
         Ok(())
     }
 }
@@ -139,5 +197,47 @@ mod tests {
             ..Card::default()
         };
         assert!(card.validate().is_err());
+    }
+
+    #[test]
+    fn a_card_may_only_name_a_frame_and_template_that_exist() {
+        let ok = Card {
+            frame: "gold".into(),
+            template: "classic".into(),
+            ..Card::default()
+        };
+        assert!(ok.validate().is_ok());
+        let auto = Card::default();
+        assert!(
+            auto.frame.is_empty() && auto.template.is_empty(),
+            "the default is: from the cost, and the set's choice"
+        );
+        assert!(
+            Card {
+                frame: "purple".into(),
+                ..Card::default()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Card {
+                template: "../../x".into(),
+                ..Card::default()
+            }
+            .validate()
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn the_default_template_is_one_of_the_templates() {
+        assert!(is_template(DEFAULT_TEMPLATE));
+        let ids: Vec<_> = TEMPLATES.iter().map(|(id, _)| id).collect();
+        assert_eq!(
+            ids.len(),
+            ids.iter().collect::<std::collections::HashSet<_>>().len(),
+            "ids are unique"
+        );
     }
 }

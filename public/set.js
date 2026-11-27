@@ -4,6 +4,7 @@ import { artUrl, prepareArt } from "/public/art.js";
 import { CardFace, Mana } from "/public/card-face.js";
 import { BulkBar, TransferDialog } from "/public/bulk.js";
 import { TypeBuilder } from "/public/type-builder.js";
+import { frameOf } from "/public/frame.js";
 
 const SAVE_DELAY_MS = 500;
 const RARITIES = ["common", "uncommon", "rare", "mythic"];
@@ -14,6 +15,8 @@ const app = document.getElementById("app");
 const setId = app.dataset.setId;
 // The server says how long each field may be, so the form never keeps its own copy.
 const limits = JSON.parse(document.getElementById("limits").textContent);
+// So does the list of looks and frame colours a card may name.
+const choices = JSON.parse(document.getElementById("choices").textContent);
 
 function Field({ label, count, children }) {
   return html`<label>
@@ -59,7 +62,7 @@ function Palette({ target, onInsert }) {
   </div>`;
 }
 
-function Editor({ card, onChange }) {
+function Editor({ card, template, onChange, onSetDefault }) {
   const [target, setTarget] = useState("mana_cost");
   const [uploading, setUploading] = useState(false);
   const [artError, setArtError] = useState("");
@@ -129,6 +132,26 @@ function Editor({ card, onChange }) {
           <i class="rarity-pip"></i>${rarity}
         </label>`)}
       </fieldset>
+    </fieldset>
+
+    <fieldset class="form-section frame-section">
+      <legend>Frame</legend>
+      <fieldset class="looks">
+        <legend>Template</legend>
+        ${choices.templates.map(([id, label]) => html`<label class=${`look-option${(card.template || template) === id ? " chosen" : ""}`}>
+          <input type="radio" name="template" value=${id} checked=${(card.template || template) === id} onChange=${() => onChange({ ...card, template: id === template ? "" : id })} />
+          <span class="look-thumb"><${CardFace} card=${{ ...card, template: id }} /></span>
+          <span class="look-name">${label}${id === template ? html` <small>set default</small>` : null}</span>
+        </label>`)}
+      </fieldset>
+      <fieldset class="tints">
+        <legend>Colour</legend>
+        ${[["", "Auto"], ...choices.frames].map(([id, label]) => html`<label class=${`tint-option tint-${id || "auto"}`}>
+          <input type="radio" name="frame" value=${id} checked=${card.frame === id} onChange=${() => onChange({ ...card, frame: id })} />
+          <i class=${`tint-chip mtg-card frame-${id || frameOf({ ...card, frame: "" })}`}></i>${label}${id === "" ? html` <small>(${choices.frames.find(([f]) => f === frameOf({ ...card, frame: "" }))?.[1]})</small>` : null}
+        </label>`)}
+      </fieldset>
+      <button type="button" class="quiet set-default-template" disabled=${!card.template || card.template === template} onClick=${() => onSetDefault(card.template)}>Use this look for every card in the set</button>
     </fieldset>
 
     <fieldset class="form-section">
@@ -341,7 +364,7 @@ function SetPage() {
   if (!detail) return html`<p class="error" role="alert">${error}</p>`;
   const { set, cards } = detail;
   const current = cards.find((c) => c.id === selected);
-  const face = (c) => html`<${CardFace} card=${c.card} code=${set.code} number=${c.position} total=${cards.length} />`;
+  const face = (c) => html`<${CardFace} card=${c.card} template=${set.default_template} code=${set.code} number=${c.position} total=${cards.length} />`;
 
   return html`
     <section class="set-bar">
@@ -362,6 +385,11 @@ function SetPage() {
           <label>Code<input name="set-code" defaultValue=${set.code} maxLength="5" onChange=${(e) => patchSet({ code: e.currentTarget.value })} /></label>
           <button type="button" class="danger delete-set" onClick=${() => setConfirming("set")}>Delete set</button>
         </div>
+        <label class="default-look">Default look
+          <select name="default-template" value=${set.default_template} onChange=${(e) => patchSet({ default_template: e.currentTarget.value })}>
+            ${choices.templates.map(([id, label]) => html`<option value=${id} selected=${id === set.default_template}>${label}</option>`)}
+          </select>
+        </label>
         <label class="public-toggle">
           <input type="checkbox" name="public" checked=${set.public} onChange=${(e) => patchSet({ public: e.currentTarget.checked })} />
           <span>Show this set in the public gallery</span>
@@ -391,6 +419,7 @@ function SetPage() {
       ${cards.map((c) => html`<div class=${`strip-item${bulk && picked.has(c.id) ? " picked" : ""}`} key=${c.id}>
         <${CardFace}
           card=${c.card}
+          template=${set.default_template}
           code=${set.code}
           number=${c.position}
           total=${cards.length}
@@ -412,7 +441,7 @@ function SetPage() {
               <button type="button" class="quiet danger-quiet delete-card" onClick=${() => setConfirming("card")}>Delete</button>
             </div>
           </div>
-          <${Editor} key=${current.id} card=${current.card} onChange=${(card) => edit(current.id, card)} />
+          <${Editor} key=${current.id} card=${current.card} template=${set.default_template} onChange=${(card) => edit(current.id, card)} onSetDefault=${(default_template) => patchSet({ default_template })} />
         </section>`
       : html`<p class="muted empty">No cards yet. Add the first one.</p>`}
 

@@ -1178,3 +1178,154 @@ async fn a_picture_that_cannot_be_fetched_is_skipped_not_fatal() {
     let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&me)).await;
     assert!(detail.body["cards"][0]["card"]["art"].is_null());
 }
+
+// ---- templates and frame colours -----------------------------------------
+
+#[tokio::test]
+async fn a_set_has_a_default_template_its_owner_can_change() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let bob = register(&app, "Bob").await;
+    let (set, _) = set_with(&app, &ada, "Looks", "LOK", &["A"]).await;
+
+    let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&ada)).await;
+    assert_eq!(detail.body["set"]["default_template"], "modern");
+
+    let changed = call(
+        &app,
+        "PATCH",
+        &format!("/api/sets/{set}"),
+        Some(json!({"default_template": "classic"})),
+        Some(&ada),
+    )
+    .await;
+    assert_eq!(changed.status, StatusCode::OK);
+    assert_eq!(changed.body["default_template"], "classic");
+    // Changing one thing leaves the rest alone.
+    assert_eq!(changed.body["name"], "Looks");
+    assert_eq!(changed.body["public"], false);
+
+    let bad = call(
+        &app,
+        "PATCH",
+        &format!("/api/sets/{set}"),
+        Some(json!({"default_template": "neon"})),
+        Some(&ada),
+    )
+    .await;
+    assert_eq!(bad.status, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        call(
+            &app,
+            "PATCH",
+            &format!("/api/sets/{set}"),
+            Some(json!({"default_template": "classic"})),
+            Some(&bob)
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
+
+    // It reaches the gallery, so a public set is drawn the way its maker chose.
+    call(
+        &app,
+        "PATCH",
+        &format!("/api/sets/{set}"),
+        Some(json!({"public": true})),
+        Some(&ada),
+    )
+    .await;
+    let list = call(&app, "GET", "/api/gallery", None, None).await;
+    assert_eq!(list.body[0]["default_template"], "classic");
+    let whole = call(&app, "GET", &format!("/api/gallery/{set}"), None, None).await;
+    assert_eq!(whole.body["default_template"], "classic");
+}
+
+#[tokio::test]
+async fn a_card_keeps_the_frame_and_template_it_names_and_may_name_only_real_ones() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let (set, ids) = set_with(&app, &ada, "Looks", "LOK", &["A"]).await;
+
+    let saved = call(
+        &app,
+        "PUT",
+        &format!("/api/cards/{}", ids[0]),
+        Some(json!({"name": "A", "frame": "gold", "template": "full-art"})),
+        Some(&ada),
+    )
+    .await;
+    assert_eq!(saved.status, StatusCode::OK);
+    assert_eq!(
+        (
+            saved.body["card"]["frame"].as_str(),
+            saved.body["card"]["template"].as_str()
+        ),
+        (Some("gold"), Some("full-art"))
+    );
+    let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&ada)).await;
+    assert_eq!(detail.body["cards"][0]["card"]["frame"], "gold");
+
+    // A blank card names neither: from its cost, and the set's choice.
+    let blank = call(
+        &app,
+        "POST",
+        &format!("/api/sets/{set}/cards"),
+        None,
+        Some(&ada),
+    )
+    .await;
+    assert_eq!(
+        (
+            blank.body["card"]["frame"].as_str(),
+            blank.body["card"]["template"].as_str()
+        ),
+        (Some(""), Some(""))
+    );
+
+    for bad in [
+        json!({"frame": "purple"}),
+        json!({"template": "neon"}),
+        json!({"frame": "gold; drop"}),
+    ] {
+        assert_eq!(
+            call(
+                &app,
+                "PUT",
+                &format!("/api/cards/{}", ids[0]),
+                Some(bad),
+                Some(&ada)
+            )
+            .await
+            .status,
+            StatusCode::BAD_REQUEST
+        );
+    }
+}
+
+#[tokio::test]
+async fn the_frames_gallery_exists_only_in_a_development_build() {
+    let dir = std::env::temp_dir().join(format!("customcardmaker-{}", Uuid::new_v4()));
+    let get = |app: Router| async move {
+        app.oneshot(Request::get("/dev/frames").body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+            .status()
+    };
+    let dev = app::router(AppState::open(&dir, true).await.unwrap());
+    assert_eq!(get(dev).await, StatusCode::OK);
+    let prod = app::router(AppState::open(&dir, false).await.unwrap());
+    assert_eq!(
+        get(prod.clone()).await,
+        StatusCode::NOT_FOUND,
+        "a visitor to the real site has nothing there"
+    );
+    // And the old address is gone everywhere.
+    let old = prod
+        .oneshot(Request::get("/frames").body(Body::empty()).unwrap())
+        .await
+        .unwrap()
+        .status();
+    assert_eq!(old, StatusCode::NOT_FOUND);
+}

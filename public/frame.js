@@ -18,8 +18,10 @@ export function colorsOf(cost) {
   return WUBRG.filter((c) => seen.has(c));
 }
 
-/** The frame treatment: a colour, `gold` for several, or `land`/`artifact`/`colorless`. */
+/** The frame treatment: the one named on the card, else from its cost: a colour, `gold` for several, or `land`/`artifact`/`colorless`. */
 export function frameOf(card) {
+  // A frame the author chose wins; otherwise it follows from the cost and type.
+  if (card.frame) return card.frame;
   const type = String(card.type_line ?? "").toLowerCase();
   const colors = colorsOf(card.mana_cost);
   if (colors.length > 1) return "gold";
