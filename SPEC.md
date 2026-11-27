@@ -169,13 +169,14 @@ nothing about real Magic cards.
   group. Subtypes are tokens with a typeahead. Both
   read and write the one `type_line` string, so typing it by hand and using the
   buttons always agree, and a word the buttons do not know is kept, never dropped.
+  A subtype-only draft keeps a leading dash so adding or removing card types
+  preserves its subtypes.
 - **B8.** Subtype suggestions come from the chosen card types (creature types for a
   Creature or Kindred, artifact types for an Artifact, and so on; all of them if
   none is chosen), names starting with what was typed first, minus those already
   chosen. A subtype that is not listed can still be added, capitalised. Enter or
-  comma adds, arrows choose, Escape closes, Backspace in the empty box removes the
-  last. A subtype may contain a space (`Time Lord`). The box is disabled until a
-  type is chosen. Field limits come from the server (`src/card.rs`), not the page.
+  comma adds. **Add** commits typed text. Arrows choose, Escape closes, Backspace in the empty box removes the
+  last. A subtype may contain a space (`Time Lord`). An empty subtype box is disabled until a type or supertype is chosen. Field limits come from the server (`src/card.rs`), not the page.
 - **B7.** Duplicate copies the selected card to the end of the set.
 - **B9.** *Select* puts the set in select mode: tapping a card picks it instead of
   opening it, the editor steps aside, and a bar shows how many are picked with

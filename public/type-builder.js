@@ -15,7 +15,8 @@ export function TypeBuilder({ typeLine, onChange }) {
 
   const change = (next) => onChange(buildTypeLine({ ...parts, ...next }));
   const hasType = parts.types.length > 0 || parts.supertypes.length > 0;
-  const options = open && hasType ? suggestSubtypes(parts.types, query, parts.subtypes) : [];
+  const canEditSubtypes = hasType || parts.subtypes.length > 0;
+  const options = open && canEditSubtypes ? suggestSubtypes(parts.types, query, parts.subtypes) : [];
 
   function add(name) {
     const subtype = titleCase(name);
@@ -57,7 +58,8 @@ export function TypeBuilder({ typeLine, onChange }) {
       >${name}</button>`;
 
   return html`<div class="type-builder">
-    <div class="type-picks" role="group" aria-label="Supertype">
+    <div class="type-picks" role="group" aria-labelledby="supertype-label">
+      <span class="field-label" id="supertype-label">Supertype</span>
       ${SUPERTYPES.map((name) => html`<button
         type="button"
         class="chip supertype-pick"
@@ -65,7 +67,8 @@ export function TypeBuilder({ typeLine, onChange }) {
         onClick=${() => change({ supertypes: toggled(parts.supertypes, name) })}
       >${name}</button>`)}
     </div>
-    <div class="type-picks" role="group" aria-label="Card type">
+    <div class="type-picks" role="group" aria-labelledby="card-type-label">
+      <span class="field-label" id="card-type-label">Card type</span>
       ${CARD_TYPES.map(typeButton)}
     </div>
     <details class="supplemental-types">
@@ -94,14 +97,18 @@ export function TypeBuilder({ typeLine, onChange }) {
           aria-autocomplete="list"
           aria-activedescendant=${active >= 0 && options[active] ? `subtype-option-${active}` : undefined}
           autocomplete="off"
-          disabled=${!hasType}
-          placeholder=${hasType ? "Elf, Druid, Equipment…" : "Choose a card type first"}
+          disabled=${!canEditSubtypes}
+          placeholder=${canEditSubtypes ? "Search or type a subtype" : "Choose a card type first"}
           value=${query}
           onInput=${(e) => { setQuery(e.currentTarget.value); setOpen(true); setActive(-1); }}
           onFocus=${() => setOpen(true)}
           onBlur=${() => { setOpen(false); setActive(-1); }}
           onKeyDown=${onKeyDown}
         />
+        ${canEditSubtypes && query.trim()
+          ? html`<button type="button" class="quiet subtype-add" aria-label="Add typed subtype"
+              onClick=${() => add(query)}>Add</button>`
+          : null}
       </div>
       <ul id="subtype-options" class="subtype-options" role="listbox" aria-label="Subtype suggestions" hidden=${options.length === 0}>
         ${options.map((name, index) => html`<li

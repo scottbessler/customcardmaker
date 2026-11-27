@@ -28,7 +28,7 @@ const ALL_SUBTYPES = [...new Set(Object.values(SUBTYPES).flat())].toSorted((a, b
 // Looked up by lower case, so `time lord` finds `Time Lord`.
 const CANONICAL = new Map(ALL_SUBTYPES.map((name) => [name.toLowerCase(), name]));
 const SEPARATOR = " — ";
-const SEPARATOR_PATTERN = /\s+[—–-]\s+/;
+const SEPARATOR_PATTERN = /[—–]|(?:^|\s)-(?:\s|$)/;
 
 /**
  * Reads a type line. Everything before the dash is a supertype or a card type;
@@ -36,13 +36,16 @@ const SEPARATOR_PATTERN = /\s+[—–-]\s+/;
  * Nothing is dropped: a word nobody recognises is kept as a type or subtype.
  */
 export function parseTypeLine(line) {
-  const [left = "", ...rest] = String(line ?? "").split(SEPARATOR_PATTERN);
+  const text = String(line ?? "");
+  const separator = SEPARATOR_PATTERN.exec(text);
+  const left = separator ? text.slice(0, separator.index) : text;
+  const right = separator ? text.slice(separator.index + separator[0].length) : "";
   const supertypes = [];
   const types = [];
   for (const word of left.split(/\s+/).filter(Boolean)) {
     (KNOWN_SUPERTYPES.has(word.toLowerCase()) ? supertypes : types).push(canonicalWord(word));
   }
-  const words = rest.join(" ").split(/\s+/).filter(Boolean);
+  const words = right.split(/\s+/).filter(Boolean);
   const subtypes = [];
   for (let i = 0; i < words.length; i += 1) {
     const pair = i + 1 < words.length ? `${words[i]} ${words[i + 1]}` : "";
@@ -61,12 +64,12 @@ function canonicalWord(word) {
   return known ?? word;
 }
 
-/** The line for some parts. Subtypes only follow a dash that something precedes. */
+/** Keep the separator while a draft has subtypes, even with an empty left side. */
 export function buildTypeLine({ supertypes, types, subtypes }) {
   const left = [...supertypes, ...types].join(" ");
   const right = subtypes.join(" ");
   if (!right) return left;
-  return left ? `${left}${SEPARATOR}${right}` : right;
+  return `${left}${SEPARATOR}${right}`.trimStart();
 }
 
 /** Adds or removes `name` from a list, case-insensitively. */
