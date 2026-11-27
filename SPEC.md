@@ -176,12 +176,24 @@ nothing about real Magic cards.
   download, or is not an image of a kind we serve, is skipped and the card
   imports without art. MTG Nexus's pictures are whole printed cards, so the form
   asks whether they are; if so each card with a picture is marked `art_is_card`
-  (B14); a token, planeswalker or saga (layouts Nexus draws differently) also gets
-  `keep_printed_text`, so its picture shows as printed. Rules text drops blank lines
+  (B14). A token (by its type line), planeswalker or saga (by its type line or layout)
+  becomes that layout (R9) and its loyalty is read; a layout we have no geometry for
+  (split, flip, adventure...) gets `keep_printed_text`, so its picture shows as printed. Rules text drops blank lines
   between paragraphs, and Nexus's `special` rarity is read as mythic. The set and its cards are written together or not at all,
   and only into the signed-in account. A signed-out visitor to `/import` is sent
   to `/`.
 
+- **R9.** A card has a **layout**: `normal` (or empty), `token`, `planeswalker` or `saga`
+  (`card.layout`), apart from its template: the layout is what is on the card and where,
+  the template how it is drawn. The places are those of a real MTG Nexus card, in
+  card-width units, so a card drawn natively and a scan with our text laid over it
+  (B14) share one geometry. A planeswalker's rules text is one ability per line,
+  `+1: ...`, `−3: ...`, `0: ...`; a line with no cost, or a bare `: ...`, is a static
+  ability; the loyalty (`card.loyalty`, up to 4 characters) replaces power/toughness. A
+  saga's is reminder text, then `I: ...` / `II, III: ...` per chapter, each beside its
+  numeral. A token has no mana cost, a centred name, and the art behind it all. An unknown
+  layout, or a loyalty over 4 characters, is a 400. (`public/frame.js`: `abilities`,
+  `chapters`.)
 - **B14.** `card.art_is_card` says the card's picture is a whole printed card, not
   just art. Such a card is drawn with the picture edge to edge and our name plate,
   type plate and text box laid over it, in a Nexus card's places and opaque, so

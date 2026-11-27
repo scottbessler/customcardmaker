@@ -120,3 +120,59 @@ button.mtg-card{cursor:pointer}
 .art-card .mtg-foot{display:none}
 /* Keeping the picture's own words: none of ours is drawn at all. */
 .art-card-plain .mtg-frame{display:none}
+
+/* ---- Layouts ---------------------------------------------------------------
+   A layout is what is on a card and where; the template is how it is drawn. The
+   places below are those of a real MTG Nexus card, in card-width units (100 wide,
+   140 tall), measured off real exports, so a card drawn natively and a scan with
+   our text laid over it share one geometry. `--fx`/`--fy` are where the template's
+   frame starts on the card: the children are absolute inside the frame, so each
+   place is taken from them. A scan has no frame of its own, so it starts at 0. */
+.mtg-card{--fx:3.4cqw;--fy:3.4cqw}
+.mtg-card.tpl-classic{--fx:4.6cqw;--fy:4.6cqw}
+.mtg-card.tpl-borderless,.mtg-card.tpl-full-art,.mtg-card.art-card{--fx:0cqw;--fy:0cqw}
+.lay-planeswalker .mtg-name,.lay-planeswalker .mtg-art,.lay-planeswalker .mtg-type,.lay-planeswalker .mtg-box,.lay-planeswalker .mtg-pt,
+.lay-saga .mtg-name,.lay-saga .mtg-art,.lay-saga .mtg-type,.lay-saga .mtg-box,
+.lay-token .mtg-name,.lay-token .mtg-art,.lay-token .mtg-type,.lay-token .mtg-box,.lay-token .mtg-pt{position:absolute;grid-row:auto;grid-column:auto}
+/* Planeswalker: tall art, abilities over its foot, loyalty where power/toughness would be. */
+.lay-planeswalker .mtg-name{position:absolute;left:calc(4.6cqw - var(--fx));top:calc(5.4cqw - var(--fy));width:90.8cqw;height:10cqw;right:auto;bottom:auto;padding:0 3.4cqw}
+.lay-planeswalker .mtg-art{position:absolute;left:calc(7.5cqw - var(--fx));top:calc(15cqw - var(--fy));width:85cqw;height:63cqw;right:auto;bottom:auto;}
+.lay-planeswalker .mtg-type{position:absolute;left:calc(4.6cqw - var(--fx));top:calc(77.8cqw - var(--fy));width:90.8cqw;height:9.8cqw;right:auto;bottom:auto;padding:0 3.4cqw}
+.lay-planeswalker .mtg-box{position:absolute;left:calc(5.4cqw - var(--fx));top:calc(88cqw - var(--fy));width:87.6cqw;height:38.4cqw;right:auto;bottom:auto;padding:1.6cqw 3cqw 1.6cqw 1.4cqw;justify-content:space-evenly}
+.lay-planeswalker .mtg-loyalty{position:absolute;left:calc(79.5cqw - var(--fx));top:calc(124.4cqw - var(--fy));width:15cqw;height:9.8cqw;right:auto;bottom:auto;min-width:0;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw;border-radius:1.4cqw}
+/* Saga: chapters down the left, art on the right, the type line across the foot. */
+.lay-saga .mtg-name{position:absolute;left:calc(4.6cqw - var(--fx));top:calc(5cqw - var(--fy));width:90.8cqw;height:9.4cqw;right:auto;bottom:auto;padding:0 3.4cqw}
+.lay-saga .mtg-art{position:absolute;left:calc(50cqw - var(--fx));top:calc(15cqw - var(--fy));width:42.5cqw;height:102cqw;right:auto;bottom:auto;}
+.lay-saga .mtg-box{position:absolute;left:calc(4.5cqw - var(--fx));top:calc(15cqw - var(--fy));width:45.5cqw;height:102.5cqw;right:auto;bottom:auto;padding:2cqw 2cqw 2cqw 3.4cqw;justify-content:space-evenly;border-radius:0}
+.lay-saga .mtg-type{position:absolute;left:calc(4.6cqw - var(--fx));top:calc(117.8cqw - var(--fy));width:90.8cqw;height:9cqw;right:auto;bottom:auto;padding:0 3.4cqw}
+/* Token: the art is the card; a centred name, and a type line and text box low down. */
+.lay-token .mtg-name{position:absolute;left:calc(5cqw - var(--fx));top:calc(5.2cqw - var(--fy));width:90cqw;height:10cqw;right:auto;bottom:auto;padding:0 3.4cqw;justify-content:center}
+.lay-token .mtg-art{position:absolute;left:calc(4cqw - var(--fx));top:calc(4cqw - var(--fy));width:92cqw;height:125cqw;right:auto;bottom:auto;}
+.lay-token .mtg-type{position:absolute;left:calc(4.6cqw - var(--fx));top:calc(93.4cqw - var(--fy));width:90.8cqw;height:9.6cqw;right:auto;bottom:auto;padding:0 3.4cqw}
+.lay-token .mtg-box{position:absolute;left:calc(6.5cqw - var(--fx));top:calc(103cqw - var(--fy));width:86.5cqw;height:26cqw;right:auto;bottom:auto;padding:2cqw 3cqw;background-image:none;background-color:color-mix(in srgb,var(--box) 82%,transparent)}
+.lay-token .mtg-pt{position:absolute;left:calc(78cqw - var(--fx));top:calc(124.5cqw - var(--fy));width:16.4cqw;height:9.2cqw;right:auto;bottom:auto;min-width:0;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw}
+.lay-token .mtg-cost{display:none}
+.lay-token .mtg-title{text-align:center;flex:1}
+.lay-token .mtg-art{z-index:0}
+.lay-token .mtg-name,.lay-token .mtg-type,.lay-token .mtg-box,.lay-token .mtg-pt{z-index:1}
+
+/* Planeswalker abilities: a loyalty cost beside each line. */
+.pw-rows{display:grid;gap:1.4cqw}
+.pw-row{display:grid;grid-template-columns:11cqw minmax(0,1fr);align-items:center;gap:1.2cqw}
+.pw-row p{margin:0}
+.pw-cost{justify-self:center;min-width:8.4cqw;padding:.8cqw 1cqw;border-radius:1cqw;background:var(--card-border);color:var(--card-foot-ink);font-size:4.4cqw;font-weight:800;line-height:1;text-align:center;clip-path:polygon(12% 0,88% 0,100% 50%,88% 100%,12% 100%,0 50%)}
+.pw-static .pw-cost{visibility:hidden}
+/* Saga chapters: a numeral hexagon beside each, and the reminder text above. */
+.lay-saga .mtg-rules{font-size:3.3cqw !important}
+.saga-rows{display:grid;gap:1.2cqw}
+.saga-reminder{font-style:italic;padding-bottom:1.2cqw}
+.saga-reminder p{margin:0 0 .4em}
+.saga-row{display:grid;grid-template-columns:8cqw minmax(0,1fr);align-items:center;gap:1.4cqw}
+.saga-marks{display:grid;gap:.4cqw;justify-items:center}
+.saga-mark{display:grid;place-items:center;width:7cqw;height:7.8cqw;font-style:normal;font-weight:800;font-size:3.4cqw;color:var(--card-text);background:linear-gradient(160deg,var(--frame-gold-hi),var(--frame-gold-lo));clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.saga-text p{margin:0 0 .3em}
+.saga-text p:last-child{margin-bottom:0}
+
+/* Over a scan the text box must hide what is printed under it, so a token's, which is
+   see-through over its art, is solid there. */
+.art-card.lay-token .mtg-box{background-color:var(--box)}

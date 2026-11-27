@@ -86,3 +86,37 @@ export function rulesSize(card) {
   if (weight <= 450) return 3.0;
   return 2.6;
 }
+
+/**
+ * A planeswalker's rules text, one ability per line: `+1: Draw a card`, `−X: ...`,
+ * `0: ...`. A line with no loyalty cost (a static ability, or Nexus's bare `: ...`)
+ * has an empty cost. A minus may be typed `-`, `–` or `−`; it is drawn as `−`.
+ */
+export function abilities(text) {
+  return String(text ?? "")
+    .split("\n")
+    .filter((line) => line.trim())
+    .map((line) => {
+      const match = /^\s*([+\-–−]\s*(?:\d+|X)|0)\s*:\s*(.*)$/i.exec(line);
+      if (match) return { cost: match[1].replace(/\s+/g, "").replace(/[-–]/, "−").toUpperCase(), text: match[2] };
+      return { cost: "", text: line.replace(/^\s*:\s*/, "") };
+    });
+}
+
+/**
+ * A saga's rules text: reminder text first, then one line per chapter, `I: ...` or
+ * `I, II: ...`. A line after a chapter that names none belongs to that chapter.
+ * Chapters are numbered in Roman numerals only.
+ */
+export function chapters(text) {
+  const reminder = [];
+  const list = [];
+  for (const line of String(text ?? "").split("\n")) {
+    if (!line.trim()) continue;
+    const match = /^\s*([IVX]+(?:\s*[,–-]\s*[IVX]+)*)\s*:\s*(.*)$/.exec(line);
+    if (match) list.push({ marks: match[1].split(/\s*[,–-]\s*/), lines: [match[2]] });
+    else if (list.length) list.at(-1).lines.push(line);
+    else reminder.push(line.replace(/^\s*:\s*/, ""));
+  }
+  return { reminder, chapters: list };
+}

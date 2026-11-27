@@ -78,12 +78,25 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
 
     let layout = prop
         .and_then(|prop| text(prop, "layout"))
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .to_ascii_lowercase();
     let type_line = field("type");
-    let printed_layout = layout.eq_ignore_ascii_case("planeswalker")
-        || ["token", "saga", "planeswalker"]
-            .iter()
-            .any(|word| type_line.to_ascii_lowercase().contains(word));
+    let lowered = type_line.to_ascii_lowercase();
+    // What the card is, by its type first (a transform's back may be a saga), then by
+    // the layout the file names.
+    let ours = if lowered.contains("token") {
+        "token"
+    } else if lowered.contains("planeswalker") || layout == "planeswalker" {
+        "planeswalker"
+    } else if lowered.contains("saga") || layout == "saga" {
+        "saga"
+    } else {
+        ""
+    };
+    // A layout Nexus draws in a way we have no geometry for (split, flip, adventure...):
+    // its picture is kept as printed.
+    let printed_layout =
+        ours.is_empty() && !matches!(layout.as_str(), "" | "normal" | "transform" | "modal_dfc");
 
     let card = Card {
         name: text(node, "name").unwrap_or_default(),
@@ -95,6 +108,8 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
             .unwrap_or_default(),
         rules_text: paragraphs(text(node, "text").unwrap_or_default()),
         power_toughness: field("pt"),
+        loyalty: field("loyalty"),
+        layout: ours.to_string(),
         ..Card::default()
     };
 
@@ -295,6 +310,7 @@ You can only Activate this Ability: Sacrifice Bandage
 <card><name>Dog</name><text></text><prop><layout>normal</layout><side>front</side><type>Token Creature — Dog</type><pt>1/1</pt></prop><set rarity="mythic" picurl="https://example.test/b.jpg" num="2">ALA</set></card>
 <card><name>Munchkin</name><text>+1: Add {B}{B}</text><prop><layout>planeswalker</layout><side>front</side><type>Legendary Planeswalker — Bird</type><manacost>{2}{W}{W}{W}</manacost><loyalty>4</loyalty></prop><set rarity="mythic" picurl="https://example.test/c.jpg" num="3">ALA</set></card>
 <card><name>Jorgan</name><text>I: Draw.</text><prop><layout>transform</layout><side>back</side><type>Enchantment — Saga</type></prop><set rarity="uncommon" picurl="https://example.test/d.jpg" num="4">ALA</set></card>
+<card><name>Cut</name><text>Deal 2.</text><prop><layout>split</layout><side>front</side><type>Instant</type><manacost>{R}</manacost></prop><set rarity="common" picurl="https://example.test/e.jpg" num="5">ALA</set></card>
 </cards></cockatrice_carddatabase>"#;
 
     #[test]
@@ -308,8 +324,12 @@ You can only Activate this Ability: Sacrifice Bandage
         );
         // "special" has no pip of its own; it is shown as mythic.
         assert_eq!(cards[0].card.rarity, Rarity::Mythic);
-        // A normal card can be drawn over; a token, planeswalker or saga cannot.
+        // Token, planeswalker and saga are layouts of our own now, and are drawn over.
+        let layouts: Vec<_> = cards.iter().map(|c| c.card.layout.as_str()).collect();
+        assert_eq!(layouts, ["", "token", "planeswalker", "saga", ""]);
+        assert_eq!(cards[2].card.loyalty, "4");
+        // One we have no geometry for keeps its picture as printed.
         let printed: Vec<_> = cards.iter().map(|c| c.printed_layout).collect();
-        assert_eq!(printed, [false, true, true, true]);
+        assert_eq!(printed, [false, false, false, false, true]);
     }
 }

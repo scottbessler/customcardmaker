@@ -17,6 +17,20 @@ pub const MAX_RULES_TEXT: usize = 1500;
 pub const MAX_FLAVOR_TEXT: usize = 600;
 pub const MAX_POWER_TOUGHNESS: usize = 12;
 pub const MAX_ARTIST: usize = 80;
+pub const MAX_LOYALTY: usize = 4;
+
+/// How a card is laid out, as (id, label): what is on it and where, apart from the
+/// look (template) it wears. A card that names none is a normal card.
+pub const LAYOUTS: &[(&str, &str)] = &[
+    ("normal", "Normal"),
+    ("token", "Token"),
+    ("planeswalker", "Planeswalker"),
+    ("saga", "Saga"),
+];
+
+pub fn is_layout(id: &str) -> bool {
+    LAYOUTS.iter().any(|(known, _)| *known == id)
+}
 
 /// The looks a card can wear, as (id, label). One list: the picker in the editor
 /// and the check on what a card may name both read it, so they cannot disagree.
@@ -57,12 +71,14 @@ pub fn is_frame(id: &str) -> bool {
 pub struct Choices {
     pub templates: &'static [(&'static str, &'static str)],
     pub frames: &'static [(&'static str, &'static str)],
+    pub layouts: &'static [(&'static str, &'static str)],
     pub default_template: &'static str,
 }
 
 pub const CHOICES: Choices = Choices {
     templates: TEMPLATES,
     frames: FRAMES,
+    layouts: LAYOUTS,
     default_template: DEFAULT_TEMPLATE,
 };
 
@@ -76,6 +92,7 @@ pub struct Limits {
     pub rules_text: usize,
     pub flavor_text: usize,
     pub power_toughness: usize,
+    pub loyalty: usize,
     pub artist: usize,
 }
 
@@ -86,6 +103,7 @@ pub const LIMITS: Limits = Limits {
     rules_text: MAX_RULES_TEXT,
     flavor_text: MAX_FLAVOR_TEXT,
     power_toughness: MAX_POWER_TOUGHNESS,
+    loyalty: MAX_LOYALTY,
     artist: MAX_ARTIST,
 };
 
@@ -112,6 +130,10 @@ pub struct Card {
     pub flavor_text: String,
     /// `2/3` for a creature, empty otherwise.
     pub power_toughness: String,
+    /// A planeswalker's starting loyalty: `4`, or `X`.
+    pub loyalty: String,
+    /// `normal` (or empty), `token`, `planeswalker` or `saga`.
+    pub layout: String,
     pub artist: String,
     /// An upload (`/api/art/<id>`) shown in the art box. Only the owner's own
     /// uploads may be referenced; the route checks, the document just holds it.
@@ -159,7 +181,11 @@ impl Card {
             MAX_POWER_TOUGHNESS,
             false,
         )?;
+        within("loyalty", &self.loyalty, MAX_LOYALTY, false)?;
         within("artist", &self.artist, MAX_ARTIST, false)?;
+        if !self.layout.is_empty() && !is_layout(&self.layout) {
+            return Err(AppError::bad_request("That is not a card layout."));
+        }
         if !self.frame.is_empty() && !is_frame(&self.frame) {
             return Err(AppError::bad_request("That is not a frame colour."));
         }
@@ -246,5 +272,25 @@ mod tests {
             ids.iter().collect::<std::collections::HashSet<_>>().len(),
             "ids are unique"
         );
+    }
+
+    #[test]
+    fn a_card_may_only_name_a_layout_that_exists() {
+        let ok = Card {
+            layout: "planeswalker".into(),
+            loyalty: "4".into(),
+            ..Card::default()
+        };
+        assert!(ok.validate().is_ok());
+        let bad = Card {
+            layout: "split".into(),
+            ..Card::default()
+        };
+        assert!(bad.validate().is_err());
+        let long = Card {
+            loyalty: "12345".into(),
+            ..Card::default()
+        };
+        assert!(long.validate().is_err());
     }
 }

@@ -146,6 +146,17 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
 
     <fieldset class="form-section frame-section">
       <legend>Frame</legend>
+      <fieldset class="tints layouts">
+        <legend>Layout</legend>
+        ${choices.layouts.map(([id, label]) => html`<label class="tint-option">
+          <input type="radio" name="layout" value=${id} checked=${(card.layout || "normal") === id} onChange=${() => onChange({ ...card, layout: id === "normal" ? "" : id })} />${label}
+        </label>`)}
+      </fieldset>
+      <p class="muted layout-hint">${card.layout === "planeswalker"
+        ? "One ability per line: +1: Draw a card. A line with no cost, or starting with a colon, is a static ability."
+        : card.layout === "saga"
+        ? "Reminder text first, then one line per chapter: I: Draw a card. II, III: Gain 2 life."
+        : ""}</p>
       ${card.art && card.art_is_card
         ? html`<p class="muted looks-note">A whole-card picture is drawn as it is, so it has no template. The colour below tints our text plates over it.</p>`
         : html`<fieldset class="looks">
@@ -211,7 +222,11 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
     <fieldset class="form-section">
       <legend>Details</legend>
       <div class="row">
-        <${Field} label="Power / toughness"><input placeholder="2/3" autocomplete="off" ...${text("power_toughness")} /><//>
+        ${card.layout === "planeswalker"
+          ? html`<${Field} label="Loyalty"><input placeholder="4" autocomplete="off" ...${text("loyalty")} /><//>`
+          : card.layout === "saga"
+          ? null
+          : html`<${Field} label="Power / toughness"><input placeholder="2/3" autocomplete="off" ...${text("power_toughness")} /><//>`}
         <${Field} label="Artist"><input autocomplete="off" ...${text("artist")} /><//>
       </div>
     </fieldset>

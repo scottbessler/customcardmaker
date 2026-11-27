@@ -89,6 +89,10 @@ that changes behaviour, not here.
   - [x] Per card, with a default for the set; saved in the card document
   - [x] The `/frames` page makes no sense to a visitor: remove it from the app. Keep
         what it gave the tests (every frame rendered side by side) as a dev-only page
+  - [x] Layouts: token, planeswalker (with loyalty) and saga, drawn natively and over
+        a Nexus scan, in every template
+  - [ ] Still to do: transform / double-faced cards (two faces, flip in the editor, linked
+        on import by `<related>`), then split, adventure, flip and modal layouts
   - [ ] Still to do: match the real MTG Nexus template list (Nexus's creator refuses automated
         fetches, so ask for names or screenshots)
 

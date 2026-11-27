@@ -1368,3 +1368,34 @@ async fn pictures_can_be_marked_as_whole_cards_on_import() {
     let art_only = import(false).await;
     assert_eq!(art_only["cards"][0]["card"]["art_is_card"], false);
 }
+
+#[tokio::test]
+async fn a_card_may_name_a_layout_and_a_loyalty_but_only_real_layouts() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let (_set, ids) = set_with(&app, &ada, "Looks", "LOK", &["A"]).await;
+    let put = |body: Value| {
+        let app = app.clone();
+        let ada = ada.clone();
+        let id = ids[0].clone();
+        async move {
+            call(
+                &app,
+                "PUT",
+                &format!("/api/cards/{id}"),
+                Some(body),
+                Some(&ada),
+            )
+            .await
+        }
+    };
+
+    let saved = put(json!({"name": "A", "layout": "planeswalker", "loyalty": "4"})).await;
+    assert_eq!(saved.status, StatusCode::OK);
+    assert_eq!(saved.body["card"]["layout"], "planeswalker");
+    assert_eq!(saved.body["card"]["loyalty"], "4");
+
+    for bad in [json!({"layout": "split"}), json!({"loyalty": "12345"})] {
+        assert_eq!(put(bad).await.status, StatusCode::BAD_REQUEST);
+    }
+}
