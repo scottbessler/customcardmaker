@@ -180,6 +180,9 @@ nothing about real Magic cards.
   becomes that layout (R9) and its loyalty is read; a layout we have no geometry for
   (split, flip, adventure...) gets `keep_printed_text`, so its picture shows as printed.
   A transform's two `<card>`s (the back marked `side=back`, each naming the other in
+  `<related>`) become one card with a back face (R10), each face with its own picture; a
+  back whose front is not in the file stays a card of its own.
+  A transform's two `<card>`s (the back marked `side=back`, each naming the other in
   `<related>`) become one card with a back face, each face with its own picture; a back
   whose front is not in the file stays a card of its own. Rules text drops blank lines
   between paragraphs, and Nexus's `special` rarity is read as mythic. The set and its cards are written together or not at all,
