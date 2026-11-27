@@ -21,6 +21,7 @@ const FILES: &[&str] = &[
     include_str!("../public/templates/classic.xml"),
     include_str!("../public/templates/borderless.xml"),
     include_str!("../public/templates/full-art.xml"),
+    include_str!("../public/templates/nexus.xml"),
     include_str!("../public/templates/planeswalker.xml"),
     include_str!("../public/templates/saga.xml"),
     include_str!("../public/templates/token.xml"),
@@ -49,9 +50,10 @@ impl Template {
         self.requires.iter().all(has) && !self.excludes.iter().any(has)
     }
 
-    /// A look any card can wear, so a set may make it its default.
+    /// A look: a frame of its own that any card can wear, so a set may make it its default. A
+    /// template that takes its frame from the card (`inherit`) is a layout, not a look.
     pub fn is_look(&self) -> bool {
-        self.requires.is_empty() && self.excludes.is_empty()
+        self.requires.is_empty() && self.excludes.is_empty() && self.frame != "inherit"
     }
 }
 
@@ -221,6 +223,7 @@ mod tests {
                 "classic",
                 "borderless",
                 "full-art",
+                "nexus",
                 "planeswalker",
                 "saga",
                 "token"
@@ -235,6 +238,8 @@ mod tests {
     #[test]
     fn the_frames_are_looks_and_the_rest_say_what_they_need() {
         assert!(get("modern").is_some_and(Template::is_look));
+        // A layout takes the card's frame, so it is not a look a set can default to.
+        assert!(!get("nexus").is_some_and(Template::is_look));
         let walker = get("planeswalker").unwrap();
         assert_eq!(walker.requires, ["loyalty"]);
         assert!(!walker.is_look());

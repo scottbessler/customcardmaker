@@ -6,7 +6,7 @@ import { CardFace, Mana } from "/public/card-face.js";
 import { BulkBar, TransferDialog } from "/public/bulk.js";
 import { TypeBuilder } from "/public/type-builder.js";
 import { frameOf, worksWith } from "/public/frame.js";
-import { allTemplates } from "/public/templates.js";
+import { allTemplates, isLook } from "/public/templates.js";
 
 const SAVE_DELAY_MS = 500;
 const RARITIES = ["common", "uncommon", "rare", "mythic"];
@@ -470,7 +470,7 @@ function SetPage() {
         </div>
         <label class="default-look">Default look
           <select name="default-template" value=${set.default_template} onChange=${(e) => patchSet({ default_template: e.currentTarget.value })}>
-            ${allTemplates().filter((t) => !t.requires.length && !t.excludes.length).map(({ id, label }) => html`<option value=${id} selected=${id === set.default_template}>${label}</option>`)}
+            ${allTemplates().filter(isLook).map(({ id, label }) => html`<option value=${id} selected=${id === set.default_template}>${label}</option>`)}
           </select>
         </label>
         <label class="public-toggle">

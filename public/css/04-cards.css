@@ -108,12 +108,11 @@ button.mtg-card{cursor:pointer}
    template the card names, this is the geometry. */
 .mtg-card.art-card{background-size:100% 100%;background-position:center;background-repeat:no-repeat}
 .art-card .mtg-frame{inset:0;display:block;padding:0;background:none;box-shadow:none;border-radius:0}
-.art-card .mtg-name,.art-card .mtg-type,.art-card .mtg-box,.art-card .mtg-pt,.art-card .mtg-art{position:absolute}
-.art-card .mtg-name{left:4.6cqw;top:5.8cqw;width:90.8cqw;height:10cqw;padding:0 3.4cqw}
-.art-card .mtg-art{visibility:hidden;left:7.7cqw;top:15.5cqw;width:84.6cqw;height:62cqw}
-.art-card .mtg-type{left:4.6cqw;top:77.8cqw;width:90.8cqw;height:9.6cqw;padding:0 3.4cqw}
-.art-card .mtg-box{left:6.8cqw;top:87.4cqw;width:86.4cqw;height:40.6cqw;padding:2.6cqw 3cqw}
-.art-card .mtg-pt{left:78cqw;top:125cqw;right:auto;bottom:auto;width:16.4cqw;min-width:0;height:8.6cqw;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw}
+.art-card .mtg-art{visibility:hidden}
+/* Where the parts go is in nexus.xml; this is how they look. */
+.lay-nexus .mtg-name,.lay-nexus .mtg-type{padding:0 3.4cqw}
+.lay-nexus .mtg-box{padding:2.6cqw 3cqw}
+.lay-nexus .mtg-pt{min-width:0;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw}
 .art-card .mtg-title{font-size:5.6cqw}
 .art-card .mtg-type span{font-size:5cqw}
 .art-card .mana{font-size:4.6cqw}
@@ -133,7 +132,8 @@ button.mtg-card{cursor:pointer}
 .mtg-card.tpl-borderless,.mtg-card.tpl-full-art,.mtg-card.art-card{--fx:0cqw;--fy:0cqw}
 .lay-planeswalker .mtg-name,.lay-planeswalker .mtg-art,.lay-planeswalker .mtg-type,.lay-planeswalker .mtg-box,.lay-planeswalker .mtg-pt,
 .lay-saga .mtg-name,.lay-saga .mtg-art,.lay-saga .mtg-type,.lay-saga .mtg-box,
-.lay-token .mtg-name,.lay-token .mtg-art,.lay-token .mtg-type,.lay-token .mtg-box,.lay-token .mtg-pt{position:absolute;grid-row:auto;grid-column:auto}
+.lay-token .mtg-name,.lay-token .mtg-art,.lay-token .mtg-type,.lay-token .mtg-box,.lay-token .mtg-pt,
+.lay-nexus .mtg-name,.lay-nexus .mtg-art,.lay-nexus .mtg-type,.lay-nexus .mtg-box,.lay-nexus .mtg-pt{position:absolute;grid-row:auto;grid-column:auto}
 /* Planeswalker: tall art, abilities over its foot, loyalty where power/toughness would be. */
 .lay-planeswalker .mtg-name{padding:0 3.4cqw}
 .lay-planeswalker .mtg-type{padding:0 3.4cqw}

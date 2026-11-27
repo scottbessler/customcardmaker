@@ -121,17 +121,19 @@ that changes behaviour, not here.
     - [x] renderer: `public/templates.js` (`allTemplates`, `resolveTemplate`), `card-face.js`
           draws a template with a body; planeswalker, saga and token are data now, their
           geometry removed from `04-cards.css` (only styling is left there)
+    - [x] `nexus` template (a normal card as Nexus draws it, tall art): the scan overlay's
+          geometry now comes from it (`resolveTemplate(..., scan)`), so `.art-card` in
+          `04-cards.css` holds only styling; a scan of a planeswalker/saga/token already used
+          their own templates. (`keep_printed_text` stays: "draw none of ours".)
     - [ ] port the four looks' standard grid layout (name plate, art, type plate, text box, P/T,
           foot; `.mtg-frame` grid in `04-cards.css` for modern/classic/borderless/full-art) into
-          `<template>` bodies so a look is data too; keep the e2e image/geometry baselines green
-    - [ ] `scan-*` templates (the Nexus overlay, now `.art-card` rules in `04-cards.css`) replacing
-          the `art_is_card` special case; a scan template per layout (normal, planeswalker, saga,
-          token); `keep_printed_text` becomes "no template body"
+          `<template>` bodies so a look is data too; keep the e2e image/geometry baselines green.
+          Lowest value of what is left (they are our own looks, not Nexus layouts): do last
     - [ ] a set keeps a default template per kind of card (today one look for all, only a look)
     - [ ] both stats at once: a template that draws power/toughness and loyalty (creature
           planeswalker); today the planeswalker layout shows loyalty only
-    - [ ] delete what the above makes dead: the `.lay-*` position group and `layoutOf` leftovers,
-          `.art-card` geometry, `TEMPLATES`-style lists in `set.js`
+    - [ ] delete what the above makes dead: the `.lay-*` position-group CSS rule once the looks are
+          bodies
   - [ ] Later: split / adventure / flip / modal; custom templates per account (editor,
         per-account storage, the whitelist enforced on save)
 

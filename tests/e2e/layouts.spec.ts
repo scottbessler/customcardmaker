@@ -114,3 +114,32 @@ for (const template of ["modern", "classic", "borderless", "full-art"]) {
     await expectImage(page.locator(".frames-grid"), `layouts-${template}.png`);
   });
 }
+
+test("the Nexus template lays a normal card out the way Nexus does, with a tall art box", async ({ page }) => {
+  await registerUser(page, "nexus");
+  await page.fill('.new-set input[name="name"]', "Nexus");
+  await page.fill('.new-set input[name="code"]', "NEX");
+  await page.click(".new-set button");
+  await expect(page.locator("h1")).toBeVisible();
+  await page.click(".add-card");
+  await page.fill('input[name="name"]', "Tall Art");
+  await page.fill('input[name="mana_cost"]', "{1}{U}");
+  await page.check('input[name="feature-power_toughness"]');
+  await page.fill('input[name="power_toughness"]', "2/2");
+  const art = page.locator(".preview .mtg-art");
+  const standard = (await art.boundingBox())!.height;
+
+  await page.locator(".look-option", { hasText: "Nexus" }).click();
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-nexus/);
+  // The art box is 62 card-widths tall there, against 41 in the standard layout.
+  const tall = (await art.boundingBox())!.height;
+  expect(tall / standard).toBeGreaterThan(1.4);
+  await expect(page.locator(".preview .mtg-pt")).toHaveText("2/2");
+  await expect(page.locator(".save-state")).toHaveText(/Saved/);
+
+  await page.reload();
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-nexus/);
+  // Nexus takes its frame from the card's look, so the set can still choose that.
+  await page.locator(".set-settings summary").click();
+  await expect(page.locator('select[name="default-template"] option')).toHaveText(["Modern", "Classic", "Borderless", "Full art"]);
+});

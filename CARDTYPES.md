@@ -137,10 +137,15 @@ and none of the `excludes`.
 | `classic` | | | heavier border, flat plates |
 | `borderless` | | | frame to the edge |
 | `full-art` | | | picture is the card, plates float on it |
+| `nexus` | | | a normal card as Nexus draws it: a tall art box (a layout: it takes the card's look for its frame) |
 | `saga` | | stats | chapters down the left, art on the right |
 | `token` | | cost | picture behind everything, centred name |
 | `planeswalker` | loyalty | | tall art, abilities over its foot, loyalty badge |
-| `scan-*` | the same as above | | the Nexus overlay for each of those (not written yet: a scan is still `art_is_card` in the stylesheet) |
+
+A **scan** (a card whose picture is a whole card, `art_is_card`) needs no templates of its own:
+it is drawn by the same template as any card, over its picture with no frame of its own. A card
+with no layout of its own is drawn by `nexus` there, since a whole-card picture is a Nexus card;
+a planeswalker, saga or token is drawn by its own. So a scan and a native card share a geometry.
 
 A card with `loyalty` is drawn by the `planeswalker` template whatever it names, and wears its
 own look or the set's for its frame (`resolveTemplate` in `public/templates.js`). A card with
@@ -161,8 +166,8 @@ matching `scan-*` template, which is what `art_is_card` selects today.
    fields are validated against them; the editor's form is built from them; the import turns
    on the right ones; old documents read as above. Drawing is unchanged.
 2. **Templates** (in progress). Done: the XML format, its loader and checker (`src/template.rs`),
-   the renderer (`public/templates.js`, `card-face.js`), and the planeswalker, saga and token
-   templates as data. To do: the four looks' standard layout as bodies, the `scan-*` templates
-   in place of `art_is_card`, and a default template per kind of card in a set.
+   the renderer (`public/templates.js`, `card-face.js`), the planeswalker, saga, token and Nexus
+   templates as data, and scans drawn by them. To do: the four looks' standard layout as bodies,
+   and a default template per kind of card in a set.
 3. **Later.** Split / adventure / flip / modal; custom templates per account (an editor,
    storage, and the whitelist enforced on save).
