@@ -11,7 +11,7 @@ let parsed = null;
 function body(xml) {
   const doc = new DOMParser().parseFromString(xml, "application/xml");
   return [...doc.documentElement.children].map((el) => {
-    const part = { tag: el.tagName, role: el.getAttribute("role") };
+    const part = { tag: el.tagName, role: el.getAttribute("role"), face: el.getAttribute("face") };
     // A <stat> may leave out w/h: null means "as big as its value".
     for (const side of ["x", "y", "w", "h"]) part[side] = el.hasAttribute(side) ? Number(el.getAttribute(side)) : null;
     part.fields = [...el.children].map((field) => ({ name: field.getAttribute("name"), as: field.getAttribute("as") }));
@@ -29,6 +29,12 @@ export function allTemplates() {
   return parsed;
 }
 
+/**
+ * What a card has, for a template's `requires`: the features it turned on, plus a second
+ * face when it has one (the split, adventure and prepared layouts draw both at once).
+ */
+export const hasAll = (card) => (card.back ? [...card.features, "back"] : card.features);
+
 /** A look: a frame of its own that any card can wear, so a set may default to it (the server's rule). */
 export const isLook = (template) => !template.requires.length && !template.excludes.length && template.frame !== "inherit";
 
@@ -41,12 +47,15 @@ export const isLook = (template) => !template.requires.length && !template.exclu
  */
 export function resolveTemplate(card, setDefault = "modern") {
   const list = allTemplates();
-  const named = list.find((t) => t.id === card.template && worksWith(t, card.features));
+  const has = hasAll(card);
+  const named = list.find((t) => t.id === card.template && worksWith(t, has));
   const defaulted = list.find((t) => t.id === setDefault) ?? list[0];
   const look = [named, defaulted].find((t) => t && FRAMES.has(t.id))?.id ?? "modern";
   const layout =
     (named?.body.length ? named : null) ??
-    list.find((t) => t.requires.length && worksWith(t, card.features)) ??
+    // Features only decide a layout for you (a card with loyalty is a planeswalker); a
+    // layout that wants a second face is the author's to pick, never automatic.
+    list.find((t) => t.requires.length && !t.requires.includes("back") && worksWith(t, has)) ??
     list.find((t) => t.id === look);
   return { layout, look: layout?.frame && layout.frame !== "inherit" ? layout.frame : look };
 }

@@ -21,10 +21,25 @@ const FILES: &[&str] = &[
     include_str!("../public/templates/planeswalker.xml"),
     include_str!("../public/templates/saga.xml"),
     include_str!("../public/templates/token.xml"),
+    include_str!("../public/templates/textless-token.xml"),
+    include_str!("../public/templates/game-marker.xml"),
+    include_str!("../public/templates/battle.xml"),
+    include_str!("../public/templates/adventure.xml"),
+    include_str!("../public/templates/prepared.xml"),
+    include_str!("../public/templates/omen.xml"),
+    include_str!("../public/templates/split.xml"),
+    include_str!("../public/templates/fuse.xml"),
+    include_str!("../public/templates/aftermath.xml"),
+    include_str!("../public/templates/semi-split.xml"),
+    include_str!("../public/templates/landscape.xml"),
 ];
 
 /// The frames a template may use. `inherit` is the set's look.
 const FRAMES: &[&str] = &["modern", "inherit"];
+
+/// A requirement a card meets by having a second face (`card.back`) rather than by a
+/// feature: the split, adventure and prepared layouts draw both faces at once.
+pub const SECOND_FACE: &str = "back";
 
 #[derive(Debug, Serialize)]
 pub struct Template {
@@ -106,7 +121,7 @@ fn list(value: Option<&str>) -> Result<Vec<String>, String> {
         .map(String::from)
         .collect();
     for id in &ids {
-        if cardtype::feature(id).is_none() {
+        if id != SECOND_FACE && cardtype::feature(id).is_none() {
             return Err(format!("\"{id}\" is not a card feature"));
         }
     }
@@ -155,13 +170,20 @@ pub fn parse(xml: &'static str) -> Result<Template, String> {
         let name = element.tag_name().name();
         match name {
             "plate" => {
-                attrs(element, &["role", "x", "y", "w", "h"])?;
+                attrs(element, &["role", "x", "y", "w", "h", "face"])?;
                 if !matches!(element.attribute("role"), Some("name" | "type")) {
                     return Err("a <plate> has role=\"name\" or role=\"type\"".into());
                 }
             }
-            "art" | "box" | "stat" => attrs(element, &["x", "y", "w", "h"])?,
+            "art" | "box" | "stat" => attrs(element, &["x", "y", "w", "h", "face"])?,
             other => return Err(format!("<{other}> is not a template element")),
+        }
+        // `face="back"` draws the second face's fields in this place; anything else is
+        // the card's own.
+        if let Some(face) = element.attribute("face")
+            && !matches!(face, "front" | "back")
+        {
+            return Err(format!("face=\"{face}\" is not a face"));
         }
         // A <stat> may leave out w and h: it is then as wide and tall as its value,
         // anchored by its bottom-right corner (which is where a printed card's P/T
@@ -223,7 +245,26 @@ mod tests {
     #[test]
     fn every_built_in_template_is_valid_and_has_its_own_id() {
         let ids: Vec<_> = all().iter().map(|t| t.id.as_str()).collect();
-        assert_eq!(ids, ["modern", "planeswalker", "saga", "token"]);
+        assert_eq!(
+            ids,
+            [
+                "modern",
+                "planeswalker",
+                "saga",
+                "token",
+                "textless-token",
+                "game-marker",
+                "battle",
+                "adventure",
+                "prepared",
+                "omen",
+                "split",
+                "fuse",
+                "aftermath",
+                "semi-split",
+                "landscape"
+            ]
+        );
         // A file is named for its template.
         for (file, template) in FILES.iter().zip(all()) {
             assert!(file.contains(&format!("id=\"{}\"", template.id)));
@@ -306,6 +347,53 @@ mod tests {
             bad(r#"<template id="a" label="A" frame="modern"><stat x="90" y="999"><field name="power_toughness"/></stat></template>"#)
                 .contains("off the card")
         );
+    }
+
+    #[test]
+    fn a_part_may_draw_the_second_face() {
+        // A part that names the second face, and a template that needs one.
+        let xml: &'static str = r#"<template id="split" label="Split" requires="back cost" frame="inherit">
+            <art x="1" y="2" w="3" h="4"/>
+            <box x="1" y="2" w="3" h="4" face="back"><field name="rules_text"/></box>
+        </template>"#;
+        let split = parse(xml).unwrap();
+        assert_eq!(split.requires, ["back", "cost"]);
+        assert!(!split.is_look(), "a two-faced layout is not a look");
+        assert!(split.works_with(&["back".into(), "cost".into()]));
+        assert!(!split.works_with(&["cost".into()]), "no second face");
+
+        assert!(
+            bad(r#"<template id="a" label="A" frame="modern"><art x="1" y="2" w="3" h="4" face="side"/></template>"#)
+                .contains("not a face")
+        );
+        // `back` is a requirement, not a feature, but anything else still has to be one.
+        assert!(
+            bad(r#"<template id="a" label="A" frame="modern" requires="wings"/>"#)
+                .contains("not a card feature")
+        );
+    }
+
+    #[test]
+    fn the_two_faced_layouts_are_the_ones_that_need_a_back() {
+        let needing: Vec<&str> = all()
+            .iter()
+            .filter(|t| t.requires.iter().any(|id| id == SECOND_FACE))
+            .map(|t| t.id.as_str())
+            .collect();
+        assert_eq!(
+            needing,
+            [
+                "adventure",
+                "prepared",
+                "omen",
+                "split",
+                "fuse",
+                "aftermath",
+                "semi-split",
+                "landscape"
+            ]
+        );
+        assert!(all().iter().all(|t| t.is_look() == (t.id == "modern")));
     }
 
     #[test]

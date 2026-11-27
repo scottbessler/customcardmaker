@@ -1,0 +1,24 @@
+<!-- Semi-split: one art column down the whole card, both halves' plates beside it. -->
+<template id="semi-split" label="Semi-split" requires="back cost" frame="inherit">
+  <art x="5" y="4.5" w="52" h="130.5"/>
+  <plate role="name" x="60" y="5" w="36" h="7.2">
+    <field name="name"/>
+    <field name="mana_cost"/>
+  </plate>
+  <plate role="type" x="60" y="13" w="36" h="6.4">
+    <field name="type_line"/>
+  </plate>
+  <box x="60" y="20" w="36" h="47">
+    <field name="rules_text"/>
+  </box>
+  <plate role="name" x="60" y="73" w="36" h="7.2" face="back">
+    <field name="name"/>
+    <field name="mana_cost"/>
+  </plate>
+  <plate role="type" x="60" y="81" w="36" h="6.4" face="back">
+    <field name="type_line"/>
+  </plate>
+  <box x="60" y="88" w="36" h="46.5" face="back">
+    <field name="rules_text"/>
+  </box>
+</template>

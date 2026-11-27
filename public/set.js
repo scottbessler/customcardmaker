@@ -6,7 +6,7 @@ import { CardFace, Mana } from "/public/card-face.js";
 import { BulkBar, TransferDialog } from "/public/bulk.js";
 import { TypeBuilder } from "/public/type-builder.js";
 import { frameOf, worksWith } from "/public/frame.js";
-import { allTemplates, isLook } from "/public/templates.js";
+import { allTemplates, hasAll, isLook } from "/public/templates.js";
 
 const SAVE_DELAY_MS = 500;
 const RARITIES = ["common", "uncommon", "rare", "mythic"];
@@ -197,7 +197,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
         ? html`<p class="muted looks-note">A whole-card picture is drawn as it is, so it has no template. The colour below tints our text plates over it.</p>`
         : html`<fieldset class="looks">
         <legend>Template</legend>
-        ${allTemplates().filter((t) => worksWith(t, card.features)).map(({ id, label }) => html`<label class=${`look-option${(card.template || template) === id ? " chosen" : ""}`}>
+        ${allTemplates().filter((t) => worksWith(t, hasAll(card))).map(({ id, label }) => html`<label class=${`look-option${(card.template || template) === id ? " chosen" : ""}`}>
           <input type="radio" name="template" value=${id} checked=${(card.template || template) === id} onChange=${() => onChange({ ...card, template: id === template ? "" : id })} />
           <span class="look-thumb"><${CardFace} card=${{ ...card, template: id }} /></span>
           <span class="look-name">${label}${id === template ? html` <small>set default</small>` : null}</span>

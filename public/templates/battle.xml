@@ -1,0 +1,19 @@
+<!-- Battle: the standard frame, laid out the same way, with a defense badge where a
+     creature keeps its power and toughness. -->
+<template id="battle" label="Battle" requires="defense" excludes="power_toughness loyalty" frame="inherit">
+  <plate role="name" x="4.6" y="6.9" w="90.8" h="7.9">
+    <field name="name"/>
+    <field name="mana_cost"/>
+  </plate>
+  <art x="7.7" y="15.5" w="84.6" h="52"/>
+  <plate role="type" x="4.6" y="69.5" w="90.8" h="8.4">
+    <field name="type_line"/>
+  </plate>
+  <box x="6.8" y="79" w="86.4" h="47">
+    <field name="rules_text"/>
+    <field name="flavor_text"/>
+  </box>
+  <stat x="94.4" y="133.6">
+    <field name="defense"/>
+  </stat>
+</template>

@@ -96,20 +96,18 @@ that changes behaviour, not here.
   - [x] Per card, with a default for the set; saved in the card document
   - [x] The `/frames` page makes no sense to a visitor: remove it from the app. Keep
         what it gave the tests (every frame rendered side by side) as a dev-only page
-  - [x] Layouts: token, planeswalker (with loyalty) and saga, drawn natively and over
-        a Nexus scan
+  - [x] Layouts: token, textless token, game marker, planeswalker (with loyalty), saga,
+        battle (with defense), adventure, prepared, omen, split, fuse, aftermath, semi-split
+        and landscape — MTG Nexus's list bar planeswalker, megawalker and old border. The
+        two-halved ones draw the card's second face beside its own
   - [x] Transform / double-faced cards: a back face, Front/Back tabs and a Flip, linked on
         import by `<related>`
   - [ ] Still to do: over a scan, our plates are the card template's, so a printed plate's
         bevel can show at their edge (the old `nexus` template made them a little bigger to
         hide it); Nexus also draws a transform front with its own crown frame, which peeks
         above our plate. Measure both
-  - [ ] Still to do: the rest of MTG Nexus's layout list — normal (done), dual face (back
-        faces, done), saga (done), token w/ text (done), prepared, adventure, omen, split,
-        fuse, aftermath, battle, textless token, game marker, semi-split, landscape (not
-        planeswalker, megawalker or old border). Each is another template file, and the
-        two-halved ones (split, fuse, aftermath, adventure) need a card with two faces drawn
-        side by side
+  - [ ] Still to do: each layout's geometry is our own drawing in Nexus's arrangement — tune
+        it against theirs where it matters
 
 - [x] **13. Progress for a large import** — a real Nexus export is ~300 cards and one
       picture download each, which can take minutes; the import page shows nothing until
@@ -143,6 +141,11 @@ that changes behaviour, not here.
           bottom-right corner), and the box draws `flavor_text` when a template names it
     - [x] the footer stays in the stylesheet: its place is a look's, not a layout's, so a
           `<foot>` element would need the look/layout split reworked first
+    - [x] the rest of MTG Nexus's layouts as templates (textless token, game marker, battle,
+          adventure, prepared, omen, split, fuse, aftermath, semi-split, landscape): a part may
+          say `face="back"` and draw the second face in that place, and `back` is a requirement
+          a template can ask for, so a split card is one document with two halves. Skips
+          planeswalker, megawalker and old border, as asked
     - [ ] a set keeps a default template per kind of card (today one look for all, only a look)
     - [ ] both stats at once: a template that draws power/toughness and loyalty (creature
           planeswalker); today the planeswalker layout shows loyalty only

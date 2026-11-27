@@ -3,6 +3,7 @@
 import { html, render } from "/public/vendor/htm-preact.js";
 import { CardFace } from "/public/card-face.js";
 import { frameOf } from "/public/frame.js";
+import { allTemplates } from "/public/templates.js";
 
 /** A card from the API always has every field; the samples only write what they need. */
 function withDefaults(card) {
@@ -33,7 +34,44 @@ const LAYOUTS = [
 const query = new URLSearchParams(location.search);
 const SAMPLES = query.get("layouts") ? LAYOUTS : BY_COLOUR;
 
+/** A card with just what a template needs, for `?templates=1`: one sample per template. */
+function cardFor(template) {
+  const has = new Set(template.requires.filter((id) => id !== "back"));
+  if (!template.excludes.includes("cost")) has.add("cost");
+  const features = [...has];
+  const card = withDefaults({
+    name: template.label,
+    features,
+    type_line: "Creature — Human",
+    rules_text: `${template.label} sample.`,
+    rarity: "common",
+    template: template.id,
+  });
+  if (has.has("cost")) card.mana_cost = "{1}{W}";
+  if (has.has("power_toughness")) card.power_toughness = "2/2";
+  if (has.has("loyalty")) card.loyalty = "4";
+  if (has.has("defense")) card.defense = "5";
+  if (template.requires.includes("back")) {
+    card.back = { ...card, name: `${template.label} (back)`, template: "", type_line: "Instant", rules_text: "Draw a card." };
+  }
+  return card;
+}
+
+const TEMPLATE_SAMPLES = allTemplates().map((template) => ({ template, card: cardFor(template) }));
+
 function Frames() {
+  if (query.get("templates")) {
+    return html`
+      <h1>Templates</h1>
+      <p class="muted">One card per template, each with just what that template needs.</p>
+      <div class="frames-grid">
+        ${TEMPLATE_SAMPLES.map(({ template, card }) => html`<figure class="frame-sample" data-template=${template.id}>
+          <${CardFace} card=${card} code="DSR" number=${1} total=${1} />
+          <figcaption>${template.label}</figcaption>
+        </figure>`)}
+      </div>
+    `;
+  }
   return html`
     <h1>Frames</h1>
     <p class="muted">One card per frame the editor can pick, chosen by the mana cost and type line.</p>
