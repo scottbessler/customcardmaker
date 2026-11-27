@@ -18,7 +18,7 @@ function PublicSet() {
     <p class="muted set-meta"><span class="set-code">${set.code}</span> · ${count} ${count === 1 ? "card" : "cards"} · by ${set.by}</p>
     <div class="public-cards">
       ${set.cards.map((c) => html`<div class="public-card" key=${c.position}>
-        <${CardFace} card=${c.card} code=${set.code} number=${c.position} total=${count} />
+        <${CardFace} card=${c.card} template=${set.default_template} code=${set.code} number=${c.position} total=${count} />
       </div>`)}
     </div>
   `;

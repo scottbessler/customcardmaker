@@ -26,6 +26,8 @@ pub struct SetSummary {
     pub updated_at: String,
     /// Listed in the gallery for anyone to see.
     pub public: bool,
+    /// The template a card with none of its own wears.
+    pub default_template: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -34,6 +36,16 @@ pub struct StoredCard {
     pub position: i64,
     pub card: Card,
     pub updated_at: String,
+}
+
+/// What an owner may change about a set; `None` leaves a field as it is.
+#[derive(Debug, Clone, Default)]
+pub struct SetChanges {
+    pub name: Option<String>,
+    pub code: Option<String>,
+    pub public: Option<bool>,
+    /// Already checked against `card::is_template`.
+    pub default_template: Option<String>,
 }
 
 /// Where a bulk transfer puts its cards.
@@ -101,11 +113,12 @@ fn summary(row: &rusqlite::Row<'_>) -> rusqlite::Result<SetSummary> {
         updated_at: row.get(3)?,
         card_count: row.get(4)?,
         public: row.get::<_, i64>(5)? != 0,
+        default_template: row.get(6)?,
     })
 }
 
 const SUMMARY: &str = "SELECT s.id, s.name, s.code, s.updated_at,
-        (SELECT COUNT(*) FROM cards c WHERE c.set_id = s.id), s.is_public
+        (SELECT COUNT(*) FROM cards c WHERE c.set_id = s.id), s.is_public, s.default_template
     FROM sets s";
 
 /// How many sets the gallery's front page shows.
@@ -123,6 +136,8 @@ pub struct GalleryEntry {
     pub updated_at: String,
     /// The set's first card, for a thumbnail.
     pub preview: Option<Card>,
+    /// What a card with no template of its own looks like in this set.
+    pub default_template: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -139,6 +154,7 @@ pub struct GalleryDetail {
     pub code: String,
     pub by: String,
     pub updated_at: String,
+    pub default_template: String,
     pub cards: Vec<GalleryCard>,
 }
 
@@ -329,18 +345,25 @@ impl SetStore {
         &self,
         owner: Uuid,
         id: Uuid,
-        name: Option<String>,
-        code: Option<String>,
-        public: Option<bool>,
+        changes: SetChanges,
     ) -> Result<Option<SetSummary>> {
         self.db
             .call(move |c| {
                 let id = id.to_string();
                 let changed = c.execute(
                     "UPDATE sets SET name = COALESCE(?2, name), code = COALESCE(?3, code),
-                            is_public = COALESCE(?6, is_public), updated_at = ?4
+                            is_public = COALESCE(?6, is_public),
+                            default_template = COALESCE(?7, default_template), updated_at = ?4
                      WHERE id = ?1 AND owner_id = ?5",
-                    params![id, name, code, now(), owner.to_string(), public],
+                    params![
+                        id,
+                        changes.name,
+                        changes.code,
+                        now(),
+                        owner.to_string(),
+                        changes.public,
+                        changes.default_template
+                    ],
                 )?;
                 if changed == 0 {
                     return Ok(None);
@@ -489,7 +512,8 @@ impl SetStore {
                     "SELECT s.id, s.name, s.code, s.updated_at,
                             (SELECT COUNT(*) FROM cards c WHERE c.set_id = s.id),
                             u.display_name,
-                            (SELECT doc FROM cards c WHERE c.set_id = s.id ORDER BY position LIMIT 1)
+                            (SELECT doc FROM cards c WHERE c.set_id = s.id ORDER BY position LIMIT 1),
+                            s.default_template
                      FROM sets s JOIN users u ON u.id = s.owner_id
                      WHERE s.is_public = 1
                        AND EXISTS (SELECT 1 FROM cards c WHERE c.set_id = s.id)
@@ -511,6 +535,7 @@ impl SetStore {
                             .map(|doc| serde_json::from_str(&doc))
                             .transpose()
                             .context("card document is not valid")?,
+                        default_template: row.get(7)?,
                     });
                 }
                 Ok(entries)
@@ -526,7 +551,7 @@ impl SetStore {
                 let id = id.to_string();
                 let head = c
                     .query_row(
-                        "SELECT s.name, s.code, s.updated_at, u.display_name
+                        "SELECT s.name, s.code, s.updated_at, u.display_name, s.default_template
                          FROM sets s JOIN users u ON u.id = s.owner_id
                          WHERE s.id = ?1 AND s.is_public = 1",
                         [&id],
@@ -536,11 +561,12 @@ impl SetStore {
                                 row.get::<_, String>(1)?,
                                 row.get::<_, String>(2)?,
                                 row.get::<_, String>(3)?,
+                                row.get::<_, String>(4)?,
                             ))
                         },
                     )
                     .optional()?;
-                let Some((name, code, updated_at, by)) = head else {
+                let Some((name, code, updated_at, by, default_template)) = head else {
                     return Ok(None);
                 };
                 let mut stmt = c.prepare(
@@ -561,6 +587,7 @@ impl SetStore {
                     code,
                     by,
                     updated_at,
+                    default_template,
                     cards,
                 }))
             })
@@ -833,7 +860,14 @@ mod tests {
         assert!(store.get(you, set.id).await.unwrap().is_none());
         assert!(
             store
-                .rename(you, set.id, Some("Stolen".into()), None, None)
+                .rename(
+                    you,
+                    set.id,
+                    SetChanges {
+                        name: Some("Stolen".into()),
+                        ..SetChanges::default()
+                    }
+                )
                 .await
                 .unwrap()
                 .is_none()

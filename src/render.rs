@@ -133,8 +133,9 @@ pub fn set_page(id: Uuid, name: &str, user: &str) -> String {
     layout(
         name,
         &format!(
-            r#"<div id="app" class="set-page" data-set-id="{id}"></div>{}"#,
-            json_script("limits", &crate::card::LIMITS)
+            r#"<div id="app" class="set-page" data-set-id="{id}"></div>{}{}"#,
+            json_script("limits", &crate::card::LIMITS),
+            json_script("choices", &crate::card::CHOICES)
         ),
         Some("/public/set.js"),
         Some(user),
@@ -147,7 +148,7 @@ pub fn frames_page() -> String {
     layout(
         "Frames",
         r#"<div id="app" class="frames-page"></div>"#,
-        Some("/public/frames.js"),
+        Some("/public/dev-frames.js"),
         None,
     )
 }

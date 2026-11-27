@@ -1,4 +1,4 @@
-// Every frame the cards can wear, side by side. Reached at /frames; it is where
+// Every frame the cards can wear, side by side. Reached at /dev/frames (a development build only); it is where
 // a frame is designed and what its regression test looks at.
 import { html, render } from "/public/vendor/htm-preact.js";
 import { CardFace } from "/public/card-face.js";
@@ -21,13 +21,15 @@ const SAMPLES = [
   { name: "Void Wanderer", mana_cost: "{6}", type_line: "Creature — Eldrazi", rarity: "mythic", rules_text: "Trample", power_toughness: "6/6", artist: "A. Painter" },
 ].map(withDefaults);
 
+const TEMPLATE = new URLSearchParams(location.search).get("template") || "modern";
+
 function Frames() {
   return html`
-    <h1>Frames</h1>
+    <h1>Frames · ${TEMPLATE}</h1>
     <p class="muted">One card per frame the editor can pick, chosen by the mana cost and type line.</p>
     <div class="frames-grid">
       ${SAMPLES.map((card, index) => html`<figure class="frame-sample" data-frame=${frameOf(card)}>
-        <${CardFace} card=${card} code="DSR" number=${index + 1} total=${SAMPLES.length} />
+        <${CardFace} card=${card} template=${TEMPLATE} code="DSR" number=${index + 1} total=${SAMPLES.length} />
         <figcaption>${frameOf(card)} · ${card.rarity}</figcaption>
       </figure>`)}
     </div>

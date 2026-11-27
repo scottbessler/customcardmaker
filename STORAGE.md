@@ -19,7 +19,7 @@ Everything lives in one SQLite file, `DATA_PATH/customcardmaker.db` (default
 | Table | Holds |
 | --- | --- |
 | `users` | username (unique, case-insensitive), display name, passkeys as one JSON document |
-| `sets` | name, code, `owner_id`, `is_public`, timestamps |
+| `sets` | name, code, `owner_id`, `is_public`, `default_template`, timestamps |
 | `art` | one row per uploaded image: owner, real content type, size |
 | `cards` | one JSON document per card, with `set_id` and collector `position` |
 

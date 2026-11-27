@@ -145,3 +145,19 @@
   .creator{grid-template-columns:24rem minmax(0,1fr);align-items:start}
   .stage{position:sticky;top:var(--space-16)}
 }
+
+/* The Frame section of the card editor: a thumbnail of this card in each look,
+   and a chip for each frame colour. */
+.looks,.tints{display:flex;flex-wrap:wrap;gap:var(--space-8);min-width:0;margin:0;padding:0;border:0}
+.look-option{position:relative;display:flex;flex-direction:column;align-items:center;gap:var(--space-4);width:6.5rem;padding:var(--space-8);border:1px solid var(--line-2);border-radius:var(--radius-chip);cursor:pointer;color:var(--text-muted)}
+.look-option input,.tint-option input{position:absolute;opacity:0;width:1px;height:1px}
+.look-option.chosen{border-color:var(--gold);background:var(--ink-600);color:var(--text)}
+.look-option:has(input:focus-visible),.tint-option:has(input:focus-visible){outline:2px solid var(--gold-hi);outline-offset:1px}
+.look-thumb{display:block;width:100%;pointer-events:none}
+.look-name{font-size:var(--text-small);text-align:center}
+.look-name small{display:block}
+.tint-option{position:relative;display:inline-flex;flex-direction:row;align-items:center;gap:var(--space-8);padding:.4rem .8rem;border:1px solid var(--line-2);border-radius:var(--radius-chip);cursor:pointer;color:var(--text-muted)}
+.tint-option:has(input:checked){border-color:var(--gold);background:var(--ink-600);color:var(--text)}
+.tint-chip{display:inline-block;width:1rem;height:1rem;aspect-ratio:1;border-radius:50%;background:linear-gradient(135deg,var(--hi),var(--lo));box-shadow:none;flex:none}
+.default-look{display:flex;flex-direction:row;align-items:center;gap:var(--space-8);margin-top:var(--space-12)}
+.set-default-template{align-self:flex-start;margin-top:var(--space-8)}

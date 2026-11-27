@@ -76,9 +76,8 @@ fn build_http_client() -> Result<reqwest::Client> {
 }
 
 pub fn router(s: AppState) -> Router {
-    Router::new()
+    let app = Router::new()
         .route("/", get(routes::index))
-        .route("/frames", get(routes::frames))
         .route("/import", get(routes::import_cockatrice_ui))
         .route("/gallery", get(routes::gallery_page))
         .route("/gallery/{id}", get(routes::gallery_set_page))
@@ -115,8 +114,16 @@ pub fn router(s: AppState) -> Router {
             "/api/cards/{id}",
             put(routes::save_card).delete(routes::delete_card),
         )
-        .nest_service("/public", ServeDir::new("public"))
-        .layer(from_fn(cache_control))
+        .nest_service("/public", ServeDir::new("public"));
+    // Every look side by side: where a frame is designed and what its tests read.
+    // It means nothing to a visitor, so it exists only in a development build
+    // (the same switch that turns passkeys off, and is never set in production).
+    let app = if s.passkey_disabled {
+        app.route("/dev/frames", get(routes::frames))
+    } else {
+        app
+    };
+    app.layer(from_fn(cache_control))
         .layer(from_fn(log_request))
         .layer(TraceLayer::new_for_http())
         .with_state(s)

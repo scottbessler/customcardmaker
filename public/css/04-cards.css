@@ -66,3 +66,34 @@ button.mtg-card{cursor:pointer}
 .mtg-rules .mana{font-size:.86em;position:relative;top:-.14em}
 .mtg-card .ms-cost.ms-tap{background-color:var(--card-text);color:var(--card-foot-ink)}
 .mana-unknown{opacity:.6}
+
+/* ---- Templates -----------------------------------------------------------
+   `modern` is the rules above. The others change only what they must: the
+   border, how far the frame reaches, and how the plates are drawn. The frame
+   colour (--hi, --lo, --box) is the same in every one. */
+
+/* Classic: a heavier black border, flat plates and square corners, no bevel. */
+.mtg-card.tpl-classic{border-radius:3.4% / 2.4%}
+.tpl-classic .mtg-frame{inset:4.6cqw 4.6cqw 8.6cqw;border-radius:.6cqw;background-image:none;background-color:var(--lo);box-shadow:inset 0 0 0 .5cqw color-mix(in srgb,var(--lo) 30%,black)}
+.tpl-classic .mtg-name,.tpl-classic .mtg-type{border-radius:1.2cqw / 1cqw;background-image:none;box-shadow:0 0 0 .5cqw var(--card-border)}
+.tpl-classic .mtg-art{border-radius:0;box-shadow:0 0 0 .5cqw var(--card-border)}
+.tpl-classic .mtg-box{border-radius:0;background-image:none;box-shadow:0 0 0 .5cqw var(--card-border)}
+.tpl-classic .mtg-pt{background-image:none;border-radius:1cqw}
+
+/* Borderless: the frame runs to the edge of the card, with no black border. */
+.mtg-card.tpl-borderless{background:var(--lo)}
+.tpl-borderless .mtg-frame{inset:0;padding:4.4cqw 5cqw 9cqw;border-radius:0;box-shadow:none}
+.tpl-borderless .mtg-foot{bottom:2.2cqw;left:3cqw}
+.tpl-borderless .mtg-pt{bottom:2.6cqw;right:3.4cqw}
+
+/* Full art: the picture is the whole card; the plates and text box float on it. */
+.mtg-card.tpl-full-art{background:var(--lo)}
+.tpl-full-art .mtg-frame{inset:0;padding:4.4cqw 5cqw 9cqw;border-radius:0;background-image:none;box-shadow:none;grid-template-rows:7.4cqw 1fr 6.6cqw 27cqw}
+.tpl-full-art .mtg-art{position:absolute;inset:0;border-radius:0;box-shadow:none}
+.tpl-full-art .mtg-name,.tpl-full-art .mtg-type,.tpl-full-art .mtg-box{position:relative;z-index:1}
+.tpl-full-art .mtg-name{grid-row:1}
+.tpl-full-art .mtg-type{grid-row:3}
+.tpl-full-art .mtg-box{grid-row:4;background-image:none;background-color:color-mix(in srgb,var(--box) 82%,transparent)}
+.tpl-full-art .mtg-name,.tpl-full-art .mtg-type{background-color:color-mix(in srgb,var(--box) 88%,transparent)}
+.tpl-full-art .mtg-foot{bottom:2.2cqw;left:3cqw;color:var(--card-foot-ink)}
+.tpl-full-art .mtg-pt{bottom:2.6cqw;right:3.4cqw}
