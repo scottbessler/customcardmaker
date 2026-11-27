@@ -12,11 +12,30 @@ const RARITIES = ["common", "uncommon", "rare", "mythic"];
 // Left to right as they are printed on the cards.
 const PALETTE = ["W", "U", "B", "R", "G", "C", "X", "0", "1", "2", "3", "4", "5", "6", "T"];
 const FIELD_LABELS = { mana_cost: "mana cost", rules_text: "rules text" };
-// What a new back face starts as: every field the API would send for a blank card.
-const BLANK_FACE = {
-  name: "", mana_cost: "", type_line: "", rarity: "common", rules_text: "", flavor_text: "", power_toughness: "",
-  loyalty: "", layout: "", artist: "", art: null, art_is_card: false, keep_printed_text: false, frame: "", template: "", back: null,
-};
+const typeOf = (id) => choices.cardtypes.find((t) => t.id === id) ?? choices.cardtypes[0];
+
+/**
+ * The same card as another type: what the two share is kept, a field the new type has no place
+ * for is dropped, and a template the new type cannot use goes back to the set's default.
+ */
+function retype(card, id) {
+  const next = typeOf(id);
+  const template = choices.templates.find((t) => t.id === card.template);
+  return {
+    cardtype: next.id,
+    template: template?.cardtypes.includes(next.id) ? card.template : "",
+    frame: card.frame ?? "",
+    rarity: card.rarity ?? "common",
+    art: card.art ?? null,
+    art_is_card: card.art_is_card ?? false,
+    keep_printed_text: card.keep_printed_text ?? false,
+    back: next.back ? card.back ?? null : null,
+    ...Object.fromEntries(next.fields.map((f) => [f.key, card[f.key] ?? ""])),
+  };
+}
+
+/** A new back face: a blank card of the default type. */
+const blankFace = (rarity) => ({ ...retype({}, choices.default_cardtype), rarity });
 const app = document.getElementById("app");
 const setId = app.dataset.setId;
 // The server says how long each field may be, so the form never keeps its own copy.
@@ -69,7 +88,12 @@ function Palette({ target, onInsert }) {
 }
 
 function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
-  const [target, setTarget] = useState("mana_cost");
+  const type = typeOf(card.cardtype);
+  const has = (key) => type.fields.some((f) => f.key === key);
+  const [wanted, setTarget] = useState("mana_cost");
+  // Symbols go where the cursor last was; a type with no mana cost has nowhere else but the text.
+  const target = has(wanted) ? wanted : "rules_text";
+  const missing = type.fields.filter((f) => f.required && !String(card[f.key] ?? "").trim()).map((f) => f.label.toLowerCase());
   const [searching, setSearching] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [artError, setArtError] = useState("");
@@ -136,8 +160,9 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
   return html`<form class="panel card-form" onSubmit=${(e) => e.preventDefault()}>
     <fieldset class="form-section">
       <legend>Identity</legend>
+      <p class=${`muted missing${missing.length ? "" : " done"}`} role="status">${missing.length ? `To finish this card: ${missing.join(", ")}.` : "Every required field is filled in."}</p>
       <${Field} label="Name"><input autocomplete="off" ...${text("name")} /><//>
-      <${Field} label="Mana cost"><input placeholder="{2}{U}{U}" autocomplete="off" ...${text("mana_cost")} ...${watch("mana_cost")} /><//>
+      ${has("mana_cost") ? html`<${Field} label="Mana cost"><input placeholder="{2}{U}{U}" autocomplete="off" ...${text("mana_cost")} ...${watch("mana_cost")} /><//>` : null}
       <${Field} label="Type line"><input placeholder="Creature — Merfolk Wizard" autocomplete="off" ...${text("type_line")} /><//>
       <${TypeBuilder} typeLine=${card.type_line} onChange=${(type_line) => onChange({ ...latest.current, type_line })} />
       <fieldset class="rarity">
@@ -151,22 +176,22 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
 
     <fieldset class="form-section frame-section">
       <legend>Frame</legend>
-      <fieldset class="tints layouts">
-        <legend>Layout</legend>
-        ${choices.layouts.map(([id, label]) => html`<label class="tint-option">
-          <input type="radio" name="layout" value=${id} checked=${(card.layout || "normal") === id} onChange=${() => onChange({ ...card, layout: id === "normal" ? "" : id })} />${label}
+      <fieldset class="tints cardtypes">
+        <legend>Type</legend>
+        ${choices.cardtypes.map(({ id, label }) => html`<label class="tint-option">
+          <input type="radio" name="cardtype" value=${id} checked=${card.cardtype === id} onChange=${() => onChange(retype(card, id))} />${label}
         </label>`)}
       </fieldset>
-      <p class="muted layout-hint">${card.layout === "planeswalker"
+      <p class="muted layout-hint">${card.cardtype === "planeswalker"
         ? "One ability per line: +1: Draw a card. A line with no cost, or starting with a colon, is a static ability."
-        : card.layout === "saga"
+        : card.template === "saga"
         ? "Reminder text first, then one line per chapter: I: Draw a card. II, III: Gain 2 life."
         : ""}</p>
       ${card.art && card.art_is_card
         ? html`<p class="muted looks-note">A whole-card picture is drawn as it is, so it has no template. The colour below tints our text plates over it.</p>`
         : html`<fieldset class="looks">
         <legend>Template</legend>
-        ${choices.templates.map(([id, label]) => html`<label class=${`look-option${(card.template || template) === id ? " chosen" : ""}`}>
+        ${choices.templates.filter((t) => t.cardtypes.includes(card.cardtype)).map(({ id, label }) => html`<label class=${`look-option${(card.template || template) === id ? " chosen" : ""}`}>
           <input type="radio" name="template" value=${id} checked=${(card.template || template) === id} onChange=${() => onChange({ ...card, template: id === template ? "" : id })} />
           <span class="look-thumb"><${CardFace} card=${{ ...card, template: id }} /></span>
           <span class="look-name">${label}${id === template ? html` <small>set default</small>` : null}</span>
@@ -188,9 +213,11 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
         <textarea rows="5" placeholder="Flying\n{T}: Draw a card." ...${text("rules_text")} ...${watch("rules_text")}></textarea>
       <//>
       <${Palette} target=${target} onInsert=${insert} />
-      <${Field} label="Flavor text" count=${`${card.flavor_text.length}/${limits.flavor_text}`}>
-        <textarea rows="2" ...${text("flavor_text")}></textarea>
-      <//>
+      ${has("flavor_text")
+        ? html`<${Field} label="Flavor text" count=${`${card.flavor_text.length}/${limits.flavor_text}`}>
+            <textarea rows="2" ...${text("flavor_text")}></textarea>
+          <//>`
+        : null}
     </fieldset>
 
     <fieldset class="form-section">
@@ -227,12 +254,9 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
     <fieldset class="form-section">
       <legend>Details</legend>
       <div class="row">
-        ${card.layout === "planeswalker"
-          ? html`<${Field} label="Loyalty"><input placeholder="4" autocomplete="off" ...${text("loyalty")} /><//>`
-          : card.layout === "saga"
-          ? null
-          : html`<${Field} label="Power / toughness"><input placeholder="2/3" autocomplete="off" ...${text("power_toughness")} /><//>`}
-        <${Field} label="Artist"><input autocomplete="off" ...${text("artist")} /><//>
+        ${has("loyalty") ? html`<${Field} label="Loyalty"><input placeholder="4" autocomplete="off" ...${text("loyalty")} /><//>` : null}
+        ${has("power_toughness") ? html`<${Field} label="Power / toughness"><input placeholder="2/3" autocomplete="off" ...${text("power_toughness")} /><//>` : null}
+        ${has("artist") ? html`<${Field} label="Artist"><input autocomplete="off" ...${text("artist")} /><//>` : null}
       </div>
     </fieldset>
   </form>`;
@@ -444,7 +468,7 @@ function SetPage() {
         </div>
         <label class="default-look">Default look
           <select name="default-template" value=${set.default_template} onChange=${(e) => patchSet({ default_template: e.currentTarget.value })}>
-            ${choices.templates.map(([id, label]) => html`<option value=${id} selected=${id === set.default_template}>${label}</option>`)}
+            ${choices.templates.filter((t) => choices.cardtypes.every((ty) => t.cardtypes.includes(ty.id))).map(({ id, label }) => html`<option value=${id} selected=${id === set.default_template}>${label}</option>`)}
           </select>
         </label>
         <label class="public-toggle">
@@ -507,7 +531,7 @@ function SetPage() {
                 ? html`<button type="button" class=${`face-tab${turned ? "" : " chosen"}`} aria-pressed=${String(!turned)} onClick=${() => setSide("front")}>Front</button>
                   <button type="button" class=${`face-tab${turned ? " chosen" : ""}`} aria-pressed=${String(!!turned)} onClick=${() => setSide("back")}>Back</button>
                   <button type="button" class="quiet danger-quiet remove-back" onClick=${() => { setSide("front"); edit(current.id, { ...current.card, back: null }); }}>Remove back face</button>`
-                : html`<button type="button" class="quiet add-back" onClick=${() => { edit(current.id, { ...current.card, back: { ...BLANK_FACE, rarity: current.card.rarity } }); setSide("back"); }}>Add a back face</button>`}
+                : (typeOf(current.card.cardtype).back ? html`<button type="button" class="quiet add-back" onClick=${() => { edit(current.id, { ...current.card, back: blankFace(current.card.rarity) }); setSide("back"); }}>Add a back face</button>` : null)}
             </div>
             <${Editor}
               key=${`${current.id}${turned ? "-back" : ""}`}

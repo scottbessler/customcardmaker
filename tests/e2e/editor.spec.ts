@@ -60,6 +60,7 @@ test("the preview follows the form and the frame follows the mana cost", async (
   await page.fill('input[name="mana_cost"]', "{1}{U}");
   await page.fill('input[name="type_line"]', "Creature — Merfolk Wizard");
   await page.fill('textarea[name="rules_text"]', "Flying\n{T}: Draw a card.");
+  await page.locator(".cardtypes .tint-option", { hasText: "Creature" }).click();
   await page.fill('input[name="power_toughness"]', "2/3");
   await page.locator(".rarity-option", { hasText: "rare" }).click();
 
@@ -181,6 +182,7 @@ test("a finished card holds its layout", async ({ page }) => {
   await page.fill('input[name="type_line"]', "Creature — Merfolk Wizard");
   await page.fill('textarea[name="rules_text"]', "Flying\n{T}: Draw a card.");
   await page.fill('textarea[name="flavor_text"]', "It sees the tide before the moon does.");
+  await page.locator(".cardtypes .tint-option", { hasText: "Creature" }).click();
   await page.fill('input[name="power_toughness"]', "2/3");
   await fillAndSave(page, 'input[name="artist"]', "A. Painter");
   // Boxes are viewport-relative, so measure from a fixed scroll position:

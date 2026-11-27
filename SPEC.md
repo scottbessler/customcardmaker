@@ -68,9 +68,10 @@ nothing about real Magic cards.
   and a hairline round each piece. Ink on every plate and text box keeps a WCAG
   contrast of at least 7. A development build serves `/dev/frames?template=<id>`, one card
   per frame; a production build has no such page.
-- **R8.** A card wears a **template**: `modern`, `classic`, `borderless` or `full-art`
-  (`card.template`; empty means the set's `default_template`, itself `modern` until
-  changed). The editor shows a thumbnail of the card in each, and a colour chip for each
+- **R8.** A card wears a **template**: `modern`, `classic`, `borderless`, `full-art`, or
+  `saga` (`card.template`; empty means the set's `default_template`, itself `modern` until
+  changed, and only ever a look every type can wear). A template names the card types it
+  works with and a card may not name one that does not work with its type (400). The editor shows a thumbnail of the card in each, and a colour chip for each
   frame colour plus Auto. An unknown template or frame is a 400. The gallery draws a
   public set with its default. (`src/card.rs`, `public/card-face.js`)
 - **R5.** A card's art fills the art box, cropped to cover it and centred; a card
@@ -177,7 +178,7 @@ nothing about real Magic cards.
   imports without art. MTG Nexus's pictures are whole printed cards, so the form
   asks whether they are; if so each card with a picture is marked `art_is_card`
   (B14). A token (by its type line), planeswalker or saga (by its type line or layout)
-  becomes that layout (R9) and its loyalty is read; a layout we have no geometry for
+  becomes that type (R9) and its loyalty is read; a layout we have no geometry for
   (split, flip, adventure...) gets `keep_printed_text`, so its picture shows as printed.
   A transform's two `<card>`s (the back marked `side=back`, each naming the other in
   `<related>`) become one card with a back face (R10), each face with its own picture; a
@@ -189,17 +190,25 @@ nothing about real Magic cards.
   and only into the signed-in account. A signed-out visitor to `/import` is sent
   to `/`.
 
-- **R9.** A card has a **layout**: `normal` (or empty), `token`, `planeswalker` or `saga`
-  (`card.layout`), apart from its template: the layout is what is on the card and where,
-  the template how it is drawn. The places are those of a real MTG Nexus card, in
-  card-width units, so a card drawn natively and a scan with our text laid over it
-  (B14) share one geometry. A planeswalker's rules text is one ability per line,
-  `+1: ...`, `−3: ...`, `0: ...`; a line with no cost, or a bare `: ...`, is a static
-  ability; the loyalty (`card.loyalty`, up to 4 characters) replaces power/toughness. A
-  saga's is reminder text, then `I: ...` / `II, III: ...` per chapter, each beside its
-  numeral. A token has no mana cost, a centred name, and the art behind it all. An unknown
-  layout, or a loyalty over 4 characters, is a 400. (`public/frame.js`: `abilities`,
-  `chapters`.)
+- **R9.** A card has a **type** (`card.cardtype`: `spell`, `creature`, `planeswalker` or
+  `token`), which says what fields it has and which a finished card must have (name and
+  type line for all; also power/toughness for a creature and a token, loyalty for a
+  planeswalker; a token has no mana cost), and whether it may have a back face. Types are
+  data (`src/cardtype.rs`, described in `CARDTYPES.md`); the editor's form shows exactly the
+  type's fields and says what is still missing. A card is one flat object whose keys are the
+  common ones and the type's; a key the type does not list is a 400, as is an unknown type.
+  Changing a card's type keeps what the two types share and drops the rest. A document with
+  no `cardtype` is read as the type it was (`token`, `planeswalker`, a creature if it had
+  power/toughness, otherwise a spell; a saga becomes a spell with the `saga` template).
+  How a card is drawn is its **template** (R8), which must work with its type. For now the
+  layout follows from the type and template: a planeswalker has tall art, abilities over its
+  foot and a loyalty badge; a token has the art behind everything and no cost; the `saga`
+  template (spells only) has chapters down the left and art on the right. The places are
+  those of a real MTG Nexus card, in card-width units, so a card drawn natively and a scan
+  with our text laid over it (B14) share one geometry. A planeswalker's rules text is one
+  ability per line, `+1: ...`, `−3: ...`, `0: ...`; a line with no cost, or a bare `: ...`,
+  is a static ability. A saga's is reminder text, then `I: ...` / `II, III: ...` per
+  chapter. (`public/frame.js`: `abilities`, `chapters`.)
 - **R10.** A card may have a **back face** (`card.back`), making it a double-faced (transform)
   card. The back is a card of its own — name, cost, type, art, layout, template — but has no
   back of its own, and is checked like a front (a bad back is a 400). Its art follows the

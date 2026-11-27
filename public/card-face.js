@@ -16,6 +16,16 @@ function Line({ text }) {
   return html`<p>${tokenize(text).map((t) => (t.symbol ? html`<${Mana} symbol=${t.symbol} />` : t.text))}</p>`;
 }
 
+/** The frames a template can wear; the rest of the templates (a saga) are layouts. */
+const LOOKS = new Set(["modern", "classic", "borderless", "full-art"]);
+
+/** What is on the card and where, from its type and template. */
+function layoutOf(card) {
+  if (card.cardtype === "planeswalker") return "planeswalker";
+  if (card.cardtype === "token") return "token";
+  return card.template === "saga" ? "saga" : "normal";
+}
+
 /** A planeswalker's abilities: a loyalty cost beside each line. */
 function Abilities({ text }) {
   return html`<div class="pw-rows">${abilities(text).map(
@@ -50,12 +60,13 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
   const card = turned ? whole.back : whole;
   // A back with no cost of its own keeps the front's colour, as printed ones do.
   const frame = card.frame || (turned && !card.mana_cost ? frameOf(whole) : frameOf(card));
-  // A card that names a template wears it; otherwise it wears the set's.
-  const look = card.template || whole.template || template;
+  // The look is the template's, if it names one that is a look; otherwise the set's. (A saga is
+  // a template too, and takes the set's look for its frame.)
+  const look = [card.template, whole.template, template].find((name) => LOOKS.has(name)) ?? "modern";
   // A whole-card picture is the card; the plates and text box go on top of it.
   const scan = card.art && card.art_is_card;
   // What is on the card and where; the template is how it is drawn.
-  const layout = card.layout || "normal";
+  const layout = layoutOf(card);
   const rules = card.rules_text ? card.rules_text.split("\n") : [];
   const flavor = card.flavor_text ? card.flavor_text.split("\n") : [];
   const collector = number ? `${String(number).padStart(3, "0")}${total ? `/${String(total).padStart(3, "0")}` : ""}` : "";

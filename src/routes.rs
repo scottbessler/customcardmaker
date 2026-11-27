@@ -1,8 +1,8 @@
 use crate::{
     app::AppState,
     art,
-    card::{self, Card},
-    cockatrice,
+    card::Card,
+    cardtype, cockatrice,
     error::{ApiError, AppError},
     openverse::{ArtCredit, SearchPage},
     render,
@@ -144,9 +144,9 @@ pub async fn patch_set(
     let name = body.name.as_deref().map(sets::clean_name).transpose()?;
     let code = body.code.as_deref().map(sets::clean_code).transpose()?;
     if let Some(template) = body.default_template.as_deref()
-        && !card::is_template(template)
+        && !cardtype::is_set_default(template)
     {
-        return Err(AppError::bad_request("That is not a card template.").into());
+        return Err(AppError::bad_request("That is not a template every card can wear.").into());
     }
     let changes = sets::SetChanges {
         name,

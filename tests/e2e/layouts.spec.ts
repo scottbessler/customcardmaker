@@ -40,9 +40,12 @@ test("a card can be made a planeswalker, a saga or a token, and keeps it", async
   await page.click(".add-card");
   const preview = page.locator(".preview .mtg-card");
   await expect(preview).toHaveClass(/lay-normal/);
+  // A new card is a spell: no power/toughness until it is a creature.
+  await expect(page.locator('input[name="power_toughness"]')).toHaveCount(0);
+  await page.locator(".cardtypes .tint-option", { hasText: "Creature" }).click();
   await expect(page.locator('input[name="power_toughness"]')).toBeVisible();
 
-  await page.locator(".layouts .tint-option", { hasText: "Planeswalker" }).click();
+  await page.locator(".cardtypes .tint-option", { hasText: "Planeswalker" }).click();
   await expect(preview).toHaveClass(/lay-planeswalker/);
   // Loyalty replaces power/toughness.
   await expect(page.locator('input[name="power_toughness"]')).toHaveCount(0);
@@ -57,17 +60,22 @@ test("a card can be made a planeswalker, a saga or a token, and keeps it", async
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-planeswalker/);
   await expect(page.locator(".preview .pw-row")).toHaveCount(3);
 
-  await page.locator(".layouts .tint-option", { hasText: "Saga" }).click();
+  // A saga is a spell drawn by the Saga template.
+  await page.locator(".cardtypes .tint-option", { hasText: "Spell" }).click();
+  await page.locator(".look-option", { hasText: "Saga" }).click();
   await page.fill('textarea[name="rules_text"]', ": (Reminder.)\nI: One\nII, III: Two");
   await expect(page.locator(".preview .saga-row")).toHaveCount(2);
   await expect(page.locator(".preview .saga-mark")).toHaveCount(3);
   await expect(page.locator('input[name="power_toughness"]')).toHaveCount(0);
   await expect(page.locator('input[name="loyalty"]')).toHaveCount(0);
 
-  await page.locator(".layouts .tint-option", { hasText: "Token" }).click();
+  await page.locator(".cardtypes .tint-option", { hasText: "Token" }).click();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-token/);
   await expect(page.locator(".preview .mtg-cost")).toBeHidden();
-  await page.locator(".layouts .tint-option", { hasText: "Normal" }).click();
+  await expect(page.locator('input[name="mana_cost"]')).toHaveCount(0);
+  await page.locator(".cardtypes .tint-option", { hasText: "Spell" }).click();
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-saga/);
+  await page.locator(".look-option", { hasText: "Modern" }).click();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-normal/);
 });
 

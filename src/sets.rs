@@ -740,10 +740,7 @@ mod tests {
     }
 
     fn named(name: &str) -> Card {
-        Card {
-            name: name.into(),
-            ..Card::default()
-        }
+        Card::of("spell").with("name", name)
     }
 
     #[test]
@@ -786,7 +783,7 @@ mod tests {
         let order: Vec<_> = detail
             .cards
             .iter()
-            .map(|c| (c.card.name.as_str(), c.position))
+            .map(|c| (c.card.get("name"), c.position))
             .collect();
         assert_eq!(order, [("B", 1), ("C", 2)]);
         assert_eq!(detail.set.card_count, 2);
@@ -801,11 +798,9 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
-        let saved = Card {
-            name: "Final".into(),
-            rules_text: "Flying".into(),
-            ..Card::default()
-        };
+        let saved = Card::of("spell")
+            .with("name", "Final")
+            .with("rules_text", "Flying");
         store
             .save_card(me, card.id, saved.clone())
             .await
@@ -892,7 +887,7 @@ mod tests {
         let detail = store.get(me, set.id).await.unwrap().unwrap();
         assert_eq!(detail.set.name, "Dusk");
         assert_eq!(detail.cards.len(), 1);
-        assert_eq!(detail.cards[0].card.name, "Mine");
+        assert_eq!(detail.cards[0].card.get("name"), "Mine");
     }
 
     /// A set of cards named by `names`, in order, and their ids.
@@ -925,7 +920,7 @@ mod tests {
         detail
             .cards
             .into_iter()
-            .map(|c| (c.card.name, c.position))
+            .map(|c| (c.card.get("name").to_string(), c.position))
             .collect()
     }
 

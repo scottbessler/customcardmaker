@@ -107,6 +107,17 @@ that changes behaviour, not here.
   - [ ] Say at the end which pictures failed, so they can be retried
   - [ ] A cap on how long one import may run, and one import at a time per account
 
+- [ ] **14. Card types and templates** — see `CARDTYPES.md`.
+  - [x] Stage 1: card types (a card's fields, which are required, whether it may have a
+        back), the generic card, the form built from the type, the import choosing a type,
+        old documents read as the type they were
+  - [ ] Stage 2: templates as XML files that name the types they work with and place the
+        fields; one renderer reads them in place of the per-layout CSS; the built-ins ported
+        from the current geometry (modern, classic, borderless, full art, planeswalker, saga,
+        token, and a scan overlay for each); a card picks its template and a set keeps a
+        default per type
+  - [ ] Later: split / adventure / flip / modal types; custom templates per account
+
 ## Notes
 
 - **Licensing (item 2).** The Magic symbols are Wizards of the Coast's artwork.

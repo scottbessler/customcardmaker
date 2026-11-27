@@ -1370,7 +1370,7 @@ async fn pictures_can_be_marked_as_whole_cards_on_import() {
 }
 
 #[tokio::test]
-async fn a_card_may_name_a_layout_and_a_loyalty_but_only_real_layouts() {
+async fn a_card_has_a_type_and_only_the_fields_that_type_lists() {
     let app = app().await;
     let ada = register(&app, "Ada").await;
     let (_set, ids) = set_with(&app, &ada, "Looks", "LOK", &["A"]).await;
@@ -1390,14 +1390,50 @@ async fn a_card_may_name_a_layout_and_a_loyalty_but_only_real_layouts() {
         }
     };
 
-    let saved = put(json!({"name": "A", "layout": "planeswalker", "loyalty": "4"})).await;
+    let saved = put(json!({"cardtype": "planeswalker", "name": "A", "loyalty": "4"})).await;
     assert_eq!(saved.status, StatusCode::OK);
-    assert_eq!(saved.body["card"]["layout"], "planeswalker");
+    assert_eq!(saved.body["card"]["cardtype"], "planeswalker");
     assert_eq!(saved.body["card"]["loyalty"], "4");
 
-    for bad in [json!({"layout": "split"}), json!({"loyalty": "12345"})] {
+    for bad in [
+        // No such type; a field the type does not list; a field too long for its type.
+        json!({"cardtype": "split"}),
+        json!({"cardtype": "spell", "power_toughness": "2/2"}),
+        json!({"cardtype": "token", "mana_cost": "{1}"}),
+        json!({"cardtype": "planeswalker", "loyalty": "12345"}),
+        // A template for sagas is only for spells.
+        json!({"cardtype": "creature", "template": "saga"}),
+    ] {
         assert_eq!(put(bad).await.status, StatusCode::BAD_REQUEST);
     }
+    // The type decides which fields come back, all of them, empty if unset.
+    let spell = put(json!({"cardtype": "spell", "name": "B", "template": "saga"})).await;
+    assert_eq!(spell.status, StatusCode::OK);
+    assert_eq!(spell.body["card"]["template"], "saga");
+    assert!(spell.body["card"].get("power_toughness").is_none());
+    assert_eq!(spell.body["card"]["rules_text"], "");
+}
+
+#[tokio::test]
+async fn a_card_saved_before_types_existed_is_read_as_the_type_it_was() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let (_set, ids) = set_with(&app, &ada, "Old", "OLD", &["A"]).await;
+    // What an old client sent: a `layout`, and every field whether the card used it or not.
+    let old = json!({"name": "Walker", "layout": "planeswalker", "loyalty": "5", "power_toughness": "", "mana_cost": "{2}{W}"});
+    let put = call(
+        &app,
+        "PUT",
+        &format!("/api/cards/{}", ids[0]),
+        Some(old),
+        Some(&ada),
+    )
+    .await;
+    assert_eq!(put.status, StatusCode::OK, "{:?}", put.body);
+    assert_eq!(put.body["card"]["cardtype"], "planeswalker");
+    assert_eq!(put.body["card"]["loyalty"], "5");
+    assert!(put.body["card"].get("layout").is_none());
+    assert!(put.body["card"].get("power_toughness").is_none());
 }
 
 #[tokio::test]
@@ -1430,18 +1466,18 @@ async fn a_back_face_is_part_of_the_card_and_its_art_follows_the_same_rules() {
         &app,
         "POST",
         &format!("/api/sets/{set}/cards"),
-        Some(json!({"name": "Day", "art": front_art, "back": {"name": "Night", "art": back_art, "layout": "saga"}})),
+        Some(json!({"name": "Day", "art": front_art, "back": {"cardtype": "spell", "name": "Night", "art": back_art, "template": "saga"}})),
         Some(&ada),
     )
     .await;
     assert_eq!(made.status, StatusCode::CREATED, "{:?}", made.body);
     let card = made.body["id"].as_str().unwrap().to_string();
     assert_eq!(made.body["card"]["back"]["name"], "Night");
-    assert_eq!(made.body["card"]["back"]["layout"], "saga");
+    assert_eq!(made.body["card"]["back"]["template"], "saga");
 
     // A back face is checked like a front, and has no back of its own.
     for bad in [
-        json!({"back": {"layout": "split"}}),
+        json!({"back": {"cardtype": "split"}}),
         json!({"back": {"back": {"name": "Deeper"}}}),
     ] {
         let put = call(

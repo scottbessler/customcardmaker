@@ -6,6 +6,7 @@
 //! file from a newer exporter still imports.
 
 use crate::card::{Card, Rarity};
+use crate::cardtype;
 use crate::error::AppError;
 use roxmltree::Node;
 
@@ -106,23 +107,41 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
     let printed_layout =
         ours.is_empty() && !matches!(layout.as_str(), "" | "normal" | "transform" | "modal_dfc");
 
-    let card = Card {
-        name: text(node, "name").unwrap_or_default(),
-        mana_cost: field("manacost"),
-        type_line,
-        rarity: set
-            .and_then(|set| set.attribute("rarity"))
-            .map(rarity)
-            .unwrap_or_default(),
-        rules_text: paragraphs(text(node, "text").unwrap_or_default()),
-        power_toughness: field("pt"),
-        loyalty: field("loyalty"),
-        layout: ours.to_string(),
-        ..Card::default()
+    // Our type for it: what fields it has. A saga has a spell's, drawn by a template.
+    let cardtype = match ours {
+        "token" => "token",
+        "planeswalker" => "planeswalker",
+        _ if lowered.contains("creature") => "creature",
+        _ => "spell",
     };
+    let mut card = Card::of(cardtype);
+    card.set("name", text(node, "name").unwrap_or_default());
+    card.set("type_line", type_line);
+    card.set(
+        "rules_text",
+        paragraphs(text(node, "text").unwrap_or_default()),
+    );
+    for (key, tag) in [
+        ("mana_cost", "manacost"),
+        ("power_toughness", "pt"),
+        ("loyalty", "loyalty"),
+    ] {
+        // Only what the type has a field for; the rest of the file's keys are ignored.
+        if cardtype::get(cardtype).is_some_and(|ty| ty.field(key).is_some()) {
+            card.set(key, field(tag));
+        }
+    }
+    if ours == "saga" {
+        card.template = "saga".to_string();
+    }
+    card.rarity = set
+        .and_then(|set| set.attribute("rarity"))
+        .map(rarity)
+        .unwrap_or_default();
 
-    card.validate()
-        .map_err(|e| AppError::bad_request(format!("Card \"{}\": {}", card.name, e.detail())))?;
+    card.validate().map_err(|e| {
+        AppError::bad_request(format!("Card \"{}\": {}", card.get("name"), e.detail()))
+    })?;
     Ok(ImportedCard {
         card,
         image_url: set
@@ -164,8 +183,8 @@ fn join_faces(cards: Vec<ImportedCard>) -> Vec<ImportedCard> {
     for back in backs {
         let front = joined.iter_mut().find(|front| {
             front.card.back.is_none()
-                && front.related.as_deref() == Some(back.card.name.as_str())
-                && back.related.as_deref() == Some(front.card.name.as_str())
+                && front.related.as_deref() == Some(back.card.get("name"))
+                && back.related.as_deref() == Some(front.card.get("name"))
         });
         match front {
             Some(front) => {
@@ -283,11 +302,14 @@ mod tests {
         assert_eq!(db.cards.len(), 2);
 
         let first = &db.cards[0].card;
-        assert_eq!(first.name, "Vivi's Friend");
-        assert_eq!(first.mana_cost, "{2}{W}{W}");
-        assert_eq!(first.type_line, "Creature — Bird");
-        assert_eq!(first.power_toughness, "2/2");
-        assert_eq!(first.rules_text, "Birds you control have +1+1 and haste");
+        assert_eq!(first.get("name"), "Vivi's Friend");
+        assert_eq!(first.get("mana_cost"), "{2}{W}{W}");
+        assert_eq!(first.get("type_line"), "Creature — Bird");
+        assert_eq!(first.get("power_toughness"), "2/2");
+        assert_eq!(
+            first.get("rules_text"),
+            "Birds you control have +1+1 and haste"
+        );
         assert_eq!(first.rarity, Rarity::Mythic);
         assert_eq!(
             db.cards[0].image_url.as_deref(),
@@ -295,7 +317,7 @@ mod tests {
         );
 
         assert_eq!(db.cards[1].card.rarity, Rarity::Rare);
-        assert_eq!(db.cards[1].card.power_toughness, "");
+        assert_eq!(db.cards[1].card.get("power_toughness"), "");
         assert_eq!(db.cards[1].image_url, None);
     }
 
@@ -331,7 +353,7 @@ mod tests {
                    <text>one\r\ntwo\rthree</text><set>ABC</set></card></cards>\
                    </cockatrice_carddatabase>";
         let db = parse(xml).unwrap();
-        assert_eq!(db.cards[0].card.rules_text, "one\ntwo\nthree");
+        assert_eq!(db.cards[0].card.get("rules_text"), "one\ntwo\nthree");
     }
 
     #[test]
@@ -347,7 +369,7 @@ mod tests {
         let xml = format!(
             "<cockatrice_carddatabase><cards><card><name>A</name>\
              <text>{}</text><set>ABC</set></card></cards></cockatrice_carddatabase>",
-            "x".repeat(crate::card::MAX_RULES_TEXT + 1)
+            "x".repeat(1501)
         );
         let err = parse(&xml).unwrap_err();
         assert!(err.detail().contains("Card \"A\""));
@@ -374,15 +396,17 @@ You can only Activate this Ability: Sacrifice Bandage
         let cards: Vec<_> = db.cards.iter().collect();
         // Blank lines and trailing spaces are not paragraphs.
         assert_eq!(
-            cards[0].card.rules_text,
+            cards[0].card.get("rules_text"),
             "Enchant Creature\nEnchanted Creature Gains +0+2\nYou can only Activate this Ability: Sacrifice Bandage"
         );
         // "special" has no pip of its own; it is shown as mythic.
         assert_eq!(cards[0].card.rarity, Rarity::Mythic);
-        // Token, planeswalker and saga are layouts of our own now, and are drawn over.
-        let layouts: Vec<_> = cards.iter().map(|c| c.card.layout.as_str()).collect();
-        assert_eq!(layouts, ["", "token", "planeswalker", "saga", ""]);
-        assert_eq!(cards[2].card.loyalty, "4");
+        // Token and planeswalker are types of our own now; a saga is a spell drawn by the
+        // saga template.
+        let types: Vec<_> = cards.iter().map(|c| c.card.cardtype.as_str()).collect();
+        assert_eq!(types, ["spell", "token", "planeswalker", "spell", "spell"]);
+        assert_eq!(cards[3].card.template, "saga");
+        assert_eq!(cards[2].card.get("loyalty"), "4");
         // One we have no geometry for keeps its picture as printed.
         let printed: Vec<_> = cards.iter().map(|c| c.printed_layout).collect();
         assert_eq!(printed, [false, false, false, false, true]);
@@ -397,13 +421,13 @@ You can only Activate this Ability: Sacrifice Bandage
 <card><name>Orphan</name><text>No front.</text><prop><layout>transform</layout><side>back</side><type>Instant</type></prop><set rarity="rare">ABC</set><related attach="transform">Missing</related></card>
 </cards></cockatrice_carddatabase>"#;
         let db = parse(xml).unwrap();
-        let names: Vec<_> = db.cards.iter().map(|c| c.card.name.as_str()).collect();
+        let names: Vec<_> = db.cards.iter().map(|c| c.card.get("name")).collect();
         // The back leaves the list; a back with no front in the file stays, at the end.
         assert_eq!(names, ["Day", "Solo", "Orphan"]);
         let day = &db.cards[0];
         let back = day.card.back.as_ref().expect("Day has a back face");
         assert_eq!(
-            (back.name.as_str(), back.power_toughness.as_str()),
+            (back.get("name"), back.get("power_toughness")),
             ("Night", "2/2")
         );
         assert_eq!(
