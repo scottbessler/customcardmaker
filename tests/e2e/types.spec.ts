@@ -142,5 +142,25 @@ test("supplemental card types can be picked and edited as text", async ({ page }
   const plane = extras.getByRole("button", { name: "Plane", exact: true });
   await expect(plane).toHaveAttribute("aria-pressed", "true");
   await plane.click();
-  await expect(line(page)).toHaveValue("Amonkhet");
+  await expect(line(page)).toHaveValue("— Amonkhet");
+  await expect(tokens(page)).toContainText("Amonkhet");
+});
+
+test("removing the last type preserves subtypes through reload and retyping", async ({ page }) => {
+  await newCard(page);
+  await line(page).fill("Creature—Time Lord");
+  await expect(tokens(page)).toHaveCount(1);
+  await expect(tokens(page)).toContainText("Time Lord");
+  await type(page, "Creature").click();
+  await expect(line(page)).toHaveValue("— Time Lord");
+  await expect(subtype(page)).toBeEnabled();
+  await subtype(page).fill("wizard");
+  await page.getByRole("button", { name: "Add typed subtype" }).click();
+  await expect(line(page)).toHaveValue("— Time Lord Wizard");
+  await expect(page.locator(".save-state")).toHaveText("Saved");
+
+  await page.reload();
+  await expect(tokens(page)).toHaveCount(2);
+  await type(page, "Creature").click();
+  await expect(line(page)).toHaveValue("Creature — Time Lord Wizard");
 });

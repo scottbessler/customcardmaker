@@ -139,6 +139,7 @@
 .field-label{display:flex;justify-content:space-between;gap:var(--space-8)}
 .count{color:var(--text-faint);font-variant-numeric:tabular-nums}
 .type-picks{display:flex;flex-wrap:wrap;gap:var(--space-8)}
+.type-picks>.field-label{flex-basis:100%}
 .type-builder{display:grid;gap:var(--space-8)}
 .supplemental-types summary{cursor:pointer;color:var(--text-muted);font-size:var(--text-small)}
 .supplemental-types .type-picks{margin-top:var(--space-8)}
