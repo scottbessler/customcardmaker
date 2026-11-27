@@ -49,7 +49,10 @@ test("the set's default template applies to every card that names none", async (
   await expect(page.locator(".filmstrip .mtg-card.tpl-classic")).toHaveCount(1);
   await page.reload();
   await expect(page.locator(".filmstrip .mtg-card.tpl-classic")).toHaveCount(1);
-  // Making the chosen look the set's default restyles the rest.
+  // Making a card's look the set's default restyles the rest. Open that card first: the
+  // reload does not say which one is selected.
+  await page.locator(".filmstrip .mtg-card.tpl-full-art").click();
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/tpl-full-art/);
   await page.click(".set-default-template");
   await expect(page.locator(".filmstrip .mtg-card.tpl-full-art")).toHaveCount(2);
 });
