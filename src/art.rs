@@ -5,7 +5,7 @@
 //! what arrives is small, but the server does not trust that: it checks the
 //! file's own signature rather than the claimed type, and caps the size.
 
-use crate::db::Db;
+use crate::{db::Db, openverse::ArtCredit};
 use anyhow::{Context, Result};
 use chrono::Utc;
 use rusqlite::{OptionalExtension, params};
@@ -56,6 +56,7 @@ impl ArtStore {
         owner: Uuid,
         content_type: &'static str,
         bytes: &[u8],
+        credit: Option<&ArtCredit>,
     ) -> Result<Uuid> {
         let id = Uuid::new_v4();
         let path = self.dir.join(id.to_string());
@@ -63,12 +64,13 @@ impl ArtStore {
             .await
             .with_context(|| format!("failed to write {}", path.display()))?;
         let length = bytes.len() as i64;
+        let credit = credit.map(serde_json::to_string).transpose()?;
         let row = self
             .db
             .call(move |c| {
                 c.execute(
-                    "INSERT INTO art (id, owner_id, content_type, bytes, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
-                    params![id.to_string(), owner.to_string(), content_type, length, Utc::now().to_rfc3339()],
+                    "INSERT INTO art (id, owner_id, content_type, bytes, created_at, credit) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                    params![id.to_string(), owner.to_string(), content_type, length, Utc::now().to_rfc3339(), credit],
                 )?;
                 Ok(())
             })
@@ -78,6 +80,36 @@ impl ArtStore {
             return Err(error);
         }
         Ok(id)
+    }
+
+    /// The credit for each of these images that has one. It does no visibility
+    /// check of its own: callers pass only ids taken from cards they have
+    /// already been allowed to show (the owner's set, or a public one).
+    pub async fn credits(
+        &self,
+        ids: Vec<Uuid>,
+    ) -> Result<std::collections::HashMap<Uuid, ArtCredit>> {
+        self.db
+            .call(move |c| {
+                let mut found = std::collections::HashMap::new();
+                for id in ids {
+                    let credit: Option<Option<String>> = c
+                        .query_row(
+                            "SELECT credit FROM art WHERE id = ?1",
+                            [id.to_string()],
+                            |row| row.get(0),
+                        )
+                        .optional()?;
+                    if let Some(Some(json)) = credit {
+                        found.insert(
+                            id,
+                            serde_json::from_str(&json).context("art credit is not valid")?,
+                        );
+                    }
+                }
+                Ok(found)
+            })
+            .await
     }
 
     pub async fn owned_by(&self, owner: Uuid, id: Uuid) -> Result<bool> {

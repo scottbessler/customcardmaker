@@ -79,6 +79,9 @@ const MIGRATIONS: &[&str] = &[
     // 7: the look a set's cards wear unless a card says otherwise. Text, not a
     // foreign key: the list of templates lives in code and grows without a migration.
     "ALTER TABLE sets ADD COLUMN default_template TEXT NOT NULL DEFAULT 'modern';",
+    // 8: who made an image and under what licence, kept with the image. Null for
+    // an upload, which is the owner's own.
+    "ALTER TABLE art ADD COLUMN credit TEXT;",
 ];
 
 #[derive(Clone)]

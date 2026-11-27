@@ -90,6 +90,21 @@ nothing about real Magic cards.
   uses it (G3). A card can only reference its owner's uploads, otherwise `400`.
 - **U4.** An upload's id never changes what it names, so its response is cached
   by the owner's browser indefinitely (`private`, `immutable`).
+- **U6.** *Find free art* searches Openverse through the server: signed-in accounts
+  only, at most 30 searches per account per 10 minutes, identical searches answered
+  from a one-minute memory, so the shared anonymous quota is not spent twice.
+  Offered: CC0, the public domain mark, CC BY and CC BY-SA, plus the non-commercial
+  ones only when asked for. NoDerivatives is never offered (a card crops its art),
+  nor mature work, nor anything that is not a PNG or JPEG. An upstream
+  "busy" or failure is reported plainly, as `429` / `502`.
+- **U7.** Picking a result copies the image into our own storage as an upload (so U2
+  and U3 apply to it) and keeps its **credit**: title, creator, licence and its link,
+  and where it came from. The server contacts only the configured Openverse host,
+  never a URL taken from a result, never follows a redirect elsewhere, and refuses
+  an image over the upload cap or whose bytes are not a PNG, JPEG or WebP.
+- **U8.** The credit is shown wherever borrowed art is: under the art in the editor
+  and in an *Art credits* list on a public set's page. Picking art fills the card's
+  *artist* from the credit only if it was empty.
 - **U5.** Removing art from a card drops the reference; the file is kept
   (cleanup is a known gap, see TODO.md).
 

@@ -1,6 +1,7 @@
 import { html, render, useEffect, useState } from "/public/vendor/htm-preact.js";
 import { api } from "/public/api.js";
 import { CardFace } from "/public/card-face.js";
+import { Credit } from "/public/art-search.js";
 
 const setId = document.getElementById("app").dataset.setId;
 
@@ -12,6 +13,8 @@ function PublicSet() {
   }, []);
   if (!set) return html`<p class="error" role="alert">${error}</p>`;
   const count = set.cards.length;
+  // Borrowed art carries its credit; a licence asks for it to be shown.
+  const credited = set.cards.filter((c) => c.card.art && set.credits?.[c.card.art]);
   return html`
     <p class="back"><a href="/gallery">← Gallery</a></p>
     <h1>${set.name}</h1>
@@ -21,6 +24,12 @@ function PublicSet() {
         <${CardFace} card=${c.card} template=${set.default_template} code=${set.code} number=${c.position} total=${count} />
       </div>`)}
     </div>
+    ${credited.length
+      ? html`<section class="art-credits" aria-label="Art credits">
+          <h2>Art credits</h2>
+          <ul>${credited.map((c) => html`<li key=${c.position}><strong>${c.card.name || "Untitled"}</strong> — <${Credit} credit=${set.credits[c.card.art]} /></li>`)}</ul>
+        </section>`
+      : null}
   `;
 }
 
