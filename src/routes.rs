@@ -2,12 +2,13 @@ use crate::{
     app::AppState,
     art,
     card::Card,
-    cardtype, cockatrice,
+    cockatrice,
     error::{ApiError, AppError},
     openverse::{ArtCredit, SearchPage},
     render,
     session::{ApiUser, MaybeUser},
     sets::{self, Destination, SetDetail, SetSummary, StoredCard, Transferred},
+    template,
     users::User,
 };
 use axum::{
@@ -144,7 +145,7 @@ pub async fn patch_set(
     let name = body.name.as_deref().map(sets::clean_name).transpose()?;
     let code = body.code.as_deref().map(sets::clean_code).transpose()?;
     if let Some(template) = body.default_template.as_deref()
-        && !cardtype::template(template).is_some_and(cardtype::Template::is_look)
+        && !template::get(template).is_some_and(template::Template::is_look)
     {
         return Err(AppError::bad_request("That is not a template every card can wear.").into());
     }

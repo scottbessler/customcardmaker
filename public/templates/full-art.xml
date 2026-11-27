@@ -1,0 +1,3 @@
+<!-- Full art: a frame. It has no body, so a card in it is laid out by the standard grid layout
+     (name plate, art, type plate, text box) that the stylesheet draws for this frame. -->
+<template id="full-art" label="Full art" frame="full-art"/>

@@ -29,6 +29,7 @@ fn import_map() -> String {
         "/public/bulk.js",
         "/public/card-face.js",
         "/public/frame.js",
+        "/public/templates.js",
         "/public/type-builder.js",
         "/public/type-data.js",
         "/public/types.js",
@@ -130,13 +131,19 @@ fn json_script(id: &str, value: &impl serde::Serialize) -> String {
     )
 }
 
+/// The built-in templates, for any page that draws a card (`public/templates.js` reads them).
+fn templates_script() -> String {
+    json_script("templates", &crate::template::all())
+}
+
 pub fn set_page(id: Uuid, name: &str, user: &str) -> String {
     layout(
         name,
         &format!(
-            r#"<div id="app" class="set-page" data-set-id="{id}"></div>{}{}"#,
+            r#"<div id="app" class="set-page" data-set-id="{id}"></div>{}{}{}"#,
             json_script("limits", &crate::cardtype::limits()),
-            json_script("choices", &crate::card::CHOICES)
+            json_script("choices", &crate::card::choices()),
+            templates_script()
         ),
         Some("/public/set.js"),
         Some(user),
@@ -148,7 +155,10 @@ pub fn set_page(id: Uuid, name: &str, user: &str) -> String {
 pub fn frames_page() -> String {
     layout(
         "Frames",
-        r#"<div id="app" class="frames-page"></div>"#,
+        &format!(
+            r#"<div id="app" class="frames-page"></div>{}"#,
+            templates_script()
+        ),
         Some("/public/dev-frames.js"),
         None,
     )
@@ -169,7 +179,10 @@ pub fn import_page(user: &str) -> String {
 pub fn gallery_page(user: Option<&str>) -> String {
     layout(
         "Gallery",
-        r#"<div id="app" class="gallery-page"></div>"#,
+        &format!(
+            r#"<div id="app" class="gallery-page"></div>{}"#,
+            templates_script()
+        ),
         Some("/public/gallery.js"),
         user,
     )
@@ -178,7 +191,10 @@ pub fn gallery_page(user: Option<&str>) -> String {
 pub fn gallery_set_page(id: Uuid, name: &str, user: Option<&str>) -> String {
     layout(
         name,
-        &format!(r#"<div id="app" class="gallery-set-page" data-set-id="{id}"></div>"#),
+        &format!(
+            r#"<div id="app" class="gallery-set-page" data-set-id="{id}"></div>{}"#,
+            templates_script()
+        ),
         Some("/public/gallery-set.js"),
         user,
     )

@@ -1,0 +1,17 @@
+<!-- Token: the art is the card, a centred name, a type line and a text box low down. It has
+     no mana cost to draw. -->
+<template id="token" label="Token" excludes="cost loyalty defense" frame="inherit">
+  <plate role="name" x="5" y="5.2" w="90" h="10">
+    <field name="name"/>
+  </plate>
+  <art x="4" y="4" w="92" h="125"/>
+  <plate role="type" x="4.6" y="93.4" w="90.8" h="9.6">
+    <field name="type_line"/>
+  </plate>
+  <box x="6.5" y="103" w="86.5" h="26">
+    <field name="rules_text"/>
+  </box>
+  <stat x="78" y="124.5" w="16.4" h="9.2">
+    <field name="power_toughness"/>
+  </stat>
+</template>

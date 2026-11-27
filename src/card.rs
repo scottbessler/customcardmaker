@@ -12,6 +12,7 @@
 
 use crate::cardtype::{self, Kind};
 use crate::error::AppError;
+use crate::template;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use uuid::Uuid;
@@ -37,24 +38,24 @@ pub fn is_frame(id: &str) -> bool {
     FRAMES.iter().any(|(known, _)| *known == id)
 }
 
-/// The choices the editor offers, sent to the page beside the limits: the base fields, the
-/// features, and the templates (with the features each needs and cannot draw).
+/// The choices the editor offers, sent to the page beside the limits: the base fields and the
+/// features. (The templates go in a script of their own; every page that draws a card needs them.)
 #[derive(Debug, Serialize)]
 pub struct Choices {
     pub base: &'static [cardtype::Field],
     pub features: &'static [cardtype::Feature],
-    pub templates: &'static [cardtype::Template],
     pub frames: &'static [(&'static str, &'static str)],
     pub default_template: &'static str,
 }
 
-pub const CHOICES: Choices = Choices {
-    base: cardtype::BASE,
-    features: cardtype::FEATURES,
-    templates: cardtype::TEMPLATES,
-    frames: FRAMES,
-    default_template: DEFAULT_TEMPLATE,
-};
+pub fn choices() -> Choices {
+    Choices {
+        base: cardtype::BASE,
+        features: cardtype::FEATURES,
+        frames: FRAMES,
+        default_template: DEFAULT_TEMPLATE,
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -246,7 +247,7 @@ impl Card {
         for field in cardtype::fields_for(&card.features) {
             card.set(field.key, self.get(field.key));
         }
-        if cardtype::template(&card.template).is_some_and(|t| !t.works_with(&card.features)) {
+        if template::get(&card.template).is_some_and(|t| !t.works_with(&card.features)) {
             card.template.clear();
         }
         card
@@ -296,7 +297,7 @@ impl Card {
             return Err(AppError::bad_request("That is not a frame colour."));
         }
         if !self.template.is_empty() {
-            let template = cardtype::template(&self.template)
+            let template = template::get(&self.template)
                 .ok_or_else(|| AppError::bad_request("That is not a card template."))?;
             if !template.works_with(&self.features) {
                 return Err(AppError::bad_request(format!(

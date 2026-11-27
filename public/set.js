@@ -6,6 +6,7 @@ import { CardFace, Mana } from "/public/card-face.js";
 import { BulkBar, TransferDialog } from "/public/bulk.js";
 import { TypeBuilder } from "/public/type-builder.js";
 import { frameOf, worksWith } from "/public/frame.js";
+import { allTemplates } from "/public/templates.js";
 
 const SAVE_DELAY_MS = 500;
 const RARITIES = ["common", "uncommon", "rare", "mythic"];
@@ -21,7 +22,7 @@ const fieldsFor = (features) => [...choices.base, ...choices.features.filter((f)
  */
 function withFeatures(card, features) {
   const on = choices.features.map((f) => f.id).filter((id) => features.includes(id));
-  const template = choices.templates.find((t) => t.id === card.template);
+  const template = allTemplates().find((t) => t.id === card.template);
   return {
     features: on,
     template: template && !worksWith(template, on) ? "" : card.template ?? "",
@@ -192,7 +193,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
         ? html`<p class="muted looks-note">A whole-card picture is drawn as it is, so it has no template. The colour below tints our text plates over it.</p>`
         : html`<fieldset class="looks">
         <legend>Template</legend>
-        ${choices.templates.filter((t) => worksWith(t, card.features)).map(({ id, label }) => html`<label class=${`look-option${(card.template || template) === id ? " chosen" : ""}`}>
+        ${allTemplates().filter((t) => worksWith(t, card.features)).map(({ id, label }) => html`<label class=${`look-option${(card.template || template) === id ? " chosen" : ""}`}>
           <input type="radio" name="template" value=${id} checked=${(card.template || template) === id} onChange=${() => onChange({ ...card, template: id === template ? "" : id })} />
           <span class="look-thumb"><${CardFace} card=${{ ...card, template: id }} /></span>
           <span class="look-name">${label}${id === template ? html` <small>set default</small>` : null}</span>
@@ -469,7 +470,7 @@ function SetPage() {
         </div>
         <label class="default-look">Default look
           <select name="default-template" value=${set.default_template} onChange=${(e) => patchSet({ default_template: e.currentTarget.value })}>
-            ${choices.templates.filter((t) => !t.requires.length && !t.excludes.length).map(({ id, label }) => html`<option value=${id} selected=${id === set.default_template}>${label}</option>`)}
+            ${allTemplates().filter((t) => !t.requires.length && !t.excludes.length).map(({ id, label }) => html`<option value=${id} selected=${id === set.default_template}>${label}</option>`)}
           </select>
         </label>
         <label class="public-toggle">

@@ -80,46 +80,51 @@ no row is rewritten until it is next saved.
 
 A template is a file in `public/templates/`: restricted XML, so the browser and the server
 read it with the parsers they already have, and so that one a person wrote could be
-accepted later by checking it against a whitelist. Built-ins only for now.
+accepted later by checking it against a whitelist. Built-ins only for now. The server embeds
+the files (`src/template.rs`), checks every one when it is loaded, and sends them to each page
+that draws a card (`<script id="templates">`); `public/templates.js` parses them there.
 
 ```xml
-<template id="nexus-planeswalker" label="Planeswalker" requires="loyalty" frame="modern">
-  <plate  x="4.6" y="5.4" w="90.8" h="10" role="name">
-    <field name="name" align="start"/>
+<template id="planeswalker" label="Planeswalker" requires="loyalty" frame="inherit">
+  <plate role="name" x="4.6" y="5.4" w="90.8" h="10">
+    <field name="name"/>
     <field name="mana_cost"/>
   </plate>
-  <art    x="7.5" y="15" w="85" h="63"/>
-  <plate  x="4.6" y="77.8" w="90.8" h="9.8" role="type">
+  <art x="7.5" y="15" w="85" h="63"/>
+  <plate role="type" x="4.6" y="77.8" w="90.8" h="9.8">
     <field name="type_line"/>
   </plate>
-  <box    x="5.4" y="88" w="87.6" h="38.4">
+  <box x="5.4" y="88" w="87.6" h="38.4">
     <field name="rules_text" as="abilities"/>
   </box>
-  <stat   x="79.5" y="124.4" w="15" h="9.8"><field name="loyalty"/></stat>
+  <stat x="79.5" y="124.4" w="15" h="9.8">
+    <field name="loyalty"/>
+  </stat>
 </template>
 ```
 
 - **Units.** Every `x`, `y`, `w`, `h` is in card-width units: the card is 100 wide and
-  its height is 140. Nothing is in pixels, so a card renders the same at any size.
-- **Elements** (a closed list): `plate` (the tinted name/type plates), `box` (the text
-  box), `art`, `stat` (the P/T or loyalty badge), `foot` (the collector line), `group`
-  (a container that places children relative to itself). Each has `x y w h`; unknown
-  elements and attributes are an error, not ignored.
-- **`<field name="…"/>`** draws one field of the card, in the element that holds it.
-  `as` picks a reader for it: `as="abilities"` (loyalty costs beside each line),
-  `as="chapters"` (a saga's numerals), plain by default. A template can only name fields
-  of the base and of the features it `requires`; it lists in `excludes` the features it has
-  nowhere to draw. A template that names any other field is rejected when it is loaded, which
-  is what keeps "works with" honest.
-- **`frame`** names the chrome (the bevelled border, or none): `modern`, `classic`,
-  `borderless`, `full-art`, or `scan` (nothing; the card's picture is the frame).
-- **Style** is by `role` and `class` from the card stylesheet, not by raw CSS: a template
-  says *where* things go and which part each is, and the stylesheet (with its tokens)
-  says how a plate or a text box looks. The few things a template may tune directly are a
-  whitelist of properties on `style` (`font-size`, `text-align`, `padding`, `opacity`), all
-  in card units.
-- A **scan** template is the same thing with `frame="scan"`: opaque plates and a box laid
-  where a Nexus card keeps its own, over the picture.
+  140 tall. Nothing is in pixels, so a card renders the same at any size. A place is from the
+  card's own corner; the renderer takes the frame's offset off it, so one geometry serves every
+  frame (and a scan, which has none).
+- **Elements** (a closed list): `plate` (the tinted plates; `role="name"` or `role="type"`),
+  `box` (the text box), `art`, `stat` (a badge showing the first of its fields the card has a
+  value for). Unknown elements and attributes are an error, not ignored.
+- **`<field name="…"/>`** draws one field of the card, in the element that holds it. `as` picks
+  a reader for the rules text: `as="abilities"` (loyalty costs beside each line),
+  `as="chapters"` (a saga's numerals), plain by default. A template may name any field of the
+  base and of the features it has not `excludes`; a card without the feature shows it empty. A
+  template that names any other field is rejected when it is loaded, which is what keeps the
+  rule honest.
+- **`requires` / `excludes`** are space-separated feature ids.
+- **`frame`** is `modern`, `classic`, `borderless` or `full-art` (a frame of its own), or
+  `inherit` (the card's own look, else the set's).
+- **No body** means a frame: the four looks have none, and a card in one is laid out by the
+  standard grid layout (name plate, art, type plate, text box) the stylesheet draws for that
+  frame. Porting that layout into bodies is the rest of stage 2.
+- **Style** is by `role` and class from the card stylesheet, not by raw CSS: a template says
+  *where* things go and which part each is, and the stylesheet (with its tokens) says how a plate
+  or a text box looks.
 
 ### Built-in templates
 
@@ -135,11 +140,12 @@ and none of the `excludes`.
 | `saga` | | stats | chapters down the left, art on the right |
 | `token` | | cost | picture behind everything, centred name |
 | `planeswalker` | loyalty | | tall art, abilities over its foot, loyalty badge |
-| `scan-*` | the same as above | | the Nexus overlay for each of those |
+| `scan-*` | the same as above | | the Nexus overlay for each of those (not written yet: a scan is still `art_is_card` in the stylesheet) |
 
-Today a card with `loyalty` is drawn as a planeswalker whatever its template, and wears the
-set's look for its frame; `planeswalker` becomes a template of its own in stage 2. A card with
-both stats draws the planeswalker layout (loyalty only); a template that shows both is stage 2.
+A card with `loyalty` is drawn by the `planeswalker` template whatever it names, and wears its
+own look or the set's for its frame (`resolveTemplate` in `public/templates.js`). A card with
+both stats draws the planeswalker layout (loyalty only); a template that shows both is not
+written yet.
 
 ### A card chooses its template
 
@@ -154,8 +160,9 @@ matching `scan-*` template, which is what `art_is_card` selects today.
 1. **Features and the generic card** (done). `src/cardtype.rs`; the card carries `features`;
    fields are validated against them; the editor's form is built from them; the import turns
    on the right ones; old documents read as above. Drawing is unchanged.
-2. **Templates.** The XML format and its loader; one renderer that reads a template instead
-   of the per-layout CSS; the built-ins above, ported from the current geometry; a card
-   picks its template and the set keeps a default per kind of card.
+2. **Templates** (in progress). Done: the XML format, its loader and checker (`src/template.rs`),
+   the renderer (`public/templates.js`, `card-face.js`), and the planeswalker, saga and token
+   templates as data. To do: the four looks' standard layout as bodies, the `scan-*` templates
+   in place of `art_is_card`, and a default template per kind of card in a set.
 3. **Later.** Split / adventure / flip / modal; custom templates per account (an editor,
    storage, and the whitelist enforced on save).

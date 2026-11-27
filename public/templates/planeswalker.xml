@@ -1,0 +1,19 @@
+<!-- Planeswalker: tall art, the abilities over its foot, the loyalty badge where power and
+     toughness would be. Places are in card-width units (the card is 100 wide, 140 tall),
+     measured off a real MTG Nexus card. It wears the set's look for its frame. -->
+<template id="planeswalker" label="Planeswalker" requires="loyalty" frame="inherit">
+  <plate role="name" x="4.6" y="5.4" w="90.8" h="10">
+    <field name="name"/>
+    <field name="mana_cost"/>
+  </plate>
+  <art x="7.5" y="15" w="85" h="63"/>
+  <plate role="type" x="4.6" y="77.8" w="90.8" h="9.8">
+    <field name="type_line"/>
+  </plate>
+  <box x="5.4" y="88" w="87.6" h="38.4">
+    <field name="rules_text" as="abilities"/>
+  </box>
+  <stat x="79.5" y="124.4" w="15" h="9.8">
+    <field name="loyalty"/>
+  </stat>
+</template>

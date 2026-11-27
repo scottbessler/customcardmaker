@@ -11,4 +11,5 @@ pub mod render;
 pub mod routes;
 pub mod session;
 pub mod sets;
+pub mod template;
 pub mod users;

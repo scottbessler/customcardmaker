@@ -8,8 +8,8 @@
 //! editor asks for it and what it may hold), a bound on its length, and whether a
 //! *finished* card must have it (a draft need not).
 //!
-//! A template names the features it needs and the ones it cannot draw; nothing here knows
-//! about looks.
+//! A template (`template.rs`) names the features it needs and the ones it cannot draw;
+//! nothing here knows about looks.
 
 use serde::Serialize;
 
@@ -177,104 +177,12 @@ pub fn limits() -> std::collections::BTreeMap<&'static str, usize> {
         .collect()
 }
 
-/// A way a card may be drawn. It needs some features (a planeswalker's frame has a place
-/// for loyalty and none for anything else it could not draw) and cannot draw others (a
-/// token has no mana cost to show). The XML that will replace this list is in `CARDTYPES.md`.
-#[derive(Debug, Serialize)]
-pub struct Template {
-    pub id: &'static str,
-    pub label: &'static str,
-    /// Features a card must have on to wear it.
-    pub requires: &'static [&'static str],
-    /// Features a card must not have on, because the template has nowhere to draw them.
-    pub excludes: &'static [&'static str],
-}
-
-pub const TEMPLATES: &[Template] = &[
-    Template {
-        id: "modern",
-        label: "Modern",
-        requires: &[],
-        excludes: &[],
-    },
-    Template {
-        id: "classic",
-        label: "Classic",
-        requires: &[],
-        excludes: &[],
-    },
-    Template {
-        id: "borderless",
-        label: "Borderless",
-        requires: &[],
-        excludes: &[],
-    },
-    Template {
-        id: "full-art",
-        label: "Full art",
-        requires: &[],
-        excludes: &[],
-    },
-    // Chapters down the left, art on the right: it reads the rules text as chapters.
-    Template {
-        id: "saga",
-        label: "Saga",
-        requires: &[],
-        excludes: &["power_toughness", "loyalty", "defense"],
-    },
-    // The art behind everything, a centred name, no cost.
-    Template {
-        id: "token",
-        label: "Token",
-        requires: &[],
-        excludes: &["cost", "loyalty", "defense"],
-    },
-];
-
-pub fn template(id: &str) -> Option<&'static Template> {
-    TEMPLATES.iter().find(|template| template.id == id)
-}
-
-impl Template {
-    /// Whether a card with these features on can wear it.
-    pub fn works_with(&self, features: &[String]) -> bool {
-        let has = |id: &str| features.iter().any(|f| f == id);
-        self.requires.iter().all(|id| has(id)) && !self.excludes.iter().any(|id| has(id))
-    }
-
-    /// A look any card can wear, so a set may make it its default.
-    pub fn is_look(&self) -> bool {
-        self.requires.is_empty() && self.excludes.is_empty()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn on(ids: &[&str]) -> Vec<String> {
         ids.iter().map(ToString::to_string).collect()
-    }
-
-    #[test]
-    fn templates_name_real_features() {
-        for template in TEMPLATES {
-            for id in template.requires.iter().chain(template.excludes) {
-                assert!(
-                    feature(id).is_some(),
-                    "{} names {id}, which is no feature",
-                    template.id
-                );
-            }
-            assert!(
-                !template
-                    .requires
-                    .iter()
-                    .any(|id| template.excludes.contains(id)),
-                "{} both needs and excludes a feature",
-                template.id
-            );
-        }
     }
 
     #[test]
@@ -291,24 +199,5 @@ mod tests {
         let both = keys(&["power_toughness", "loyalty"]);
         assert!(both.contains(&"power_toughness") && both.contains(&"loyalty"));
         assert_eq!(default_features(), ["cost"]);
-    }
-
-    #[test]
-    fn a_template_works_with_the_features_it_can_draw() {
-        let token = template("token").unwrap();
-        assert!(token.works_with(&on(&["power_toughness"])));
-        assert!(!token.works_with(&on(&["cost"])), "a token has no cost");
-        assert!(
-            template("modern")
-                .unwrap()
-                .works_with(&on(&["cost", "loyalty"]))
-        );
-        assert!(!template("saga").unwrap().works_with(&on(&["loyalty"])));
-    }
-
-    #[test]
-    fn only_a_look_can_be_a_sets_default() {
-        assert!(template("modern").is_some_and(Template::is_look));
-        assert!(!template("saga").is_some_and(Template::is_look));
     }
 }
