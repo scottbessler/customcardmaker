@@ -22,6 +22,7 @@ async function search(page, query: string) {
 
 test("search the free art, pick one, and it arrives on the card with its credit", async ({ page }) => {
   await cardInEditor(page);
+  await page.click(".preview .card-art-control");
   await page.click(".search-art");
   await expect(dialog(page)).toBeVisible();
   await search(page, "forest");
@@ -47,6 +48,7 @@ test("search the free art, pick one, and it arrives on the card with its credit"
 
   // And it is the card's own now: still there, with its credit, after a reload.
   await page.reload();
+  await page.click(".preview .card-art-control");
   await expect(page.locator(".preview .mtg-art")).toHaveClass(/has-art/);
   await expect(page.locator(".art-credit-line")).toContainText("Jane Painter");
 });
@@ -54,6 +56,7 @@ test("search the free art, pick one, and it arrives on the card with its credit"
 test("an artist already on the card is not overwritten", async ({ page }) => {
   await cardInEditor(page);
   await page.fill('input[name="artist"]', "Someone Else");
+  await page.click(".preview .card-art-control");
   await page.click(".search-art");
   await search(page, "forest");
   await results(page).first().click();
@@ -64,6 +67,7 @@ test("an artist already on the card is not overwritten", async ({ page }) => {
 
 test("non-commercial licences appear only when asked for", async ({ page }) => {
   await cardInEditor(page);
+  await page.click(".preview .card-art-control");
   await page.click(".search-art");
   await search(page, "forest");
   await expect(results(page)).toHaveCount(2);
@@ -77,6 +81,7 @@ test("non-commercial licences appear only when asked for", async ({ page }) => {
 
 test("an empty or busy search says so, and the dialog stays usable", async ({ page }) => {
   await cardInEditor(page);
+  await page.click(".preview .card-art-control");
   await page.click(".search-art");
   await search(page, "nothing");
   await expect(dialog(page).locator(".art-empty")).toHaveText("Nothing matched. Try another word.");
@@ -89,6 +94,7 @@ test("an empty or busy search says so, and the dialog stays usable", async ({ pa
 
 test("Escape and Close leave the card alone", async ({ page }) => {
   await cardInEditor(page);
+  await page.click(".preview .card-art-control");
   await page.click(".search-art");
   await search(page, "forest");
   await page.keyboard.press("Escape");
@@ -101,6 +107,7 @@ test("Escape and Close leave the card alone", async ({ page }) => {
 
 test("borrowed art is credited on the public page", async ({ page, browser }) => {
   const set = await cardInEditor(page);
+  await page.click(".preview .card-art-control");
   await page.click(".search-art");
   await search(page, "forest");
   await results(page).nth(1).click();
@@ -122,6 +129,7 @@ test("borrowed art is credited on the public page", async ({ page, browser }) =>
 test("the dialog fits a phone", async ({ page }, info) => {
   test.skip(info.project.name !== "chromium-mobile");
   await cardInEditor(page);
+  await page.click(".preview .card-art-control");
   await page.click(".search-art");
   await search(page, "forest");
   await expect(results(page)).toHaveCount(2);

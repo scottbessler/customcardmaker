@@ -15,7 +15,9 @@ async function setWithCard(page) {
   await page.click(".new-set button");
   await expect(page.locator("h1")).toBeVisible();
   await page.click(".add-card");
+  await page.getByRole("button", { name: "Start editing" }).click();
   await expect(page.locator(".filmstrip .mtg-card")).toHaveCount(1);
+  await page.click(".preview .card-art-control");
 }
 
 async function upload(page) {

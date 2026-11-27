@@ -108,7 +108,7 @@ function Part({ part, card, turned, marker }) {
  * One printed card. Its size is its container's: every measurement inside is
  * in container-width units, so it renders the same at any scale.
  */
-export function CardFace({ card: whole, flipped = false, template = "modern", code = "", number = 0, total = 0, selected = false, onClick }) {
+export function CardFace({ card: whole, flipped = false, template = "modern", code = "", number = 0, total = 0, selected = false, onClick, onArt }) {
   // A double-faced card shows one face at a time; the back is a card of its own.
   const turned = flipped && whole.back;
   const card = turned ? whole.back : whole;
@@ -125,6 +125,7 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
   const collector = number ? `${String(number).padStart(3, "0")}${total ? `/${String(total).padStart(3, "0")}` : ""}` : "";
   const label = card.name || "Untitled card";
   const Tag = onClick ? "button" : "article";
+  const artZones = scan ? [{ x: 0, y: 0, w: 100, h: 140 }] : layout.body.filter((part) => part.tag === "art");
   return html`<${Tag}
     data-face=${whole.back ? (turned ? "back" : "front") : undefined}
     class=${`mtg-card tpl-${look} lay-${layout.id} frame-${frame} rarity-${card.rarity}${whole.back ? " has-back" : ""}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
@@ -140,5 +141,10 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
         <span>${card.artist ? `Illus. ${card.artist}` : ""}</span>
       </footer>
     </div>
+    ${onArt ? artZones.map(({ x, y, w, h, face }) => html`<div class="card-art-zone"
+      style=${`left:${x}cqw;top:${y}cqw;width:${w}cqw;height:${h}cqw`}>
+      <button type="button" class="card-art-control" onClick=${() => onArt(face === "half")}
+        aria-label=${face === "half" ? "Edit second half art" : "Edit card art"}>Edit art</button>
+    </div>`) : null}
   <//>`;
 }

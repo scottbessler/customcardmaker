@@ -190,10 +190,6 @@
 .look-thumb{display:block;width:100%;pointer-events:none}
 .look-name{font-size:var(--text-small);text-align:center}
 .look-name small{display:block}
-/* A layout the card cannot wear yet: shown, so it can be found, and told why. */
-.look-option.unavailable{cursor:default;opacity:.55}
-.look-option.unavailable .look-name{font-weight:600}
-.look-needs{color:var(--text-faint);font-weight:500}
 .tint-option{position:relative;display:inline-flex;flex-direction:row;align-items:center;gap:var(--space-8);padding:.4rem .8rem;border:1px solid var(--line-2);border-radius:var(--radius-chip);cursor:pointer;color:var(--text-muted)}
 .tint-option:has(input:checked){border-color:var(--gold);background:var(--ink-600);color:var(--text)}
 .tint-chip{display:inline-block;width:1rem;height:1rem;aspect-ratio:1;border-radius:50%;background:linear-gradient(135deg,var(--hi),var(--lo));box-shadow:none;flex:none}
@@ -206,3 +202,16 @@
 .face-tab{min-height:2.75rem;padding:.4rem 1rem;border:1px solid var(--line-2);border-radius:var(--radius-chip);background:none;color:var(--text-muted);font:inherit;font-weight:600;cursor:pointer}
 .face-tab.chosen{border-color:var(--gold);background:var(--ink-600);color:var(--text)}
 .public-card{display:grid;gap:var(--space-8);justify-items:center;align-content:start}
+
+.template-setup{width:min(56rem,calc(100vw - 2rem))}
+.template-setup .looks{display:grid;grid-template-columns:repeat(auto-fill,minmax(5rem,1fr))}
+.template-setup .look-option{width:auto;min-width:0}
+.template-setup legend{margin-bottom:var(--space-8)}
+.template-setup .tint-option:has(input:disabled){cursor:default}
+.template-setup .tint-option small{color:var(--text-muted)}
+.card-art-zone{position:absolute;z-index:3;display:grid;place-items:center;pointer-events:auto}
+.card-art-control{font-size:var(--text-small);padding-inline:var(--space-12)}
+@media(hover:hover) and (pointer:fine){
+  .card-art-control{opacity:0}
+  .card-art-zone:hover .card-art-control,.card-art-control:focus-visible{opacity:1}
+}

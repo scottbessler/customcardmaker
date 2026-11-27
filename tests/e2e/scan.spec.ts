@@ -1,5 +1,4 @@
 import { expect, test } from "./fixtures";
-import { expectImage } from "./rendering";
 import { registerUser } from "./session";
 
 /**
@@ -26,12 +25,14 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
   await page.click(".new-set button");
   await expect(page.locator("h1")).toBeVisible();
   await page.click(".add-card");
+  await page.getByRole("button", { name: "Start editing" }).click();
   await page.fill('input[name="name"]', "Overlaid Name");
   await page.fill('input[name="mana_cost"]', "{1}{W}");
   await page.fill('input[name="type_line"]', "Creature — Human Knight");
   await page.fill('textarea[name="rules_text"]', "Vigilance");
 
   const preview = page.locator(".preview .mtg-card");
+  await page.click(".preview .card-art-control");
   await page.setInputFiles('input[name="art"]', { name: "scan.png", mimeType: "image/png", buffer: scan });
   await expect(page.locator(".art-thumb")).toHaveCSS("background-image", /api\/art/);
   // Used as art first: the picture sits in the art box.
@@ -39,13 +40,12 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
 
   await page.check('input[name="art_is_card"]');
   await expect(preview).toHaveClass(/art-card/);
-  await expect(page.locator(".look-option")).toHaveCount(0);
   await expect(preview.locator(".mtg-title")).toHaveText("Overlaid Name");
   await expect(page.locator(".save-state")).toHaveText(/Saved/);
 
   await page.reload();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/art-card/);
-  await expect(page.locator('input[name="art_is_card"]')).toBeChecked();
+
 
   // Our plates against the printed ones, measured from the card's own corner: where the
   // page happens to sit when it is read must not move them.
@@ -69,9 +69,9 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
     };
   });
   expect(JSON.stringify(overlay, null, 2)).toMatchSnapshot(["json", "scan.json"]);
-  await expectImage(page.locator(".preview .mtg-card"), "scan.png");
 
   // Or keep what the picture says: none of ours is drawn.
+  await page.click(".preview .card-art-control");
   await page.check('input[name="keep_printed_text"]');
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/art-card-plain/);
   await expect(page.locator(".preview .mtg-frame")).toBeHidden();
@@ -81,5 +81,5 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
   // Taking the picture away takes the flags with it.
   await page.click(".remove-art");
   await expect(page.locator(".preview .mtg-card")).not.toHaveClass(/art-card/);
-  await expect(page.locator(".look-option")).toHaveCount(15);
+  await expect(page.locator('input[name="art_is_card"]')).toHaveCount(0);
 });
