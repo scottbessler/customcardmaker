@@ -1,6 +1,6 @@
 <!-- Aftermath: the two halves one above the other, each a card of its own across the
      width, the second half printed upside down on a real card. -->
-<template id="aftermath" label="Aftermath" requires="back cost" frame="inherit">
+<template id="aftermath" label="Aftermath" requires="half cost" frame="inherit">
   <art x="5" y="4.5" w="90" h="28"/>
   <plate role="name" x="5" y="34.5" w="90" h="7.2">
     <field name="name"/>
@@ -12,15 +12,15 @@
   <box x="5" y="49.5" w="90" h="18">
     <field name="rules_text"/>
   </box>
-  <art x="5" y="73" w="90" h="28" face="back"/>
-  <plate role="name" x="5" y="103" w="90" h="7.2" face="back">
+  <art x="5" y="73" w="90" h="28" face="half"/>
+  <plate role="name" x="5" y="103" w="90" h="7.2" face="half">
     <field name="name"/>
     <field name="mana_cost"/>
   </plate>
-  <plate role="type" x="5" y="111" w="90" h="6.4" face="back">
+  <plate role="type" x="5" y="111" w="90" h="6.4" face="half">
     <field name="type_line"/>
   </plate>
-  <box x="5" y="118" w="90" h="17.5" face="back">
+  <box x="5" y="118" w="90" h="17.5" face="half">
     <field name="rules_text"/>
   </box>
 </template>

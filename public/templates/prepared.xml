@@ -1,6 +1,6 @@
 <!-- Prepared: the card, with the prepared spell's text in a box beside its own. The
      prepared spell is the back face. -->
-<template id="prepared" label="Prepared" requires="back" frame="inherit">
+<template id="prepared" label="Prepared" requires="half" frame="inherit">
   <plate role="name" x="4.6" y="6.9" w="90.8" h="7.9">
     <field name="name"/>
     <field name="mana_cost"/>
@@ -12,7 +12,7 @@
   <box x="6.8" y="80.5" w="42" h="47.5">
     <field name="rules_text"/>
   </box>
-  <box x="51" y="80.5" w="44" h="47.5" face="back">
+  <box x="51" y="80.5" w="44" h="47.5" face="half">
     <field name="rules_text"/>
   </box>
 </template>

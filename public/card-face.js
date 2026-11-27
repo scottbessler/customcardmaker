@@ -69,12 +69,12 @@ function Rules({ card, as }) {
 }
 
 /**
- * One element of a template's body, drawn with the card's own fields — or the second
- * face's, when the element says `face="back"` (the split and adventure layouts).
+ * One element of a template's body, drawn with this face's fields — or the second half's,
+ * when the element says `face="half"` (the split and adventure layouts).
  */
-function Part({ part, card, turned, whole, marker }) {
+function Part({ part, card, turned, marker }) {
   const style = place(part);
-  const source = part.face === "back" && whole.back ? whole.back : card;
+  const source = part.face === "half" && card.half ? card.half : card;
   const field = (name) => part.fields.find((f) => f.name === name);
   if (part.tag === "art") {
     return html`<div class=${`mtg-art${source.art ? " has-art" : ""}`} style=${`${style}${source.art ? `;background-image:url(${artUrl(source.art)})` : ""}`}></div>`;
@@ -118,9 +118,9 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
   // A whole-card picture is the card; the plates and text box go on top of it.
   const scan = card.art && card.art_is_card;
   const { layout, look } = resolveTemplate(card.template ? card : { ...card, template: whole.template }, template);
-  // A layout that places the second face draws both at once (a split card), so neither
+  // A layout that places the second half draws both at once (a split card), so neither
   // gets the transform marker; one that does not is a card you turn over.
-  const paired = layout.body.some((part) => part.face === "back");
+  const paired = layout.body.some((part) => part.face === "half");
   const marker = Boolean(whole.back && !paired);
   const collector = number ? `${String(number).padStart(3, "0")}${total ? `/${String(total).padStart(3, "0")}` : ""}` : "";
   const label = card.name || "Untitled card";
@@ -134,7 +134,7 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
     onClick=${onClick}
   >
     <div class="mtg-frame">
-      ${layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} whole=${whole} marker=${marker} />`)}
+      ${layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} marker=${marker} />`)}
       <footer class="mtg-foot">
         <span>${collector}${collector && code ? " • " : ""}${code}</span>
         <span>${card.artist ? `Illus. ${card.artist}` : ""}</span>

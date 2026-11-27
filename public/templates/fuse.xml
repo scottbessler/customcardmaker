@@ -1,5 +1,5 @@
 <!-- Fuse: the same two halves, with each half's art on its outer edge (they mirror). -->
-<template id="fuse" label="Fuse" requires="back cost" frame="inherit">
+<template id="fuse" label="Fuse" requires="half cost" frame="inherit">
   <plate role="name" x="5" y="5" w="45" h="7.2">
     <field name="name"/>
     <field name="mana_cost"/>
@@ -11,15 +11,15 @@
     <field name="rules_text"/>
   </box>
   <art x="51" y="4.5" w="44" h="63"/>
-  <art x="5" y="73" w="44" h="62" face="back"/>
-  <plate role="name" x="51" y="73.5" w="45" h="7.2" face="back">
+  <art x="5" y="73" w="44" h="62" face="half"/>
+  <plate role="name" x="51" y="73.5" w="45" h="7.2" face="half">
     <field name="name"/>
     <field name="mana_cost"/>
   </plate>
-  <plate role="type" x="51" y="81.5" w="45" h="6.4" face="back">
+  <plate role="type" x="51" y="81.5" w="45" h="6.4" face="half">
     <field name="type_line"/>
   </plate>
-  <box x="51" y="88.5" w="45" h="46" face="back">
+  <box x="51" y="88.5" w="45" h="46" face="half">
     <field name="rules_text"/>
   </box>
 </template>

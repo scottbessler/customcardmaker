@@ -39,6 +39,8 @@ function withFeatures(card, features) {
 /** A new back face: a blank card with the features a new card has. */
 const blankFace = (rarity) => withFeatures({ rarity }, choices.features.filter((f) => f.default).map((f) => f.id));
 
+const faceOf = (card, which) => (which === "back" ? card.back : which === "half" ? card.half : card) ?? card;
+
 /**
  * A card the given template could draw, for its thumbnail: the card itself when it fits,
  * else one carrying what the template asks for, so the picture is of that layout rather
@@ -47,17 +49,21 @@ const blankFace = (rarity) => withFeatures({ rarity }, choices.features.filter((
 function previewFace(card, template) {
   if (worksWith(template, hasAll(card))) return { ...card, template: template.id };
   const features = card.features.filter((id) => !template.excludes.includes(id));
-  for (const id of template.requires) if (id !== "back" && !features.includes(id)) features.push(id);
+  for (const id of template.requires) if (id !== "back" && id !== "half" && !features.includes(id)) features.push(id);
   const preview = { ...card, features, template: template.id };
-  if (template.requires.includes("back") && !preview.back) {
-    preview.back = { ...blankFace(card.rarity), name: "Back", type_line: card.type_line, features: [...features] };
+  if (template.requires.includes("half") && !preview.half) {
+    preview.half = { ...blankFace(card.rarity), name: "2nd half", type_line: card.type_line, features: [...features] };
   }
   return preview;
 }
 
 /** A feature id in a few words, for a reason a card cannot wear a template yet. */
 const wordFor = (id) =>
-  id === "back" ? "a second face" : (choices.features.find((f) => f.id === id)?.label.toLowerCase() ?? id);
+  id === "back"
+    ? "a second face"
+    : id === "half"
+      ? "a second half"
+      : (choices.features.find((f) => f.id === id)?.label.toLowerCase() ?? id);
 
 /** Why a card cannot wear a template yet, in a few words: `needs a second face`. */
 function whyNot(template, card) {
@@ -487,7 +493,10 @@ function SetPage() {
   if (!detail) return html`<p class="error" role="alert">${error}</p>`;
   const { set, cards } = detail;
   const current = cards.find((c) => c.id === selected);
-  const turned = side === "back" && current?.card.back;
+  // Which face of the card is being edited: its own, a back face (one you turn to), or a
+  // second half (a whole card drawn beside it). A back is not a half.
+  const editing = current ? faceOf(current.card, side) : undefined;
+  const turned = side === "back" && Boolean(current?.card.back);
   const face = (c) => html`<${CardFace} card=${c.card} flipped=${!!turned} template=${set.default_template} code=${set.code} number=${c.position} total=${cards.length} />`;
 
   return html`
@@ -570,18 +579,28 @@ function SetPage() {
           </div>
           <div class="editing">
             <div class="faces" role="group" aria-label="Faces">
+              ${current.card.back || current.card.half
+                ? html`<button type="button" class=${`face-tab${side === "front" ? " chosen" : ""}`} aria-pressed=${String(side === "front")} onClick=${() => setSide("front")}>Front</button>
+                  ${current.card.back
+                    ? html`<button type="button" class=${`face-tab${side === "back" ? " chosen" : ""}`} aria-pressed=${String(side === "back")} onClick=${() => setSide("back")}>Back</button>`
+                    : null}
+                  ${current.card.half
+                    ? html`<button type="button" class=${`face-tab${side === "half" ? " chosen" : ""}`} aria-pressed=${String(side === "half")} onClick=${() => setSide("half")}>2nd half</button>`
+                    : null}`
+                : null}
               ${current.card.back
-                ? html`<button type="button" class=${`face-tab${turned ? "" : " chosen"}`} aria-pressed=${String(!turned)} onClick=${() => setSide("front")}>Front</button>
-                  <button type="button" class=${`face-tab${turned ? " chosen" : ""}`} aria-pressed=${String(!!turned)} onClick=${() => setSide("back")}>Back</button>
-                  <button type="button" class="quiet danger-quiet remove-back" onClick=${() => { setSide("front"); edit(current.id, { ...current.card, back: null }); }}>Remove back face</button>`
+                ? html`<button type="button" class="quiet danger-quiet remove-back" onClick=${() => { setSide("front"); edit(current.id, { ...current.card, back: null }); }}>Remove back face</button>`
                 : html`<button type="button" class="quiet add-back" onClick=${() => { edit(current.id, { ...current.card, back: blankFace(current.card.rarity) }); setSide("back"); }}>Add a back face</button>`}
+              ${current.card.half
+                ? html`<button type="button" class="quiet danger-quiet remove-half" onClick=${() => { setSide("front"); edit(current.id, { ...current.card, half: null }); }}>Remove 2nd half</button>`
+                : html`<button type="button" class="quiet add-half" onClick=${() => { edit(current.id, { ...current.card, half: blankFace(current.card.rarity) }); setSide("half"); }}>Add a second half</button>`}
             </div>
             <${Editor}
-              key=${`${current.id}${turned ? "-back" : ""}`}
-              card=${turned ? current.card.back : current.card}
+              key=${`${current.id}-${side}`}
+              card=${editing}
               template=${set.default_template}
-              credit=${credits[(turned ? current.card.back : current.card).art]}
-              onChange=${(card) => edit(current.id, turned ? { ...current.card, back: card } : card)}
+              credit=${credits[editing?.art]}
+              onChange=${(card) => edit(current.id, side === "back" ? { ...current.card, back: card } : side === "half" ? { ...current.card, half: card } : card)}
               onSetDefault=${(default_template) => patchSet({ default_template })}
               onCredit=${(id, credit) => setCredits((now) => ({ ...now, [id]: credit }))}
             />

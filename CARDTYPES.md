@@ -45,12 +45,26 @@ Defined once, in `src/cardtype.rs`:
 
 A token is a card with `cost` off; a creature is one with `power_toughness` on; a
 planeswalker has `loyalty`; a battle has `defense`. A saga or a token is also a *template*:
-they differ from other cards in how they are drawn, not in what they have. A back face is not
-a feature but a card's own optional `back`, which is a whole card with its own features.
+they differ from other cards in how they are drawn, not in what they have. A back face and a
+second half are not features but a card's own optional `back` and `half`, each a whole card
+with its own features and template.
 
 Every card also has fields that belong to no feature because every card has them:
 `rarity`, `frame` (a colour forced by the author; empty means from the mana cost),
 `template`, and the picture flags `art_is_card` and `keep_printed_text`.
+
+### A back is not a half
+
+Two different ways for one card to be more than one card:
+
+- a **back** (`card.back`) is a whole card you *turn to* — a transform card. It has its own
+  template, and may have a second half of its own, but no back.
+- a **half** (`card.half`) is a whole card drawn *beside* this one: the other half of a split,
+  adventure or prepared card. It has no back and no half, since a half is read at once, not
+  turned to.
+
+Neither is a feature: they are whole documents, not groups of fields, so a layout asks for one
+with the reserved requirement `back` or `half` rather than with a feature.
 
 ### Wire shape
 
@@ -60,12 +74,13 @@ and the keys its features allow:
 ```json
 { "features": ["cost", "power_toughness"], "template": "", "rarity": "rare", "frame": "",
   "name": "Day", "mana_cost": "{1}{W}", "type_line": "Creature — Human",
-  "rules_text": "...", "power_toughness": "1/1", "art": "…uuid…", "back": { … } }
+  "rules_text": "...", "power_toughness": "1/1", "art": "…uuid…",
+  "back": { … }, "half": { … } }
 ```
 
 A key the features do not allow is refused (`400`), and a missing key is an empty one, so the
 shape grows by adding a field to a feature, or a feature, with no migration. A back face is a
-card of its own with no `back` of its own.
+card of its own with no `back` of its own (it may have a `half`); a half has neither.
 
 ### Old documents
 
@@ -111,8 +126,8 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
   `box` (the text box), `art`, `stat` (a badge showing the first of its fields the card has a
   value for). A `stat` may leave out `w` and `h` — both or neither — and is then as big as its
   value, anchored by its bottom-right corner, which is how a printed card's P/T box grows.
-  An element may say `face="back"`, and draws the second face's fields in that place — that is
-  how a split, adventure or prepared card is one card with two halves. Unknown elements and
+  An element may say `face="half"`, and draws the second half's fields in that place — that
+  is how a split, adventure or prepared card is one card with two halves. Unknown elements and
   attributes are an error, not ignored.
 - **`<field name="…"/>`** draws one field of the card, in the element that holds it. `as` picks
   a reader for the rules text: `as="abilities"` (loyalty costs beside each line),
@@ -121,7 +136,7 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
   template that names any other field is rejected when it is loaded, which is what keeps the
   rule honest.
 - **`requires` / `excludes`** are space-separated ids. An id is a feature, or the reserved
-  `back` — the card has a second face — which is what the two-halved layouts need.
+  `back` (a second face) or `half` (a second half), which only the two-halved layouts ask for.
 - **`frame`** is `modern` (a frame of its own), or `inherit` (the card's own look, else the
   set's).
 - **A body is the layout.** Every built-in template has one: `modern` places the name
@@ -135,7 +150,7 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
 
 ### Built-in templates
 
-`requires` / `excludes` are features (or `back`); a card can wear a template when it has every
+`requires` / `excludes` are features (or `back`, `half`); a card can wear a template when it has every
 `requires` and none of the `excludes`.
 
 | Id | Requires | Excludes | What it is |
@@ -147,17 +162,17 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
 | `game-marker` | | cost | a name and a box for what it does; no art |
 | `planeswalker` | loyalty | | tall art, abilities over its foot, loyalty badge |
 | `battle` | defense | stats | the standard frame with a defense badge |
-| `adventure` | back cost | | the card, with the adventure's own name and text beside it |
-| `prepared` | back | | the card, with the prepared spell's text beside it |
-| `omen` | back | | as prepared, with the omen's text given the wider box |
-| `split` | back cost | | two halves, each a card, the art beside its name and text |
-| `fuse` | back cost | | the same two halves, each art on its outer edge |
-| `aftermath` | back cost | | two halves one above the other, each across the width |
-| `semi-split` | back cost | | one art column down the card, both halves' plates beside it |
-| `landscape` | back cost | | two halves side by side, each a card down the card |
+| `adventure` | half cost | | the card, with the adventure's own name and text beside it |
+| `prepared` | half | | the card, with the prepared spell's text beside it |
+| `omen` | half | | as prepared, with the omen's text given the wider box |
+| `split` | half cost | | two halves, each a card, the art beside its name and text |
+| `fuse` | half cost | | the same two halves, each art on its outer edge |
+| `aftermath` | half cost | | two halves one above the other, each across the width |
+| `semi-split` | half cost | | one art column down the card, both halves' plates beside it |
+| `landscape` | half cost | | two halves side by side, each a card down the card |
 
-The two-halved ones draw both faces at once, so the card is one document with a `back`
-(see `card.back` above) and neither face gets the transform marker.
+The two-halved ones draw the card and its `half` at once, so the card is one document
+with a second half and neither half gets the transform marker — a `back` is what you turn to.
 
 The layouts are our own drawings in Nexus's arrangement, not their artwork: a place is a
 fraction of the card, and any of them can be tuned later.
@@ -177,8 +192,8 @@ written yet.
 checked against the registry). Empty means the set's default look: only a template with no
 `requires` and no `excludes` can be a set's default, since it must suit every card. A card
 whose features only one layout can draw is given it (a card with loyalty is a planeswalker); a
-layout that wants a second face is the author's to pick, never automatic, because a card that
-can be turned over is not a card that is split in two. A picture that is a whole card is drawn
+layout that wants a second face or half is the author's to pick, never automatic, because a
+card you can turn over is not a card that is split in two. A picture that is a whole card is drawn
 by the same template as any card, over its picture.
 
 ## Staging
@@ -191,7 +206,7 @@ by the same template as any card, over its picture.
    (measured off a real card, so the art is the top half and the text box the bottom third),
    one look, and MTG Nexus's layouts as data — saga, token, textless token, game marker,
    planeswalker, battle, adventure, prepared, omen, split, fuse, aftermath, semi-split and
-   landscape, the two-halved ones drawing the card's second face beside its own. To do: a
+   landscape, the two-halved ones drawing the card's second half beside its own. To do: a
    default template per kind of card in a set, a template that draws both stats at once, and
    the transform crown on a scan.
 3. **Later.** Custom templates per account (an editor, storage, and the whitelist enforced on

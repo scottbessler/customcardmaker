@@ -57,8 +57,8 @@ test("a layout the card cannot wear is shown, and says why", async ({ page }) =>
   await page.fill('input[name="defense"]', "5");
   await expect(page.locator(".preview .mtg-pt")).toHaveText("5");
 
-  // A two-halved layout needs a second face, and says so.
-  await expect(option(page, "split").locator(".look-needs")).toHaveText("needs a second face");
+  // A two-halved layout needs a second half, and says so.
+  await expect(option(page, "split").locator(".look-needs")).toHaveText("needs a second half");
   await expect(option(page, "split").locator("input")).toBeDisabled();
 });
 
@@ -85,12 +85,12 @@ test("the set has one look, and a card that names its own layout keeps it", asyn
   await expect(page.locator(".filmstrip .mtg-card.lay-modern")).toHaveCount(1);
 });
 
-test("a two-halved layout draws the card and its back face at once", async ({ page }) => {
+test("a two-halved layout draws the card and its second half at once", async ({ page }) => {
   await newSet(page, "SPL");
   await page.fill('input[name="mana_cost"]', "{1}{R}");
   await page.fill('input[name="name"]', "Left Half");
-  await page.click(".add-back");
-  await page.locator('.face-tab:has-text("Back")').click();
+  await page.click(".add-half");
+  await page.locator('.face-tab:has-text("2nd half")').click();
   await page.fill('input[name="name"]', "Right Half");
   await page.fill('input[name="mana_cost"]', "{2}{U}");
   await page.locator('.face-tab:has-text("Front")').click();

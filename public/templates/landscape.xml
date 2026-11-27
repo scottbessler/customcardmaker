@@ -1,5 +1,5 @@
 <!-- Landscape: the two halves side by side, each a card of its own down the card. -->
-<template id="landscape" label="Landscape" requires="back cost" frame="inherit">
+<template id="landscape" label="Landscape" requires="half cost" frame="inherit">
   <art x="5" y="4.5" w="42" h="36"/>
   <plate role="name" x="5" y="42" w="42" h="7.2">
     <field name="name"/>
@@ -11,15 +11,15 @@
   <box x="5" y="57" w="42" h="77">
     <field name="rules_text"/>
   </box>
-  <art x="53" y="4.5" w="42" h="36" face="back"/>
-  <plate role="name" x="53" y="42" w="42" h="7.2" face="back">
+  <art x="53" y="4.5" w="42" h="36" face="half"/>
+  <plate role="name" x="53" y="42" w="42" h="7.2" face="half">
     <field name="name"/>
     <field name="mana_cost"/>
   </plate>
-  <plate role="type" x="53" y="50" w="42" h="6.4" face="back">
+  <plate role="type" x="53" y="50" w="42" h="6.4" face="half">
     <field name="type_line"/>
   </plate>
-  <box x="53" y="57" w="42" h="77" face="back">
+  <box x="53" y="57" w="42" h="77" face="half">
     <field name="rules_text"/>
   </box>
 </template>
