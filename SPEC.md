@@ -145,7 +145,9 @@ nothing about real Magic cards.
   change it (anyone else gets `404`).
 - **G2.** `/gallery` lists public sets that have at least one card, most recently
   touched first (at most 60), each with a sample card, its code, its card count and
-  its maker. `/gallery/<id>` shows one public set, all its cards, read-only. Both
+  its maker. `?q=` filters by literal substring in set name, code or maker's
+  display name before the limit. ASCII letters match regardless of case.
+  `/gallery/<id>` shows one public set, all its cards, read-only. Both
   are open to anyone, signed in or not. A private set's gallery page is `404`, the
   same as one that does not exist.
 - **G3.** A card's art is visible to everyone exactly while a card in a public set uses

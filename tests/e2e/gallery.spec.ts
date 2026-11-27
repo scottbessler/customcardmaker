@@ -150,3 +150,25 @@ test("a stranger can load a published card's art, and not before", async ({ page
   expect((await visitor.request.get(`/api/art/${art.id}`)).status(), "taking the set down hides its art again").toBe(404);
   await close();
 });
+
+test("visitors can search the gallery and clear the search", async ({ page, browser }) => {
+  await registerUser(page);
+  const title = uniqueTitle("Findable");
+  const set = await setWithCards(page, title);
+  await page.request.patch(`/api/sets/${set.id}`, { data: { public: true } });
+  const { visitor, close } = await stranger(browser, page);
+  await visitor.goto("/gallery");
+  const search = visitor.getByRole("searchbox", { name: "Search public sets" });
+  await search.fill(title.toUpperCase());
+  await visitor.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(visitor.locator(".gallery-tile")).toHaveCount(1);
+  await expect(visitor.locator(".gallery-tile")).toContainText(title);
+
+  await search.fill(`${title} missing`);
+  await search.press("Enter");
+  await expect(visitor.getByRole("status")).toHaveText("No public sets match your search.");
+  await visitor.getByRole("link", { name: "Clear search" }).click();
+  await expect(visitor).toHaveURL(/\/gallery$/);
+  await expect(search).toHaveValue("");
+  await close();
+});

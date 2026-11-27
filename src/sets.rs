@@ -505,9 +505,9 @@ impl SetStore {
     }
 
     /// Public sets with something in them, most recently touched first.
-    pub async fn gallery(&self) -> Result<Vec<GalleryEntry>> {
+    pub async fn gallery(&self, search: String) -> Result<Vec<GalleryEntry>> {
         self.db
-            .call(|c| {
+            .call(move |c| {
                 let mut stmt = c.prepare(
                     "SELECT s.id, s.name, s.code, s.updated_at,
                             (SELECT COUNT(*) FROM cards c WHERE c.set_id = s.id),
@@ -517,9 +517,12 @@ impl SetStore {
                      FROM sets s JOIN users u ON u.id = s.owner_id
                      WHERE s.is_public = 1
                        AND EXISTS (SELECT 1 FROM cards c WHERE c.set_id = s.id)
-                     ORDER BY s.updated_at DESC LIMIT ?1",
+                       AND (?1 = '' OR instr(lower(s.name), lower(?1)) > 0
+                            OR instr(lower(s.code), lower(?1)) > 0
+                            OR instr(lower(u.display_name), lower(?1)) > 0)
+                     ORDER BY s.updated_at DESC, s.id DESC LIMIT ?2",
                 )?;
-                let mut rows = stmt.query([GALLERY_LIMIT])?;
+                let mut rows = stmt.query(rusqlite::params![search, GALLERY_LIMIT])?;
                 let mut entries = Vec::new();
                 while let Some(row) = rows.next()? {
                     let id: String = row.get(0)?;

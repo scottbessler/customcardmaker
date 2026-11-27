@@ -881,6 +881,37 @@ async fn a_set_is_private_until_its_owner_publishes_it() {
 }
 
 #[tokio::test]
+async fn gallery_search_matches_public_fields_and_treats_punctuation_literally() {
+    let app = app().await;
+    let ada = register_named(&app, "hidden_login", "Ada L").await;
+    let (shown, _) = set_with(&app, &ada, "Moon 100%", "MON", &["A"]).await;
+    let (other, _) = set_with(&app, &ada, "Moon 1000", "ALT", &["B"]).await;
+    let (empty, _) = set_with(&app, &ada, "Moon Empty", "EMP", &[]).await;
+    set_with(&app, &ada, "Moon Private", "PRV", &["C"]).await;
+    for id in [&shown, &other, &empty] {
+        assert_eq!(publish(&app, &ada, id, true).await.status, StatusCode::OK);
+    }
+
+    for (query, count) in [
+        ("moon", 2),
+        ("mon", 1),
+        ("ada+l", 2),
+        ("%20100%25%20", 1),
+        ("hidden_login", 0),
+        ("private", 0),
+        ("empty", 0),
+    ] {
+        let reply = call(&app, "GET", &format!("/api/gallery?q={query}"), None, None).await;
+        assert_eq!(reply.status, StatusCode::OK);
+        let entries = reply.body.as_array().unwrap();
+        assert_eq!(entries.len(), count, "{query}");
+        if count == 1 {
+            assert_eq!(entries[0]["id"], shown);
+        }
+    }
+}
+
+#[tokio::test]
 async fn a_public_set_with_nothing_in_it_is_not_listed_yet() {
     let app = app().await;
     let ada = register(&app, "Ada").await;
