@@ -29,8 +29,10 @@ that changes behaviour, not here.
   - [ ] Follow-up: planeswalker-style cards need a loyalty field; and the
         non-standard card types (Conspiracy, Scheme, Plane...) are typed, not offered
 - [ ] **4. Import** — bring an existing set in, from MTG Nexus.
-  - [ ] **Cockatrice XML** (`cockatrice_carddatabase`), which MTG Nexus can
+  - [x] **Cockatrice XML** (`cockatrice_carddatabase`), which MTG Nexus can
         export: parse sets and cards into a new set
+  - [x] Nexus's pictures are whole cards: an option to use them as such, with our
+        text laid over them (`art_is_card`)
   - [ ] Map every field we have; keep what we cannot map and say so
   - [ ] Preview what will be created before it is, and report what was skipped
   - [ ] More requirements are expected once we have a real MTG Nexus export;

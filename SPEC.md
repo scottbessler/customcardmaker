@@ -174,9 +174,18 @@ nothing about real Magic cards.
   required; the name defaults to the file's long name. When asked, each card's
   `picurl` is downloaded and kept as the importer's art; a picture that will not
   download, or is not an image of a kind we serve, is skipped and the card
-  imports without art. The set and its cards are written together or not at all,
+  imports without art. MTG Nexus's pictures are whole printed cards, so the form
+  asks whether they are; if so each card with a picture is marked `art_is_card`
+  (B14). The set and its cards are written together or not at all,
   and only into the signed-in account. A signed-out visitor to `/import` is sent
   to `/`.
+
+- **B14.** `card.art_is_card` says the card's picture is a whole printed card, not
+  just art. Such a card is drawn with the picture edge to edge and our name plate,
+  type plate and text box laid over it, in the modern frame's places and opaque, so
+  they hide the words printed on the picture and show the card's own. It has no
+  template (the picture brings its border); the frame colour still tints the plates.
+  The editor has a checkbox under the art, and removing the art clears it.
 
 ## 8. Not yet built
 

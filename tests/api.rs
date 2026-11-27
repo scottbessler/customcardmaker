@@ -1329,3 +1329,42 @@ async fn the_frames_gallery_exists_only_in_a_development_build() {
         .status();
     assert_eq!(old, StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn pictures_can_be_marked_as_whole_cards_on_import() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let url = picture_server().await;
+
+    let import = |whole: bool| {
+        let url = url.clone();
+        let app = app.clone();
+        let me = me.clone();
+        async move {
+            let mut body = cockatrice_file(Some(&url));
+            body["images"] = json!(true);
+            body["whole_cards"] = json!(whole);
+            let reply = call(
+                &app,
+                "POST",
+                "/api/import/cockatrice",
+                Some(body),
+                Some(&me),
+            )
+            .await;
+            assert_eq!(reply.status, StatusCode::CREATED, "{:?}", reply.body);
+            let set = reply.body["set_id"].as_str().unwrap().to_string();
+            call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&me))
+                .await
+                .body
+        }
+    };
+
+    let whole = import(true).await;
+    assert_eq!(whole["cards"][0]["card"]["art_is_card"], true);
+    // A card with no picture has nothing to be a whole card.
+    assert_eq!(whole["cards"][1]["card"]["art_is_card"], false);
+
+    let art_only = import(false).await;
+    assert_eq!(art_only["cards"][0]["card"]["art_is_card"], false);
+}

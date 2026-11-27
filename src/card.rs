@@ -116,6 +116,9 @@ pub struct Card {
     /// An upload (`/api/art/<id>`) shown in the art box. Only the owner's own
     /// uploads may be referenced; the route checks, the document just holds it.
     pub art: Option<Uuid>,
+    /// The picture is a whole printed card (a scan, or an MTG Nexus render), not
+    /// just art: it fills the card, and our plates and text box are laid over it.
+    pub art_is_card: bool,
     /// A frame colour forced by the author; empty means "from the mana cost".
     pub frame: String,
     /// The look of the card; empty means "the set's default".

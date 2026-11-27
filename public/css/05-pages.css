@@ -23,8 +23,8 @@
 .back{margin:0}
 .public-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:var(--space-24) var(--space-16);align-items:start}
 .public-badge{color:var(--gold-hi);font-weight:700}
-.public-toggle{display:flex;flex-direction:row;align-items:center;gap:var(--space-8);margin-top:var(--space-12);color:var(--text)}
-.public-toggle input{width:22px;height:22px;padding:0;accent-color:var(--gold)}
+.public-toggle,.art-is-card{display:flex;flex-direction:row;align-items:center;gap:var(--space-8);margin-top:var(--space-12);color:var(--text)}
+.public-toggle input,.art-is-card input{width:22px;height:22px;padding:0;accent-color:var(--gold)}
 .public-help{margin:var(--space-4) 0 0;font-size:var(--text-small)}
 
 .art-credit-line{margin:0;color:var(--text-muted);font-size:var(--text-small);overflow-wrap:anywhere}

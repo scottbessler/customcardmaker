@@ -288,7 +288,7 @@ pub async fn import_cockatrice(
 
     let cards_imported = database.cards.len();
     let (cards, images_imported) = if body.images {
-        attach_pictures(&s, me, database.cards).await
+        attach_pictures(&s, me, database.cards, body.whole_cards).await
     } else {
         (detach(database.cards), 0)
     };
@@ -325,6 +325,7 @@ async fn attach_pictures(
     s: &AppState,
     me: Uuid,
     cards: Vec<cockatrice::ImportedCard>,
+    whole_cards: bool,
 ) -> (Vec<Card>, usize) {
     let permits = Arc::new(Semaphore::new(PICTURE_FETCHES));
     let mut set = JoinSet::new();
@@ -356,7 +357,11 @@ async fn attach_pictures(
     let cards = cards
         .into_iter()
         .zip(arts)
-        .map(|(item, art)| Card { art, ..item.card })
+        .map(|(item, art)| Card {
+            art_is_card: whole_cards && art.is_some(),
+            art,
+            ..item.card
+        })
         .collect();
     (cards, imported)
 }
@@ -395,6 +400,10 @@ pub struct ImportCockatriceForm {
     /// Download each card's picture and use it as the card's art
     #[serde(default)]
     pub images: bool,
+    /// The pictures are whole printed cards (what MTG Nexus exports), not just
+    /// art: each card is marked so it shows the picture edge to edge.
+    #[serde(default)]
+    pub whole_cards: bool,
 }
 
 /// Result of Cockatrice import

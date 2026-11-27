@@ -97,3 +97,13 @@ button.mtg-card{cursor:pointer}
 .tpl-full-art .mtg-name,.tpl-full-art .mtg-type{background-color:color-mix(in srgb,var(--box) 88%,transparent)}
 .tpl-full-art .mtg-foot{bottom:2.2cqw;left:3cqw;color:var(--card-foot-ink)}
 .tpl-full-art .mtg-pt{bottom:2.6cqw;right:3.4cqw}
+
+/* A whole-card picture (an import from MTG Nexus, or a scan): the picture is the
+   card, edge to edge. Our name plate, type plate and text box sit where a modern
+   frame keeps them and are opaque, so they hide the text printed on the picture and
+   show the card's own words in its place. Whatever template the card names, this
+   is the geometry: the picture brings its own border, so there is none to draw. */
+.mtg-card.art-card{background-size:100% 100%;background-position:center;background-repeat:no-repeat;border-radius:4.8% / 3.4%}
+.art-card .mtg-frame{inset:3.4cqw 3.4cqw 7.4cqw;padding:2.4cqw 3cqw 3cqw;background:none;box-shadow:none;grid-template-rows:7.4cqw 41cqw 6.6cqw 1fr;border-radius:0}
+.art-card .mtg-art{visibility:hidden}
+.art-card .mtg-foot{display:none}
