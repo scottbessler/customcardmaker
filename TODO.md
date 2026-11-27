@@ -71,6 +71,21 @@ that changes behaviour, not here.
   - [ ] Works without a key configured (the button is simply absent), and is tested
         against a fake OpenRouter so no test spends money
 
+- [ ] **11. Symbols still not quite vertically aligned** — found by eye, so measure
+      *where*: the rules text, the mana cost in the name plate, the palette.
+  - [ ] Decide what "centred" means for a symbol beside mixed-case text, check it
+        at several sizes, and pin it with a measurement, not a screenshot
+- [ ] **12. Choose a frame / template, like MTG Nexus** — not only the one a card
+      gets from its mana cost.
+  - [ ] A **frame colour** the author can set (or leave on Auto, from the cost):
+        W U B R G, gold, artifact, land, colourless
+  - [ ] A **template**: more than one look for the same card (the modern frame we
+        have, a classic old-border one, full-art, borderless...), picked from
+        thumbnails of the card being edited
+  - [ ] Per card, with a default for the set; saved in the card document
+  - [ ] The `/frames` page makes no sense to a visitor: remove it from the app. Keep
+        what it gave the tests (every frame rendered side by side) as a dev-only page
+
 ## Notes
 
 - **Licensing (item 2).** The Magic symbols are Wizards of the Coast's artwork.
