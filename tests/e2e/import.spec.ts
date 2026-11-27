@@ -26,7 +26,7 @@ const XML = `<?xml version="1.0" encoding="UTF-8"?>
   </cards>
 </cockatrice_carddatabase>`;
 
-test("a Cockatrice file becomes a set you can open", async ({ page }) => {
+test("a Cockatrice file is previewed, then becomes a set you can open", async ({ page }) => {
   await registerUser(page, "importer");
   await page.click('a[href="/import"]');
   await expect(page.locator("#import-form")).toBeVisible();
@@ -42,7 +42,19 @@ test("a Cockatrice file becomes a set you can open", async ({ page }) => {
   await page.uncheck('#import-form input[name="images"]');
   await page.click('#import-form button[type="submit"]');
 
+  // The preview says what would be made, and nothing has been made yet.
+  const preview = page.locator("#import-preview");
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText("Imported Test Set (IMP)");
+  await expect(preview).toContainText("2 cards would be created");
+  await expect(preview.locator(".import-cards li")).toHaveCount(2);
+  await expect(preview.locator(".import-cards li").first()).toContainText("Test Bird");
+  await expect(preview.locator(".import-cards li").first()).toContainText("Creature — Bird");
+  await expect(page.locator("#import-result")).toBeHidden();
+
+  await preview.locator(".import-confirm").click();
   await expect(page.locator("#import-result")).toContainText("Imported 2 cards");
+  await expect(preview).toBeHidden();
   await page.click("#import-result a");
   await expect(page.locator("h1")).toHaveText("Imported Test Set");
   await expect(page.locator(".strip-item")).toHaveCount(2);

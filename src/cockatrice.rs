@@ -28,6 +28,8 @@ pub struct ImportedCard {
     /// printed. (`card.back` holds the rest of it.)
     pub back_image_url: Option<String>,
     pub back_printed_layout: bool,
+    /// The file gave a rarity we have no pip for (`special`), shown as mythic.
+    pub special_rarity: bool,
 }
 
 /// What a Cockatrice file says about the set and the cards in it.
@@ -38,6 +40,9 @@ pub struct Database {
     /// The short code: `<sets><set><name>`, or the first card's `<set>`.
     pub set_code: Option<String>,
     pub cards: Vec<ImportedCard>,
+    /// What the file had that we could not keep as it was, in plain words, so an
+    /// import can say what it did rather than quietly dropping it.
+    pub notes: Vec<String>,
 }
 
 pub fn parse(xml: &str) -> Result<Database, AppError> {
@@ -58,8 +63,57 @@ pub fn parse(xml: &str) -> Result<Database, AppError> {
     Ok(Database {
         set_name,
         set_code,
+        notes: notes(&cards),
         cards,
     })
+}
+
+/// What an import should say it could not keep as it was. Only what the file
+/// itself decides: a picture that will not download is known only once it is
+/// tried, so that is reported by the import, not here.
+fn notes(cards: &[ImportedCard]) -> Vec<String> {
+    let mut notes = Vec::new();
+    let of = |pick: &dyn Fn(&ImportedCard) -> bool| -> Vec<String> {
+        cards
+            .iter()
+            .filter(|item| pick(item))
+            .map(|item| item.card.get("name").to_string())
+            .collect()
+    };
+
+    let printed = of(&|item| item.printed_layout || item.back_printed_layout);
+    if !printed.is_empty() {
+        notes.push(format!(
+            "A layout we do not draw, so the picture is kept as printed: {}.",
+            names(&printed)
+        ));
+    }
+    let orphans = of(&|item| item.is_back && item.card.back.is_none());
+    if !orphans.is_empty() {
+        notes.push(format!(
+            "A back face with no front in the file, imported on its own: {}.",
+            names(&orphans)
+        ));
+    }
+    let special = cards.iter().filter(|item| item.special_rarity).count();
+    if special > 0 {
+        notes.push(format!(
+            "{special} card{} with a rarity we do not have (special), shown as mythic.",
+            if special == 1 { "" } else { "s" }
+        ));
+    }
+    notes
+}
+
+/// Up to three names, then "and N more": a note says what it is about without
+/// listing a whole set.
+fn names(list: &[String]) -> String {
+    let shown = list.iter().take(3).cloned().collect::<Vec<_>>().join(", ");
+    if list.len() > 3 {
+        format!("{shown}, and {} more", list.len() - 3)
+    } else {
+        shown
+    }
 }
 
 /// The `<sets>` block is the authoritative name; a file without one (or a
@@ -146,6 +200,9 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
         .and_then(|set| set.attribute("rarity"))
         .map(rarity)
         .unwrap_or_default();
+    let special_rarity = set
+        .and_then(|set| set.attribute("rarity"))
+        .is_some_and(|value| value.eq_ignore_ascii_case("special"));
 
     card.validate().map_err(|e| {
         AppError::bad_request(format!("Card \"{}\": {}", card.get("name"), e.detail()))
@@ -172,6 +229,7 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
             .filter(|name| !name.is_empty()),
         back_image_url: None,
         back_printed_layout: false,
+        special_rarity,
     })
 }
 
@@ -422,6 +480,21 @@ You can only Activate this Ability: Sacrifice Bandage
         // One we have no geometry for keeps its picture as printed.
         let printed: Vec<_> = cards.iter().map(|c| c.printed_layout).collect();
         assert_eq!(printed, [false, false, false, false, true]);
+    }
+
+    #[test]
+    fn an_import_says_what_it_could_not_keep_as_it_was() {
+        let db = parse(NEXUS).unwrap();
+        assert_eq!(
+            db.notes,
+            [
+                "A layout we do not draw, so the picture is kept as printed: Cut.",
+                "A back face with no front in the file, imported on its own: Jorgan.",
+                "1 card with a rarity we do not have (special), shown as mythic.",
+            ]
+        );
+        // A file with nothing to report says nothing.
+        assert!(parse(FILE).unwrap().notes.is_empty());
     }
 
     #[test]

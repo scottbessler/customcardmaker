@@ -183,13 +183,13 @@ nothing about real Magic cards.
   (split, flip, adventure...) gets `keep_printed_text`, so its picture shows as printed.
   A transform's two `<card>`s (the back marked `side=back`, each naming the other in
   `<related>`) become one card with a back face (R10), each face with its own picture; a
-  back whose front is not in the file stays a card of its own.
-  A transform's two `<card>`s (the back marked `side=back`, each naming the other in
-  `<related>`) become one card with a back face, each face with its own picture; a back
-  whose front is not in the file stays a card of its own. Rules text drops blank lines
+  back whose front is not in the file stays a card of its own. Rules text drops blank lines
   between paragraphs, and Nexus's `special` rarity is read as mythic. The set and its cards are written together or not at all,
   and only into the signed-in account. A signed-out visitor to `/import` is sent
-  to `/`.
+  to `/`. The page previews first: it says what would be created, and what the file had
+  that we could not keep as it was (a layout we cannot draw, a back face with no front, a
+  rarity we do not have, a card with no picture), and creates nothing until the import is
+  confirmed.
 
 - **R9.** Every card has the base fields (name, type line, rules text, flavor text, artist)
   and turns on **features** (`card.features`: `cost`, `power_toughness`, `loyalty`,

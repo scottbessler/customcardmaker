@@ -33,8 +33,11 @@ that changes behaviour, not here.
         export: parse sets and cards into a new set
   - [x] Nexus's pictures are whole cards: an option to use them as such, with our
         text laid over them (`art_is_card`)
-  - [ ] Map every field we have; keep what we cannot map and say so
-  - [ ] Preview what will be created before it is, and report what was skipped
+  - [x] Map every field we have; keep what we cannot map and say so (a note on
+        the preview and on the import)
+  - [x] Preview what will be created before it is, and report what was skipped
+        (a layout we cannot draw, a back with no front, a rarity we do not have,
+        a card with no picture), and create nothing until it is confirmed
   - [ ] More requirements are expected once we have a real MTG Nexus export;
         see the note below
   - [ ] Maybe later: export *to* Cockatrice XML, so sets round-trip

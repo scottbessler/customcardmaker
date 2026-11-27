@@ -269,6 +269,9 @@ pub async fn get_art(
 
 /// Import cards from a Cockatrice XML database into a new set owned by the
 /// signed-in account. The set is created and filled in one transaction.
+///
+/// With `preview`, nothing is written: the answer says what would be created and
+/// what the file had that we could not keep as it was.
 pub async fn import_cockatrice(
     State(s): State<AppState>,
     ApiUser(me): ApiUser,
@@ -287,6 +290,14 @@ pub async fn import_cockatrice(
         _ => sets::clean_name(database.set_name.as_deref().unwrap_or(&code))?,
     };
 
+    let notes = import_notes(&database, body.images);
+    if body.preview {
+        return Ok((
+            StatusCode::OK,
+            Json(preview(&database, name, code, body.images, notes)),
+        ));
+    }
+
     let cards_imported = database.cards.len();
     let (cards, images_imported) = if body.images {
         attach_pictures(&s, me, database.cards, body.whole_cards).await
@@ -297,13 +308,80 @@ pub async fn import_cockatrice(
     Ok((
         StatusCode::CREATED,
         Json(ImportCockatriceResult {
-            set_id: set.id,
+            set_id: Some(set.id),
             set_code: set.code,
             set_name: set.name,
             cards_imported,
             images_imported,
+            preview: false,
+            cards: Vec::new(),
+            notes,
         }),
     ))
+}
+
+/// What an import did not keep as it was: what the file itself could not give us,
+/// plus, when pictures are asked for, how many cards have none.
+fn import_notes(database: &cockatrice::Database, images: bool) -> Vec<String> {
+    let mut notes = database.notes.clone();
+    if images {
+        let missing = database
+            .cards
+            .iter()
+            .filter(|item| item.image_url.is_none())
+            .count();
+        if missing > 0 {
+            notes.push(format!(
+                "No picture in the file for {missing} card{}.",
+                if missing == 1 { "" } else { "s" }
+            ));
+        }
+    }
+    notes
+}
+
+/// What an import would create, without creating it. The pictures are counted,
+/// not fetched: a preview must be quick, and whether a URL answers is only known
+/// once the import tries.
+fn preview(
+    database: &cockatrice::Database,
+    name: String,
+    code: String,
+    images: bool,
+    notes: Vec<String>,
+) -> ImportCockatriceResult {
+    let cards = database
+        .cards
+        .iter()
+        .map(|item| PreviewCard {
+            name: item.card.get("name").to_string(),
+            type_line: item.card.get("type_line").to_string(),
+            rarity: item.card.rarity,
+            features: item.card.features.clone(),
+            template: item.card.template.clone(),
+            picture: item.image_url.is_some() || item.back_image_url.is_some(),
+            back: item.card.back.is_some(),
+            printed: item.printed_layout || item.back_printed_layout,
+        })
+        .collect();
+    let pictures = database
+        .cards
+        .iter()
+        .map(|item| {
+            usize::from(item.image_url.is_some()) + usize::from(item.back_image_url.is_some())
+        })
+        .sum();
+
+    ImportCockatriceResult {
+        set_id: None,
+        set_code: code,
+        set_name: name,
+        cards_imported: database.cards.len(),
+        images_imported: if images { pictures } else { 0 },
+        preview: true,
+        cards,
+        notes,
+    }
 }
 
 /// The largest picture downloaded from a card database. A card face is a few
@@ -431,21 +509,47 @@ pub struct ImportCockatriceForm {
     /// art: each card is marked so it shows the picture edge to edge.
     #[serde(default)]
     pub whole_cards: bool,
+    /// Say what would be created instead of creating it.
+    #[serde(default)]
+    pub preview: bool,
 }
 
-/// Result of Cockatrice import
+/// One card an import would create, for a preview.
+#[derive(serde::Serialize)]
+pub struct PreviewCard {
+    pub name: String,
+    pub type_line: String,
+    pub rarity: crate::card::Rarity,
+    pub features: Vec<String>,
+    /// The template it would wear, when the file says (a saga, a token).
+    pub template: String,
+    /// The file gives a picture for it (or for its back).
+    pub picture: bool,
+    /// It is a double-faced card.
+    pub back: bool,
+    /// A layout we do not draw, so its picture is kept as printed.
+    pub printed: bool,
+}
+
+/// Result of Cockatrice import, or of a preview of one.
 #[derive(serde::Serialize)]
 pub struct ImportCockatriceResult {
-    /// Set ID
-    pub set_id: Uuid,
+    /// Set ID; `None` for a preview, which creates nothing.
+    pub set_id: Option<Uuid>,
     /// Set code
     pub set_code: String,
     /// Set name
     pub set_name: String,
-    /// Number of cards imported
+    /// Number of cards imported (or that would be)
     pub cards_imported: usize,
-    /// Number of card pictures downloaded and attached
+    /// Number of card pictures downloaded and attached (or that would be)
     pub images_imported: usize,
+    /// Nothing was created; this is what would be.
+    pub preview: bool,
+    /// The cards, for a preview.
+    pub cards: Vec<PreviewCard>,
+    /// What the file had that we could not keep as it was.
+    pub notes: Vec<String>,
 }
 
 /// Show the Cockatrice import UI page. It needs an account to import into.

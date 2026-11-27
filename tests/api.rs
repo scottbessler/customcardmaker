@@ -1114,6 +1114,109 @@ async fn a_cockatrice_file_becomes_a_set_owned_by_its_importer() {
 }
 
 #[tokio::test]
+async fn previewing_an_import_creates_nothing_and_says_what_it_would_do() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+
+    let reply = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some({
+            let mut body = cockatrice_file(Some("https://example.test/bird.jpg"));
+            body["images"] = json!(true);
+            body["preview"] = json!(true);
+            body
+        }),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{:?}", reply.body);
+    assert_eq!(reply.body["preview"], true);
+    assert!(reply.body["set_id"].is_null(), "a preview creates nothing");
+    assert_eq!(reply.body["cards_imported"], 2);
+    assert_eq!(reply.body["images_imported"], 1, "counted, not fetched");
+    assert_eq!(reply.body["set_code"], "IMP");
+    assert_eq!(reply.body["set_name"], "Imported");
+
+    let cards = reply.body["cards"].as_array().unwrap();
+    assert_eq!(cards.len(), 2);
+    assert_eq!(cards[0]["name"], "Art Bird");
+    assert_eq!(cards[0]["type_line"], "Creature — Bird");
+    assert_eq!(cards[0]["rarity"], "common");
+    assert_eq!(cards[0]["features"], json!(["cost", "power_toughness"]));
+    assert_eq!(cards[0]["picture"], true);
+    assert_eq!(cards[1]["picture"], false);
+    assert_eq!(cards[1]["rarity"], "rare");
+    // One card has no picture in the file, and the preview says so.
+    assert!(
+        reply.body["notes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|note| note
+                .as_str()
+                .unwrap()
+                .contains("No picture in the file for 1 card")),
+        "{:?}",
+        reply.body["notes"]
+    );
+
+    // Nothing was written: no set, and no art.
+    assert_eq!(
+        call(&app, "GET", "/api/sets", None, Some(&me)).await.body,
+        json!([])
+    );
+}
+
+#[tokio::test]
+async fn a_preview_says_what_the_file_had_that_we_could_not_keep() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let xml = r#"<cockatrice_carddatabase><cards>
+    <card><name>Cut</name><text>Deal 2.</text><prop><layout>split</layout><side>front</side><type>Instant</type><manacost>{R}</manacost></prop><set rarity="special" picurl="https://example.test/e.jpg">ABC</set></card>
+    <card><name>Orphan</name><text>No front.</text><prop><layout>transform</layout><side>back</side><type>Instant</type></prop><set rarity="rare">ABC</set><related attach="transform">Missing</related></card>
+    </cards></cockatrice_carddatabase>"#;
+
+    let reply = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some(json!({"xml": xml, "preview": true, "images": true})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{:?}", reply.body);
+    let notes: Vec<&str> = reply.body["notes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|note| note.as_str().unwrap())
+        .collect();
+    assert!(
+        notes
+            .iter()
+            .any(|note| note.contains("layout we do not draw") && note.contains("Cut")),
+        "{notes:?}"
+    );
+    assert!(
+        notes
+            .iter()
+            .any(|note| note.contains("no front") && note.contains("Orphan")),
+        "{notes:?}"
+    );
+    assert!(
+        notes.iter().any(|note| note.contains("special")),
+        "{notes:?}"
+    );
+
+    // The card we cannot draw is marked, so the page can say its picture is kept as printed.
+    let cards = reply.body["cards"].as_array().unwrap();
+    assert_eq!(cards[0]["printed"], true);
+    assert_eq!(cards[1]["printed"], false);
+}
+
+#[tokio::test]
 async fn importing_can_download_each_card_picture() {
     let app = app().await;
     let me = register(&app, "Ada").await;
@@ -1134,6 +1237,11 @@ async fn importing_can_download_each_card_picture() {
     assert_eq!(reply.status, StatusCode::CREATED, "{:?}", reply.body);
     assert_eq!(reply.body["cards_imported"], 2);
     assert_eq!(reply.body["images_imported"], 1);
+    // The one card the file has no picture for is reported, as in a preview.
+    assert_eq!(
+        reply.body["notes"],
+        json!(["No picture in the file for 1 card."])
+    );
 
     let set = reply.body["set_id"].as_str().unwrap();
     let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&me)).await;
