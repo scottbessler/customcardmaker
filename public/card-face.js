@@ -80,19 +80,19 @@ function Part({ part, card, turned, marker }) {
     return html`<div class=${`mtg-art${source.art ? " has-art" : ""}`} style=${`${style}${source.art ? `;background-image:url(${artUrl(source.art)});background-position:${artPosition(source.art_position)}` : ""}`}></div>`;
   }
   if (part.tag === "plate" && part.role === "name") {
-    return html`<header class="mtg-name" style=${style}>
+    return html`<header class="mtg-name" data-part-face=${part.face ?? undefined} style=${style}>
       ${marker ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
       <span class="mtg-title">${source.name || html`<em>Untitled</em>`}</span>
       ${field("mana_cost") ? html`<span class="mtg-cost">${costSymbols(source.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>` : null}
     </header>`;
   }
-  if (part.tag === "plate") return html`<div class="mtg-type" style=${style}><span>${source.type_line}</span><i class="mtg-pip"></i></div>`;
+  if (part.tag === "plate") return html`<div class="mtg-type" data-part-face=${part.face ?? undefined} style=${style}><span>${source.type_line}</span><i class="mtg-pip"></i></div>`;
   if (part.tag === "box") {
     const rules = field("rules_text");
     const flavor = field("flavor_text");
     const lines = flavor && source.flavor_text ? source.flavor_text.split("\n") : [];
-    return html`<div class="mtg-box" style=${style}>
-      <div class="mtg-rules" style=${`font-size:${rulesSize(source)}cqw`}>
+    return html`<div class="mtg-box" data-part-face=${part.face ?? undefined} style=${style}>
+      <div class="mtg-rules" style=${`--rules-size:${rulesSize(source)}cqw`}>
         ${rules ? html`<${Rules} card=${source} as=${rules.as} />` : null}
         ${lines.length ? html`<div class="mtg-flavor">${lines.map((text) => html`<p>${text}</p>`)}</div>` : null}
       </div>

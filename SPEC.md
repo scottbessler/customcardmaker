@@ -85,6 +85,10 @@ nothing about real Magic cards.
   them. Apply keeps compatible content. Cancel discards setup changes. The editor
   shows a colour chip for each frame colour plus Auto. An unknown template or frame is a
   400. The gallery draws a public set with its default. (`src/card.rs`, `public/card-face.js`)
+- **R14.** Adventure draws full-width art above the main type line. The spell
+  name, cost, type and rules sit in a left inset. Main rules and flavor sit on
+  the right. Saga gives its art the right column and separates chapter rows
+  on the left. Modern separates flavor from rules when both appear.
 - **R12.** The standard layout is a real card's: the art box is the top half of the card
   and the text box the bottom third, with the name plate above the art and the type line
   between, all in card-width units so it renders at any size. (Its places are in

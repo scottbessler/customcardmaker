@@ -5,8 +5,8 @@
     <field name="name"/>
     <field name="mana_cost"/>
   </plate>
-  <art x="50" y="15" w="42.5" h="102"/>
-  <box x="4.5" y="15" w="45.5" h="102.5">
+  <art x="47.7" y="15" w="44.8" h="102"/>
+  <box x="4.5" y="15" w="43.2" h="102.5">
     <field name="rules_text" as="chapters"/>
   </box>
   <plate role="type" x="4.6" y="117.8" w="90.8" h="9">

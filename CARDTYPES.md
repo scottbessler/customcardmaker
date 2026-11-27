@@ -162,7 +162,7 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
 | `game-marker` | | cost | a name and a box for what it does; no art |
 | `planeswalker` | loyalty | | tall art, abilities over its foot, loyalty badge and optional P/T badge |
 | `battle` | defense | stats | the standard frame with a defense badge |
-| `adventure` | half cost | | the card, with the adventure's own name and text beside it |
+| `adventure` | half cost | | the card, with the adventure spell name, cost, type and rules in a left inset |
 | `prepared` | half | | the card, with the prepared spell's text beside it |
 | `omen` | half | | as prepared, with the omen's text given the wider box |
 | `split` | half cost | | two halves, each a card, the art beside its name and text |
