@@ -1498,7 +1498,7 @@ async fn a_picture_that_cannot_be_fetched_is_skipped_not_fatal() {
 // ---- templates and frame colours -----------------------------------------
 
 #[tokio::test]
-async fn a_set_has_a_default_template_its_owner_can_change() {
+async fn a_sets_default_template_is_one_every_card_can_wear_and_only_its_owner_sets_it() {
     let app = app().await;
     let ada = register(&app, "Ada").await;
     let bob = register(&app, "Bob").await;
@@ -1507,35 +1507,29 @@ async fn a_set_has_a_default_template_its_owner_can_change() {
     let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&ada)).await;
     assert_eq!(detail.body["set"]["default_template"], "modern");
 
-    let changed = call(
-        &app,
-        "PATCH",
-        &format!("/api/sets/{set}"),
-        Some(json!({"default_template": "classic"})),
-        Some(&ada),
-    )
-    .await;
-    assert_eq!(changed.status, StatusCode::OK);
-    assert_eq!(changed.body["default_template"], "classic");
-    // Changing one thing leaves the rest alone.
-    assert_eq!(changed.body["name"], "Looks");
-    assert_eq!(changed.body["public"], false);
-
-    let bad = call(
-        &app,
-        "PATCH",
-        &format!("/api/sets/{set}"),
-        Some(json!({"default_template": "neon"})),
-        Some(&ada),
-    )
-    .await;
-    assert_eq!(bad.status, StatusCode::BAD_REQUEST);
+    // Only a look may be a set's default: a layout has nowhere to draw some cards.
+    for bad in ["saga", "token", "neon"] {
+        assert_eq!(
+            call(
+                &app,
+                "PATCH",
+                &format!("/api/sets/{set}"),
+                Some(json!({"default_template": bad})),
+                Some(&ada)
+            )
+            .await
+            .status,
+            StatusCode::BAD_REQUEST,
+            "{bad} is not a look"
+        );
+    }
+    // Only the owner may name it.
     assert_eq!(
         call(
             &app,
             "PATCH",
             &format!("/api/sets/{set}"),
-            Some(json!({"default_template": "classic"})),
+            Some(json!({"default_template": "modern"})),
             Some(&bob)
         )
         .await
@@ -1548,14 +1542,14 @@ async fn a_set_has_a_default_template_its_owner_can_change() {
         &app,
         "PATCH",
         &format!("/api/sets/{set}"),
-        Some(json!({"public": true})),
+        Some(json!({"public": true, "default_template": "modern"})),
         Some(&ada),
     )
     .await;
     let list = call(&app, "GET", "/api/gallery", None, None).await;
-    assert_eq!(list.body[0]["default_template"], "classic");
+    assert_eq!(list.body[0]["default_template"], "modern");
     let whole = call(&app, "GET", &format!("/api/gallery/{set}"), None, None).await;
-    assert_eq!(whole.body["default_template"], "classic");
+    assert_eq!(whole.body["default_template"], "modern");
 }
 
 #[tokio::test]
@@ -1568,7 +1562,7 @@ async fn a_card_keeps_the_frame_and_template_it_names_and_may_name_only_real_one
         &app,
         "PUT",
         &format!("/api/cards/{}", ids[0]),
-        Some(json!({"name": "A", "frame": "gold", "template": "full-art"})),
+        Some(json!({"name": "A", "frame": "gold", "template": "saga"})),
         Some(&ada),
     )
     .await;
@@ -1578,7 +1572,7 @@ async fn a_card_keeps_the_frame_and_template_it_names_and_may_name_only_real_one
             saved.body["card"]["frame"].as_str(),
             saved.body["card"]["template"].as_str()
         ),
-        (Some("gold"), Some("full-art"))
+        (Some("gold"), Some("saga"))
     );
     let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&ada)).await;
     assert_eq!(detail.body["cards"][0]["card"]["frame"], "gold");

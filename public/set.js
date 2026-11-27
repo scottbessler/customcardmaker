@@ -96,6 +96,10 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
   // Symbols go where the cursor last was; a type with no mana cost has nowhere else but the text.
   const target = has(wanted) ? wanted : "rules_text";
   const missing = fields.filter((f) => f.required && !String(card[f.key] ?? "").trim()).map((f) => f.label.toLowerCase());
+  // Only a look can be a set's default (the server checks the same rule), so the
+  // button that makes this card's template the set's is off for a layout.
+  const chosen = card.template ? allTemplates().find((t) => t.id === card.template) : null;
+  const mayDefault = Boolean(chosen && isLook(chosen) && card.template !== template);
   const [searching, setSearching] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [artError, setArtError] = useState("");
@@ -206,7 +210,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
           <i class=${`tint-chip mtg-card frame-${id || frameOf({ ...card, frame: "" })}`}></i>${label}${id === "" ? html` <small>(${choices.frames.find(([f]) => f === frameOf({ ...card, frame: "" }))?.[1]})</small>` : null}
         </label>`)}
       </fieldset>
-      <button type="button" class="quiet set-default-template" disabled=${!card.template || card.template === template} onClick=${() => onSetDefault(card.template)}>Use this look for every card in the set</button>
+      <button type="button" class="quiet set-default-template" disabled=${!mayDefault} onClick=${() => onSetDefault(card.template)}>Use this look for every card in the set</button>
     </fieldset>
 
     <fieldset class="form-section">

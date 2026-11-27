@@ -89,20 +89,27 @@ that changes behaviour, not here.
       gets from its mana cost.
   - [x] A **frame colour** the author can set (or leave on Auto, from the cost):
         W U B R G, gold, artifact, land, colourless
-  - [x] A **template**: more than one look for the same card (the modern frame we
-        have, a classic old-border one, full-art, borderless...), picked from
-        thumbnails of the card being edited
+  - [x] A **template**: a layout picked from thumbnails of the card being edited.
+        One look so far: what were the modern, classic, borderless, full-art and
+        Nexus looks are all `modern` now, laid out as a real card is (the art the
+        top half, the text box the bottom third)
   - [x] Per card, with a default for the set; saved in the card document
   - [x] The `/frames` page makes no sense to a visitor: remove it from the app. Keep
         what it gave the tests (every frame rendered side by side) as a dev-only page
   - [x] Layouts: token, planeswalker (with loyalty) and saga, drawn natively and over
-        a Nexus scan, in every template
+        a Nexus scan
   - [x] Transform / double-faced cards: a back face, Front/Back tabs and a Flip, linked on
         import by `<related>`
-  - [ ] Still to do: Nexus draws a transform front with its own crown frame, which peeks out
-        above our plate on a scan; measure it. Then split, adventure, flip and modal layouts
-  - [ ] Still to do: match the real MTG Nexus template list (Nexus's creator refuses automated
-        fetches, so ask for names or screenshots)
+  - [ ] Still to do: over a scan, our plates are the card template's, so a printed plate's
+        bevel can show at their edge (the old `nexus` template made them a little bigger to
+        hide it); Nexus also draws a transform front with its own crown frame, which peeks
+        above our plate. Measure both
+  - [ ] Still to do: the rest of MTG Nexus's layout list — normal (done), dual face (back
+        faces, done), saga (done), token w/ text (done), prepared, adventure, omen, split,
+        fuse, aftermath, battle, textless token, game marker, semi-split, landscape (not
+        planeswalker, megawalker or old border). Each is another template file, and the
+        two-halved ones (split, fuse, aftermath, adventure) need a card with two faces drawn
+        side by side
 
 - [x] **13. Progress for a large import** — a real Nexus export is ~300 cards and one
       picture download each, which can take minutes; the import page shows nothing until
@@ -129,15 +136,13 @@ that changes behaviour, not here.
     - [x] renderer: `public/templates.js` (`allTemplates`, `resolveTemplate`), `card-face.js`
           draws a template with a body; planeswalker, saga and token are data now, their
           geometry removed from `04-cards.css` (only styling is left there)
-    - [x] `nexus` template (a normal card as Nexus draws it, tall art): the scan overlay's
-          geometry now comes from it (`resolveTemplate(..., scan)`), so `.art-card` in
-          `04-cards.css` holds only styling; a scan of a planeswalker/saga/token already used
-          their own templates. (`keep_printed_text` stays: "draw none of ours".)
-    - [x] port the four looks' standard grid layout (name plate, art, type plate, text box, P/T)
-          into `<template>` bodies so a look is data too; the geometry baselines are unchanged
-          (only `display`/`position` moved). The footer stays in the stylesheet: its place is a
-          look's, not a layout's (a saga card in the borderless look must get the borderless
-          foot), so a `<foot>` element would need the look/layout split reworked first
+    - [x] one standard layout, measured off a real card (the art the top half, the text box the
+          bottom third): what were the modern, classic, borderless, full-art and Nexus looks are
+          all `modern` now, and a scan is drawn over it like any card. Two things the format
+          needed for that: a `<stat>` may leave out w/h (as big as its value, anchored by its
+          bottom-right corner), and the box draws `flavor_text` when a template names it
+    - [x] the footer stays in the stylesheet: its place is a look's, not a layout's, so a
+          `<foot>` element would need the look/layout split reworked first
     - [ ] a set keeps a default template per kind of card (today one look for all, only a look)
     - [ ] both stats at once: a template that draws power/toughness and loyalty (creature
           planeswalker); today the planeswalker layout shows loyalty only

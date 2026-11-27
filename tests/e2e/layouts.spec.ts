@@ -113,58 +113,63 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-modern/);
 });
 
-for (const template of ["modern", "classic", "borderless", "full-art"]) {
-  test(`${template}: every layout keeps its parts on the card`, async ({ page }) => {
-    await page.goto(`/dev/frames?layouts=1&template=${template}`);
-    await expect(page.locator(".frame-sample .mtg-card")).toHaveCount(5);
-    await page.evaluate(() => document.fonts.ready);
-    const outside = await page.evaluate(() =>
-      [...document.querySelectorAll(".frame-sample .mtg-card")].flatMap((card) => {
-        const bounds = card.getBoundingClientRect();
-        return [".mtg-name", ".mtg-type", ".mtg-box"].flatMap((part) => {
-          const box = card.querySelector(part)?.getBoundingClientRect();
-          if (!box) return [`${card.className}: no ${part}`];
-          const inside = box.left >= bounds.left - 0.5 && box.right <= bounds.right + 0.5 && box.top >= bounds.top - 0.5 && box.bottom <= bounds.bottom + 0.5;
-          return inside ? [] : [`${card.getAttribute("aria-label")}: ${part} leaves the card`];
-        });
-      }),
-    );
-    expect(outside).toEqual([]);
-    await expectLayout(page, `layouts-${template}`, [
-      ".frame-sample:nth-child(1) .mtg-name",
-      ".frame-sample:nth-child(1) .mtg-box",
-      ".frame-sample:nth-child(3) .mtg-box",
-      ".frame-sample:nth-child(4) .mtg-art",
-    ]);
-    await expectImage(page.locator(".frames-grid"), `layouts-${template}.png`);
-  });
-}
+test("every layout keeps its parts on the card", async ({ page }) => {
+  await page.goto("/dev/frames?layouts=1");
+  await expect(page.locator(".frame-sample .mtg-card")).toHaveCount(5);
+  await page.evaluate(() => document.fonts.ready);
+  const outside = await page.evaluate(() =>
+    [...document.querySelectorAll(".frame-sample .mtg-card")].flatMap((card) => {
+      const bounds = card.getBoundingClientRect();
+      return [".mtg-name", ".mtg-type", ".mtg-box"].flatMap((part) => {
+        const box = card.querySelector(part)?.getBoundingClientRect();
+        if (!box) return [`${card.className}: no ${part}`];
+        const inside = box.left >= bounds.left - 0.5 && box.right <= bounds.right + 0.5 && box.top >= bounds.top - 0.5 && box.bottom <= bounds.bottom + 0.5;
+        return inside ? [] : [`${card.getAttribute("aria-label")}: ${part} leaves the card`];
+      });
+    }),
+  );
+  expect(outside).toEqual([]);
+  await expectLayout(page, "layouts-modern", [
+    ".frame-sample:nth-child(1) .mtg-name",
+    ".frame-sample:nth-child(1) .mtg-box",
+    ".frame-sample:nth-child(3) .mtg-box",
+    ".frame-sample:nth-child(4) .mtg-art",
+  ]);
+  await expectImage(page.locator(".frames-grid"), "layouts-modern.png");
+});
 
-test("the Nexus template lays a normal card out the way Nexus does, with a tall art box", async ({ page }) => {
-  await registerUser(page, "nexus");
-  await page.fill('.new-set input[name="name"]', "Nexus");
-  await page.fill('.new-set input[name="code"]', "NEX");
+test("a standard card is split the way a real one is", async ({ page }) => {
+  await registerUser(page, "standard");
+  await page.fill('.new-set input[name="name"]', "Standard");
+  await page.fill('.new-set input[name="code"]', "STD");
   await page.click(".new-set button");
   await expect(page.locator("h1")).toBeVisible();
   await page.click(".add-card");
-  await page.fill('input[name="name"]', "Tall Art");
+  await page.fill('input[name="name"]', "Split Check");
   await page.fill('input[name="mana_cost"]', "{1}{U}");
   await page.check('input[name="feature-power_toughness"]');
   await page.fill('input[name="power_toughness"]', "2/2");
-  const art = page.locator(".preview .mtg-art");
-  const standard = (await art.boundingBox())!.height;
 
-  await page.locator(".look-option", { hasText: "Nexus" }).click();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-nexus/);
-  // The art box is 62 card-widths tall there, against 41 in the standard layout.
-  const tall = (await art.boundingBox())!.height;
-  expect(tall / standard).toBeGreaterThan(1.4);
+  const card = page.locator(".preview .mtg-card");
+  const art = page.locator(".preview .mtg-art");
+  const rules = page.locator(".preview .mtg-box");
+  await expect(art).toBeVisible();
+  const [c, a, r] = await Promise.all([card, art, rules].map(async (l) => (await l.boundingBox())!));
+  const at = (v: number) => (v - c.y) / c.height;
+  // Measured off a real card: the art is the top half (11%..56% of the card) and the
+  // text box the bottom third (62%..93%), so the art is taller than the box.
+  expect(at(a.y), "the art's top").toBeGreaterThan(0.09);
+  expect(at(a.y), "the art's top").toBeLessThan(0.14);
+  expect(at(a.y + a.height), "the art's bottom").toBeGreaterThan(0.52);
+  expect(at(a.y + a.height), "the art's bottom").toBeLessThan(0.6);
+  expect(at(r.y), "the text box's top").toBeGreaterThan(0.58);
+  expect(at(r.y + r.height), "the text box's bottom").toBeLessThan(0.97);
+  expect(a.height, "the art is taller than the text box").toBeGreaterThan(r.height);
   await expect(page.locator(".preview .mtg-pt")).toHaveText("2/2");
   await expect(page.locator(".save-state")).toHaveText(/Saved/);
 
-  await page.reload();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-nexus/);
-  // Nexus takes its frame from the card's look, so the set can still choose that.
+  // One look so far, and only a look may be the set's default.
+  await expect(page.locator(".look-option")).toHaveCount(1);
   await page.locator(".set-settings summary").click();
-  await expect(page.locator('select[name="default-template"] option')).toHaveText(["Modern", "Classic", "Borderless", "Full art"]);
+  await expect(page.locator('select[name="default-template"] option')).toHaveText(["Modern"]);
 });

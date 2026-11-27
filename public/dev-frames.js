@@ -31,16 +31,15 @@ const LAYOUTS = [
 ].map(withDefaults);
 
 const query = new URLSearchParams(location.search);
-const TEMPLATE = query.get("template") || "modern";
 const SAMPLES = query.get("layouts") ? LAYOUTS : BY_COLOUR;
 
 function Frames() {
   return html`
-    <h1>Frames · ${TEMPLATE}</h1>
+    <h1>Frames</h1>
     <p class="muted">One card per frame the editor can pick, chosen by the mana cost and type line.</p>
     <div class="frames-grid">
       ${SAMPLES.map((card, index) => html`<figure class="frame-sample" data-frame=${frameOf(card)}>
-        <${CardFace} card=${card} template=${TEMPLATE} code="DSR" number=${index + 1} total=${SAMPLES.length} />
+        <${CardFace} card=${card} code="DSR" number=${index + 1} total=${SAMPLES.length} />
         <figcaption>${frameOf(card)} · ${card.rarity}</figcaption>
       </figure>`)}
     </div>

@@ -3,7 +3,7 @@
 // the page's own JSON, so the editor, the gallery and the dev frames page agree.
 import { worksWith } from "/public/frame.js";
 
-const FRAMES = new Set(["modern", "classic", "borderless", "full-art"]);
+const FRAMES = new Set(["modern"]);
 
 let parsed = null;
 
@@ -35,11 +35,11 @@ export const isLook = (template) => !template.requires.length && !template.exclu
 /**
  * How a card is drawn: the `layout` template that places its parts, and the `look` (frame) it
  * wears. A card names a template, or none. A template with a body of its own (a planeswalker, a
- * saga, a token) is a layout; a frame is a look. A card with features only a layout template
- * can draw (loyalty) gets that layout whatever it names, and wears its own look or the set's. A
- * card whose picture is a whole card (`scan`) with no layout of its own is laid out as Nexus does.
+ * saga, a token) is a layout; a look is a frame of its own. A card with features only a layout
+ * template can draw (loyalty) gets that layout whatever it names, and wears its own look or the
+ * set's. A whole-card picture is drawn by the same layout as any card, over its picture.
  */
-export function resolveTemplate(card, setDefault = "modern", scan = false) {
+export function resolveTemplate(card, setDefault = "modern") {
   const list = allTemplates();
   const named = list.find((t) => t.id === card.template && worksWith(t, card.features));
   const defaulted = list.find((t) => t.id === setDefault) ?? list[0];
@@ -47,8 +47,6 @@ export function resolveTemplate(card, setDefault = "modern", scan = false) {
   const layout =
     (named?.body.length ? named : null) ??
     list.find((t) => t.requires.length && worksWith(t, card.features)) ??
-    // A whole-card picture is a Nexus card, and so is laid out the way Nexus lays one out.
-    (scan ? list.find((t) => t.id === "nexus") : null) ??
     list.find((t) => t.id === look);
   return { layout, look: layout?.frame && layout.frame !== "inherit" ? layout.frame : look };
 }

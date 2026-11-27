@@ -15,10 +15,10 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-frame": {
-    "x": 28,
-    "y": 286,
-    "width": 336,
-    "height": 465,
+    "x": 30,
+    "y": 288,
+    "width": 333,
+    "height": 452,
     "display": "block",
     "position": "absolute",
     "fontSize": "15px",
@@ -30,10 +30,10 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-name": {
-    "x": 39,
-    "y": 295,
-    "width": 315,
-    "height": 27,
+    "x": 33,
+    "y": 299,
+    "width": 328,
+    "height": 29,
     "display": "flex",
     "position": "absolute",
     "fontSize": "15px",
@@ -45,10 +45,10 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-art": {
-    "x": 39,
-    "y": 326,
-    "width": 315,
-    "height": 148,
+    "x": 44,
+    "y": 330,
+    "width": 305,
+    "height": 224,
     "display": "block",
     "position": "absolute",
     "fontSize": "15px",
@@ -60,10 +60,10 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-type": {
-    "x": 39,
-    "y": 478,
-    "width": 315,
-    "height": 24,
+    "x": 33,
+    "y": 555,
+    "width": 328,
+    "height": 30,
     "display": "flex",
     "position": "absolute",
     "fontSize": "15px",
@@ -75,10 +75,10 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-box": {
-    "x": 39,
-    "y": 507,
-    "width": 315,
-    "height": 234,
+    "x": 41,
+    "y": 585,
+    "width": 312,
+    "height": 157,
     "display": "flex",
     "position": "absolute",
     "fontSize": "15px",
@@ -91,7 +91,7 @@
   },
   ".frame-sample:first-child .mtg-pt": {
     "x": 303,
-    "y": 736,
+    "y": 731,
     "width": 54,
     "height": 26,
     "display": "block",
@@ -105,9 +105,9 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-foot": {
-    "x": 35,
-    "y": 754,
-    "width": 261,
+    "x": 37,
+    "y": 743,
+    "width": 257,
     "height": 20,
     "display": "flex",
     "position": "absolute",

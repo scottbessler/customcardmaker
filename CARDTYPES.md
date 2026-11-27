@@ -119,14 +119,13 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
   template that names any other field is rejected when it is loaded, which is what keeps the
   rule honest.
 - **`requires` / `excludes`** are space-separated feature ids.
-- **`frame`** is `modern`, `classic`, `borderless` or `full-art` (a frame of its own), or
-  `inherit` (the card's own look, else the set's).
-- **A body is the layout.** Every built-in template has one: the four looks place the name
-  plate, the art, the type plate, the text box and the P/T badge the way the standard grid
-  layout used to, so a look is data too. A template with no body would draw none of its own
-  parts (no built-in one is like that). The footer is not a template element: its place is a
-  look's, not a layout's, so the stylesheet keeps it (a saga card in the borderless look must
-  get the borderless foot).
+- **`frame`** is `modern` (a frame of its own), or `inherit` (the card's own look, else the
+  set's).
+- **A body is the layout.** Every built-in template has one: `modern` places the name
+  plate, the art, the type plate, the text box and the P/T badge where a real card has them,
+  so the layout is data. A template with no body would draw none of its own parts (no
+  built-in one is like that). The footer is not a template element: its place is a look's,
+  not a layout's, so the stylesheet keeps it.
 - **Style** is by `role` and class from the card stylesheet, not by raw CSS: a template says
   *where* things go and which part each is, and the stylesheet (with its tokens) says how a plate
   or a text box looks.
@@ -138,22 +137,18 @@ and none of the `excludes`.
 
 | Id | Requires | Excludes | What it is |
 | --- | --- | --- | --- |
-| `modern` | | | the modern frame (today's look) |
-| `classic` | | | heavier border, flat plates |
-| `borderless` | | | frame to the edge |
-| `full-art` | | | picture is the card, plates float on it |
-| `nexus` | | | a normal card as Nexus draws it: a tall art box (a layout: it takes the card's look for its frame) |
+| `modern` | | | the standard frame, laid out as a real card is (the one look so far) |
 | `saga` | | stats | chapters down the left, art on the right |
 | `token` | | cost | picture behind everything, centred name |
 | `planeswalker` | loyalty | | tall art, abilities over its foot, loyalty badge |
 
-A **scan** (a card whose picture is a whole card, `art_is_card`) needs no templates of its own:
-it is drawn by the same template as any card, over its picture with no frame of its own. A card
-with no layout of its own is drawn by `nexus` there, since a whole-card picture is a Nexus card;
-a planeswalker, saga or token is drawn by its own. So a scan and a native card share a geometry.
+MTG Nexus offers more layouts than these (dual face, prepared, adventure, omen, split, fuse,
+aftermath, battle, textless token, game marker, semi-split, landscape); each is another
+template file plus, for the two-halved ones, a card with two faces. Not built yet.
 
-The four looks are layouts too: each places the name plate, art, type plate and text box in its
-own way, so choosing a look changes where things go as well as how they are drawn.
+A **scan** (a card whose picture is a whole card, `art_is_card`) needs no templates of its own:
+it is drawn by the same template as any card, over its picture with no frame of its own, so a
+scan and a native card share a geometry.
 
 A card with `loyalty` is drawn by the `planeswalker` template whatever it names, and wears its
 own look or the set's for its frame (`resolveTemplate` in `public/templates.js`). A card with
@@ -174,9 +169,12 @@ matching `scan-*` template, which is what `art_is_card` selects today.
    fields are validated against them; the editor's form is built from them; the import turns
    on the right ones; old documents read as above. Drawing is unchanged.
 2. **Templates** (in progress). Done: the XML format, its loader and checker (`src/template.rs`),
-   the renderer (`public/templates.js`, `card-face.js`), the planeswalker, saga, token and Nexus
-   templates as data, scans drawn by them, and the four looks' standard layout as bodies (a look
-   is data too). To do: a default template per kind of card in a set, and a template that draws
-   both stats at once.
-3. **Later.** Split / adventure / flip / modal; custom templates per account (an editor,
-   storage, and the whitelist enforced on save).
+   the renderer (`public/templates.js`, `card-face.js`), the standard layout as a template
+   (measured off a real card, so the art is the top half and the text box the bottom third),
+   and planeswalker, saga and token as data. One look so far: what used to be the classic,
+   borderless, full-art and Nexus looks are all `modern` now. To do: the rest of the layouts
+   MTG Nexus offers (dual face, prepared, adventure, omen, split, fuse, aftermath, battle,
+   textless token, game marker, semi-split, landscape), a default template per kind of card in
+   a set, and a template that draws both stats at once.
+3. **Later.** Custom templates per account (an editor, storage, and the whitelist enforced on
+   save).

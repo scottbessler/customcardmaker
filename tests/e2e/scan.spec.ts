@@ -65,5 +65,5 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
   // Taking the picture away takes the flags with it.
   await page.click(".remove-art");
   await expect(page.locator(".preview .mtg-card")).not.toHaveClass(/art-card/);
-  await expect(page.locator(".look-option")).toHaveCount(6);
+  await expect(page.locator(".look-option")).toHaveCount(2);
 });
