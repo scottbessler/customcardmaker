@@ -5,6 +5,7 @@ import { TYPE_DATA } from "/public/type-data.js";
 
 /** Offered as one-tap choices. Others can still be typed into the type line. */
 export const SUPERTYPES = ["Basic", "Legendary", "Snow", "World", "Ongoing"];
+export const SUPPLEMENTAL_TYPES = ["Conspiracy", "Dungeon", "Phenomenon", "Plane", "Scheme", "Vanguard"];
 export const CARD_TYPES = ["Artifact", "Battle", "Creature", "Enchantment", "Instant", "Kindred", "Land", "Planeswalker", "Sorcery"];
 
 // A type that is not a card type is a supertype when it is one of these.
@@ -56,7 +57,7 @@ export function parseTypeLine(line) {
 }
 
 function canonicalWord(word) {
-  const known = [...SUPERTYPES, ...CARD_TYPES].find((name) => name.toLowerCase() === word.toLowerCase());
+  const known = [...SUPERTYPES, ...CARD_TYPES, ...SUPPLEMENTAL_TYPES].find((name) => name.toLowerCase() === word.toLowerCase());
   return known ?? word;
 }
 

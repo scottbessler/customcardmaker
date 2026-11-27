@@ -131,3 +131,16 @@ test("the subtype box is a labelled combobox for assistive tech", async ({ page 
   await box.press("Escape");
   await expect(options(page)).toHaveCount(0);
 });
+
+test("supplemental card types can be picked and edited as text", async ({ page }) => {
+  await newCard(page);
+  await page.locator(".supplemental-types summary").click();
+  const extras = page.getByRole("group", { name: "Supplemental card types" });
+  await extras.getByRole("button", { name: "Scheme" }).click();
+  await expect(line(page)).toHaveValue("Scheme");
+  await line(page).fill("plane — Amonkhet");
+  const plane = extras.getByRole("button", { name: "Plane", exact: true });
+  await expect(plane).toHaveAttribute("aria-pressed", "true");
+  await plane.click();
+  await expect(line(page)).toHaveValue("Amonkhet");
+});

@@ -1,5 +1,5 @@
 import { html, useRef, useState } from "/public/vendor/htm-preact.js";
-import { CARD_TYPES, SUPERTYPES, buildTypeLine, parseTypeLine, suggestSubtypes, titleCase, toggled } from "/public/types.js";
+import { CARD_TYPES, SUPERTYPES, SUPPLEMENTAL_TYPES, buildTypeLine, parseTypeLine, suggestSubtypes, titleCase, toggled } from "/public/types.js";
 
 /**
  * Picks for the type line: supertype and card-type buttons, and a typeahead for
@@ -49,6 +49,13 @@ export function TypeBuilder({ typeLine, onChange }) {
     }
   }
 
+  const typeButton = (name) => html`<button
+        type="button"
+        class="chip type-pick"
+        aria-pressed=${String(parts.types.includes(name))}
+        onClick=${() => change({ types: toggled(parts.types, name) })}
+      >${name}</button>`;
+
   return html`<div class="type-builder">
     <div class="type-picks" role="group" aria-label="Supertype">
       ${SUPERTYPES.map((name) => html`<button
@@ -59,13 +66,14 @@ export function TypeBuilder({ typeLine, onChange }) {
       >${name}</button>`)}
     </div>
     <div class="type-picks" role="group" aria-label="Card type">
-      ${CARD_TYPES.map((name) => html`<button
-        type="button"
-        class="chip type-pick"
-        aria-pressed=${String(parts.types.includes(name))}
-        onClick=${() => change({ types: toggled(parts.types, name) })}
-      >${name}</button>`)}
+      ${CARD_TYPES.map(typeButton)}
     </div>
+    <details class="supplemental-types">
+      <summary>Supplemental card types</summary>
+      <div class="type-picks" role="group" aria-label="Supplemental card types">
+        ${SUPPLEMENTAL_TYPES.map(typeButton)}
+      </div>
+    </details>
     <div class="subtype-field">
       <span class="field-label">Subtypes</span>
       <div class="subtype-box">

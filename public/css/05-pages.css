@@ -140,6 +140,8 @@
 .count{color:var(--text-faint);font-variant-numeric:tabular-nums}
 .type-picks{display:flex;flex-wrap:wrap;gap:var(--space-8)}
 .type-builder{display:grid;gap:var(--space-8)}
+.supplemental-types summary{cursor:pointer;color:var(--text-muted);font-size:var(--text-small)}
+.supplemental-types .type-picks{margin-top:var(--space-8)}
 .subtype-field{position:relative;display:grid;gap:var(--space-4)}
 .subtype-box{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-8);min-height:var(--control-h);padding:var(--space-4) var(--space-8);border:1px solid var(--line-2);border-radius:var(--radius-control);background:var(--ink-800)}
 .subtype-box:focus-within{outline:2px solid var(--gold-hi);outline-offset:1px}

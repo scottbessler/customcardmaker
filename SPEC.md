@@ -161,7 +161,8 @@ nothing about real Magic cards.
   caret of whichever of *mana cost* or *rules text* was last focused, and says
   which. `{T}` is not offered for a mana cost.
 - **B6.** The type line is edited as parts as well as text. Supertype and card-type
-  buttons toggle words in the line; subtypes are tokens with a typeahead. Both
+  buttons toggle words in the line. Supplemental card types have a collapsible
+  group. Subtypes are tokens with a typeahead. Both
   read and write the one `type_line` string, so typing it by hand and using the
   buttons always agree, and a word the buttons do not know is kept, never dropped.
 - **B8.** Subtype suggestions come from the chosen card types (creature types for a
