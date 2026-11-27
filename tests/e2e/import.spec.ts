@@ -33,7 +33,13 @@ test("a Cockatrice file becomes a set you can open", async ({ page }) => {
 
   await page.fill('#import-form input[name="set_code"]', "IMP");
   await page.fill('#import-form input[name="set_name"]', "Imported Test Set");
-  await page.fill('#import-form textarea[name="xml"]', XML);
+  await page.setInputFiles('#import-form input[name="file"]', {
+    name: "cards.xml",
+    mimeType: "text/xml",
+    buffer: Buffer.from(XML),
+  });
+  // No picture URLs in this file, so nothing is downloaded.
+  await page.uncheck('#import-form input[name="images"]');
   await page.click('#import-form button[type="submit"]');
 
   await expect(page.locator("#import-result")).toContainText("Imported 2 cards");

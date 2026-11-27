@@ -34,6 +34,9 @@ pub struct AppState {
     pub art: ArtStore,
     pub webauthn: Arc<Webauthn>,
     pub key: Key,
+    /// Fetches card pictures named by an imported file. One client for the
+    /// process, so connections are pooled and a picture site sees one caller.
+    pub http: reqwest::Client,
     /// Sign in by username alone. For development and tests, where no
     /// authenticator can be driven; never set in production.
     pub passkey_disabled: bool,
@@ -54,9 +57,22 @@ impl AppState {
             art: ArtStore::open(db).await?,
             webauthn: Arc::new(build_webauthn()?),
             key: load_key(),
+            http: build_http_client()?,
             passkey_disabled,
         })
     }
+}
+
+/// The client that downloads the pictures a Cockatrice file names. It follows
+/// a few redirects (a picture host may send one) and otherwise trusts the
+/// importer to point it somewhere; the picture itself is sniffed before it is
+/// kept.
+fn build_http_client() -> Result<reqwest::Client> {
+    reqwest::Client::builder()
+        .user_agent(concat!("customcardmaker/", env!("CARGO_PKG_VERSION")))
+        .redirect(reqwest::redirect::Policy::limited(5))
+        .build()
+        .context("failed to build the HTTP client")
 }
 
 pub fn router(s: AppState) -> Router {

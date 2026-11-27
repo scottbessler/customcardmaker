@@ -1,5 +1,6 @@
 // Wires the server-rendered Cockatrice import form. The page itself is markup
-// in `render.rs`; this only posts it and reports what happened.
+// in `render.rs`; this reads the chosen file, posts it, and reports what
+// happened.
 
 const form = document.getElementById("import-form");
 const errorBox = document.getElementById("import-error");
@@ -29,8 +30,16 @@ function showResult(result) {
   line.append(
     `Imported ${result.cards_imported} ${
       result.cards_imported === 1 ? "card" : "cards"
-    } into `,
+    }`,
   );
+  if (result.images_imported) {
+    line.append(
+      ` with ${result.images_imported} ${
+        result.images_imported === 1 ? "picture" : "pictures"
+      }`,
+    );
+  }
+  line.append(" into ");
   const link = document.createElement("a");
   link.href = `/sets/${result.set_id}`;
   link.textContent = `${result.set_name} (${result.set_code})`;
@@ -47,9 +56,13 @@ if (form) {
     const data = new FormData(form);
     const setCode = (data.get("set_code") || "").trim();
     const setName = (data.get("set_name") || "").trim();
-    const xml = (data.get("xml") || "").trim();
-    if (!setCode || !xml) {
-      showError("A set code and the XML are both required.");
+    const file = data.get("file");
+    if (!setCode) {
+      showError("A set code is required.");
+      return;
+    }
+    if (!file || !file.size) {
+      showError("Choose a Cockatrice XML file to import.");
       return;
     }
 
@@ -60,9 +73,10 @@ if (form) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          xml,
+          xml: await file.text(),
           set_code: setCode,
           set_name: setName || null,
+          images: data.get("images") === "on",
         }),
       });
       const payload = await response.json().catch(() => ({}));

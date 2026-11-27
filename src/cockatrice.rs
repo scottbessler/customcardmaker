@@ -9,6 +9,16 @@ use crate::card::{Card, Rarity};
 use crate::error::AppError;
 use roxmltree::Node;
 
+/// One card, plus the picture the file points at. The URL is kept beside the
+/// card rather than in it: `Card` holds an uploaded image's id, and the URL
+/// only becomes one if the file is downloaded.
+#[derive(Debug)]
+pub struct ImportedCard {
+    pub card: Card,
+    /// The `picurl` on the card's `<set>`, if the file gives one.
+    pub image_url: Option<String>,
+}
+
 /// What a Cockatrice file says about the set and the cards in it.
 #[derive(Debug)]
 pub struct Database {
@@ -16,7 +26,7 @@ pub struct Database {
     pub set_name: Option<String>,
     /// The short code: `<sets><set><name>`, or the first card's `<set>`.
     pub set_code: Option<String>,
-    pub cards: Vec<Card>,
+    pub cards: Vec<ImportedCard>,
 }
 
 pub fn parse(xml: &str) -> Result<Database, AppError> {
@@ -57,17 +67,16 @@ fn set_info(doc: &roxmltree::Document<'_>) -> (Option<String>, Option<String>) {
     (name, code)
 }
 
-fn card(node: Node<'_, '_>) -> Result<Card, AppError> {
+fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
     let prop = node.children().find(|child| child.has_tag_name("prop"));
     let field = |tag| prop.and_then(|prop| text(prop, tag)).unwrap_or_default();
+    let set = node.children().find(|child| child.has_tag_name("set"));
 
     let card = Card {
         name: text(node, "name").unwrap_or_default(),
         mana_cost: field("manacost"),
         type_line: field("type"),
-        rarity: node
-            .children()
-            .find(|child| child.has_tag_name("set"))
+        rarity: set
             .and_then(|set| set.attribute("rarity"))
             .map(rarity)
             .unwrap_or_default(),
@@ -78,7 +87,22 @@ fn card(node: Node<'_, '_>) -> Result<Card, AppError> {
 
     card.validate()
         .map_err(|e| AppError::bad_request(format!("Card \"{}\": {}", card.name, e.detail())))?;
-    Ok(card)
+    Ok(ImportedCard {
+        card,
+        image_url: set
+            .and_then(|set| set.attribute("picurl"))
+            .and_then(web_url),
+    })
+}
+
+/// Only an `http`/`https` URL is worth fetching; anything else (a `file:` or a
+/// bare path) is ignored rather than handed to the HTTP client.
+fn web_url(value: &str) -> Option<String> {
+    let value = value.trim();
+    let rest = value
+        .strip_prefix("https://")
+        .or_else(|| value.strip_prefix("http://"))?;
+    (!rest.is_empty() && !rest.starts_with('/')).then(|| value.to_string())
 }
 
 /// The text of a direct child, with line endings normalised so a Windows file
@@ -137,7 +161,7 @@ mod tests {
         <manacost>{2}{W}{W}</manacost>
         <pt>2/2</pt>
       </prop>
-      <set rarity="mythic" num="5">RND</set>
+      <set rarity="mythic" num="5" picurl="https://example.test/vivi.jpg">RND</set>
     </card>
     <card>
       <name>Exquisite Blood</name>
@@ -161,16 +185,37 @@ mod tests {
         );
         assert_eq!(db.cards.len(), 2);
 
-        let first = &db.cards[0];
+        let first = &db.cards[0].card;
         assert_eq!(first.name, "Vivi's Friend");
         assert_eq!(first.mana_cost, "{2}{W}{W}");
         assert_eq!(first.type_line, "Creature — Bird");
         assert_eq!(first.power_toughness, "2/2");
         assert_eq!(first.rules_text, "Birds you control have +1+1 and haste");
         assert_eq!(first.rarity, Rarity::Mythic);
+        assert_eq!(
+            db.cards[0].image_url.as_deref(),
+            Some("https://example.test/vivi.jpg")
+        );
 
-        assert_eq!(db.cards[1].rarity, Rarity::Rare);
-        assert_eq!(db.cards[1].power_toughness, "");
+        assert_eq!(db.cards[1].card.rarity, Rarity::Rare);
+        assert_eq!(db.cards[1].card.power_toughness, "");
+        assert_eq!(db.cards[1].image_url, None);
+    }
+
+    #[test]
+    fn only_web_urls_are_kept_as_pictures() {
+        assert_eq!(
+            web_url("https://x.test/a.jpg").as_deref(),
+            Some("https://x.test/a.jpg")
+        );
+        assert_eq!(
+            web_url("http://x.test/a.jpg").as_deref(),
+            Some("http://x.test/a.jpg")
+        );
+        assert_eq!(web_url("file:///etc/passwd"), None);
+        assert_eq!(web_url("/local/a.jpg"), None);
+        assert_eq!(web_url("https://"), None);
+        assert_eq!(web_url(""), None);
     }
 
     #[test]
@@ -189,7 +234,7 @@ mod tests {
                    <text>one\r\ntwo\rthree</text><set>ABC</set></card></cards>\
                    </cockatrice_carddatabase>";
         let db = parse(xml).unwrap();
-        assert_eq!(db.cards[0].rules_text, "one\ntwo\nthree");
+        assert_eq!(db.cards[0].card.rules_text, "one\ntwo\nthree");
     }
 
     #[test]

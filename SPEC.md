@@ -146,12 +146,15 @@ nothing about real Magic cards.
   `POST /api/cards/transfer`.)
 - **B3.** `/api/*` failures are JSON `{"error": "..."}`; page failures are pages.
   Internal errors never put the database's message in a response.
-- **B9.** `/import` reads a Cockatrice carddatabase XML file (the kind MTG Nexus
-  exports) and makes a new set: each card's name, mana cost, type line, rules
-  text, P/T and rarity are taken, in file order. A set code is required; the name
-  defaults to the file's long name. The set and its cards are written together
-  or not at all, and only into the signed-in account. A signed-out visitor to
-  `/import` is sent to `/`.
+- **B13.** `/import` takes a Cockatrice carddatabase XML file (the kind MTG Nexus
+  exports) as an upload and makes a new set: each card's name, mana cost, type
+  line, rules text, P/T and rarity are taken, in file order. A set code is
+  required; the name defaults to the file's long name. When asked, each card's
+  `picurl` is downloaded and kept as the importer's art; a picture that will not
+  download, or is not an image of a kind we serve, is skipped and the card
+  imports without art. The set and its cards are written together or not at all,
+  and only into the signed-in account. A signed-out visitor to `/import` is sent
+  to `/`.
 
 ## 8. Not yet built
 
