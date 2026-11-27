@@ -190,6 +190,10 @@
 .look-thumb{display:block;width:100%;pointer-events:none}
 .look-name{font-size:var(--text-small);text-align:center}
 .look-name small{display:block}
+/* A layout the card cannot wear yet: shown, so it can be found, and told why. */
+.look-option.unavailable{cursor:default;opacity:.55}
+.look-option.unavailable .look-name{font-weight:600}
+.look-needs{color:var(--text-faint);font-weight:500}
 .tint-option{position:relative;display:inline-flex;flex-direction:row;align-items:center;gap:var(--space-8);padding:.4rem .8rem;border:1px solid var(--line-2);border-radius:var(--radius-chip);cursor:pointer;color:var(--text-muted)}
 .tint-option:has(input:checked){border-color:var(--gold);background:var(--ink-600);color:var(--text)}
 .tint-chip{display:inline-block;width:1rem;height:1rem;aspect-ratio:1;border-radius:50%;background:linear-gradient(135deg,var(--hi),var(--lo));box-shadow:none;flex:none}

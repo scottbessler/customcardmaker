@@ -55,20 +55,21 @@ test("the features a card has say which fields it has and which it must have", a
   await expect(page.locator('input[name="mana_cost"]')).toHaveCount(0);
 });
 
-test("a template is offered only for cards it can draw", async ({ page }) => {
+test("every layout is offered, and one the card cannot wear says why", async ({ page }) => {
   await newCard(page);
-  const looks = page.locator(".look-option");
-  // A card with a cost can be drawn by the one look, or as a saga; not as a token.
-  await expect(looks).toHaveCount(2);
-  await expect(looks.filter({ hasText: "Saga" })).toHaveCount(1);
-  await expect(looks.filter({ hasText: "Token" })).toHaveCount(0);
-  await feature(page, "power_toughness").check();
-  await expect(looks).toHaveCount(1);
-  await expect(looks.filter({ hasText: "Saga" })).toHaveCount(0);
+  const option = (id: string) => page.locator(`.look-option:has(input[name="template"][value="${id}"])`);
+  await expect(page.locator(".look-option")).toHaveCount(15);
+  // A card with a cost can be the look or a saga; not a token, and not a battle without a defense.
+  await expect(option("saga").locator("input")).toBeEnabled();
+  await expect(option("token").locator("input")).toBeDisabled();
+  await expect(option("token").locator(".look-needs")).toHaveText("not with mana cost");
+  await expect(option("battle").locator("input")).toBeDisabled();
 
-  // Choosing a feature a chosen template cannot draw puts the card back on the set's look.
+  // A feature a chosen template cannot draw puts the card back on the set's look.
+  await feature(page, "power_toughness").check();
+  await expect(option("saga").locator("input")).toBeDisabled();
   await feature(page, "power_toughness").uncheck();
-  await looks.filter({ hasText: "Saga" }).click();
+  await option("saga").click();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-saga/);
   await feature(page, "loyalty").check();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-planeswalker/);

@@ -92,19 +92,19 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
 
   // A saga is any card drawn by the Saga template, which has nowhere for a stat.
   await feature(page, "loyalty").uncheck();
-  await page.locator(".look-option", { hasText: "Saga" }).click();
+  await page.locator('.look-option:has(input[value="saga"])').click();
   await page.fill('textarea[name="rules_text"]', ": (Reminder.)\nI: One\nII, III: Two");
   await expect(page.locator(".preview .saga-row")).toHaveCount(2);
   await expect(page.locator(".preview .saga-mark")).toHaveCount(3);
   await feature(page, "power_toughness").check();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-modern/);
-  await expect(page.locator(".look-option", { hasText: "Saga" })).toHaveCount(0);
+  await expect(page.locator('.look-option:has(input[value="saga"]) input')).toBeDisabled();
   await feature(page, "power_toughness").uncheck();
 
   // A token is a card with no mana cost, drawn by the Token template.
-  await expect(page.locator(".look-option", { hasText: /Token/ })).toHaveCount(0);
+  await expect(page.locator('.look-option:has(input[value="token"]) input')).toBeDisabled();
   await feature(page, "cost").uncheck();
-  await page.locator(".look-option", { hasText: /Token/ }).click();
+  await page.locator('.look-option:has(input[value="token"])').click();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-token/);
   await expect(page.locator('input[name="mana_cost"]')).toHaveCount(0);
   await expect(page.locator(".preview .mtg-cost")).toBeHidden();
@@ -202,7 +202,7 @@ test("a standard card is split the way a real one is", async ({ page }) => {
   await expect(page.locator(".save-state")).toHaveText(/Saved/);
 
   // One look so far, and only a look may be the set's default.
-  await expect(page.locator(".look-option")).toHaveCount(1);
+  await expect(page.locator(".look-option")).toHaveCount(15);
   await page.locator(".set-settings summary").click();
   await expect(page.locator('select[name="default-template"] option')).toHaveText(["Modern"]);
 });

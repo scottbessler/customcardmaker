@@ -38,6 +38,39 @@ function withFeatures(card, features) {
 
 /** A new back face: a blank card with the features a new card has. */
 const blankFace = (rarity) => withFeatures({ rarity }, choices.features.filter((f) => f.default).map((f) => f.id));
+
+/**
+ * A card the given template could draw, for its thumbnail: the card itself when it fits,
+ * else one carrying what the template asks for, so the picture is of that layout rather
+ * than of the one the card wears now.
+ */
+function previewFace(card, template) {
+  if (worksWith(template, hasAll(card))) return { ...card, template: template.id };
+  const features = card.features.filter((id) => !template.excludes.includes(id));
+  for (const id of template.requires) if (id !== "back" && !features.includes(id)) features.push(id);
+  const preview = { ...card, features, template: template.id };
+  if (template.requires.includes("back") && !preview.back) {
+    preview.back = { ...blankFace(card.rarity), name: "Back", type_line: card.type_line, features: [...features] };
+  }
+  return preview;
+}
+
+/** A feature id in a few words, for a reason a card cannot wear a template yet. */
+const wordFor = (id) =>
+  id === "back" ? "a second face" : (choices.features.find((f) => f.id === id)?.label.toLowerCase() ?? id);
+
+/** Why a card cannot wear a template yet, in a few words: `needs a second face`. */
+function whyNot(template, card) {
+  const has = hasAll(card);
+  const needs = template.requires.filter((id) => !has.includes(id)).map(wordFor);
+  const clashes = template.excludes.filter((id) => has.includes(id)).map(wordFor);
+  return [
+    needs.length ? `needs ${needs.join(" and ")}` : "",
+    clashes.length ? `not with ${clashes.join(" or ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
 const app = document.getElementById("app");
 const setId = app.dataset.setId;
 // The server says how long each field may be, so the form never keeps its own copy.
@@ -197,11 +230,14 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
         ? html`<p class="muted looks-note">A whole-card picture is drawn as it is, so it has no template. The colour below tints our text plates over it.</p>`
         : html`<fieldset class="looks">
         <legend>Template</legend>
-        ${allTemplates().filter((t) => worksWith(t, hasAll(card))).map(({ id, label }) => html`<label class=${`look-option${(card.template || template) === id ? " chosen" : ""}`}>
-          <input type="radio" name="template" value=${id} checked=${(card.template || template) === id} onChange=${() => onChange({ ...card, template: id === template ? "" : id })} />
-          <span class="look-thumb"><${CardFace} card=${{ ...card, template: id }} /></span>
-          <span class="look-name">${label}${id === template ? html` <small>set default</small>` : null}</span>
-        </label>`)}
+        ${allTemplates().map((t) => {
+          const usable = worksWith(t, hasAll(card));
+          return html`<label class=${`look-option${(card.template || template) === t.id ? " chosen" : ""}${usable ? "" : " unavailable"}`}>
+          <input type="radio" name="template" value=${t.id} checked=${(card.template || template) === t.id} disabled=${!usable} onChange=${() => onChange({ ...card, template: t.id === template ? "" : t.id })} />
+          <span class="look-thumb"><${CardFace} card=${previewFace(card, t)} /></span>
+          <span class="look-name">${t.label}${t.id === template ? html` <small>set default</small>` : null}${usable ? null : html` <small class="look-needs">${whyNot(t, card)}</small>`}</span>
+        </label>`;
+        })}
       </fieldset>`}
       <fieldset class="tints">
         <legend>Colour</legend>
@@ -262,6 +298,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
       <div class="row">
         ${has("loyalty") ? html`<${Field} label="Loyalty"><input placeholder="4" autocomplete="off" ...${text("loyalty")} /><//>` : null}
         ${has("power_toughness") ? html`<${Field} label="Power / toughness"><input placeholder="2/3" autocomplete="off" ...${text("power_toughness")} /><//>` : null}
+        ${has("defense") ? html`<${Field} label="Defense"><input placeholder="5" autocomplete="off" ...${text("defense")} /><//>` : null}
         ${has("artist") ? html`<${Field} label="Artist"><input autocomplete="off" ...${text("artist")} /><//>` : null}
       </div>
     </fieldset>
