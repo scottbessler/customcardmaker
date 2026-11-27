@@ -17,7 +17,7 @@ test("a card can be given another template and frame colour, and keeps them", as
   const preview = page.locator(".preview .mtg-card");
   await expect(preview).toHaveClass(/tpl-modern/);
   await expect(preview).toHaveClass(/frame-r/);
-  // One thumbnail per template this card can wear (the four looks and Saga), each the card itself.
+  // One thumbnail per template the card can wear: the four looks, plus the saga.
   await expect(page.locator(".look-option")).toHaveCount(5);
   await expect(page.locator(".look-thumb .mtg-card.tpl-full-art")).toHaveCount(1);
 
