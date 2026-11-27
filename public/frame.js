@@ -120,3 +120,12 @@ export function chapters(text) {
   }
   return { reminder, chapters: list };
 }
+
+/**
+ * Whether a template can draw a card with these features on: it needs its `requires` and has
+ * nowhere to put its `excludes`. (The server checks the same rule; this is for what the editor
+ * offers.)
+ */
+export function worksWith(template, features) {
+  return template.requires.every((id) => features.includes(id)) && !template.excludes.some((id) => features.includes(id));
+}

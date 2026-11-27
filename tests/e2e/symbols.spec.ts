@@ -71,7 +71,7 @@ test("a card with every kind of symbol keeps its look", async ({ page }) => {
   await page.fill('input[name="mana_cost"]', "{2}{W/U}{G/P}");
   await page.fill('input[name="type_line"]', "Creature — Human Wizard");
   await page.fill('textarea[name="rules_text"]', "{T}: Add {R}, {G}, or {B}.\n{X}{U}{U}, {T}: Draw a card.");
-  await page.locator(".cardtypes .tint-option", { hasText: "Creature" }).click();
+  await page.check('input[name="feature-power_toughness"]');
   await page.fill('input[name="power_toughness"]', "2/2");
   const card = page.locator(".preview .mtg-card");
   await expect(card.locator(".mana")).toHaveCount(3 + 4 + 4);

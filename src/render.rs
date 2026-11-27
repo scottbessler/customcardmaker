@@ -135,7 +135,7 @@ pub fn set_page(id: Uuid, name: &str, user: &str) -> String {
         name,
         &format!(
             r#"<div id="app" class="set-page" data-set-id="{id}"></div>{}{}"#,
-            json_script("limits", &crate::card::limits()),
+            json_script("limits", &crate::cardtype::limits()),
             json_script("choices", &crate::card::CHOICES)
         ),
         Some("/public/set.js"),

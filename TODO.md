@@ -107,16 +107,28 @@ that changes behaviour, not here.
   - [ ] Say at the end which pictures failed, so they can be retried
   - [ ] A cap on how long one import may run, and one import at a time per account
 
-- [ ] **14. Card types and templates** — see `CARDTYPES.md`.
-  - [x] Stage 1: card types (a card's fields, which are required, whether it may have a
-        back), the generic card, the form built from the type, the import choosing a type,
-        old documents read as the type they were
-  - [ ] Stage 2: templates as XML files that name the types they work with and place the
-        fields; one renderer reads them in place of the per-layout CSS; the built-ins ported
-        from the current geometry (modern, classic, borderless, full art, planeswalker, saga,
-        token, and a scan overlay for each); a card picks its template and a set keeps a
-        default per type
-  - [ ] Later: split / adventure / flip / modal types; custom templates per account
+- [ ] **14. Card features and templates** — design in `CARDTYPES.md`. A card has the base
+      fields (name, type line, rules text, flavor, artist) plus **features** it turns on
+      (cost, power_toughness, loyalty, defense); a template says which features it
+      needs/excludes and places the fields; a card picks a template that can draw it.
+  - [x] Stage 1 (DONE): the registry (`src/cardtype.rs`), the generic card (`src/card.rs`,
+        flat JSON: `features` + the fields they allow, old documents read as the card they
+        were), the form built from the features, the import turning on the right ones, a
+        card's template checked against its features
+  - [ ] Stage 2 — NEXT: templates as XML files (format in `CARDTYPES.md`) that name the
+        features they `requires`/`excludes` and place the fields; one renderer reads them in
+        place of the per-layout CSS (`public/css/04-cards.css`, section "Layouts", and
+        `layoutOf` in `public/card-face.js`); built-ins ported from the current geometry (modern,
+        classic, borderless, full art, planeswalker, saga, token, and a `scan-*` overlay for
+        each, replacing the `art_is_card` special case); the server loads the same files
+        (roxmltree) for `works_with`, replacing the `TEMPLATES` list in `src/cardtype.rs`; a
+        set keeps a default template per kind of card. Steps: (1) loader + validator in Rust with
+        tests, (2) renderer in JS reading the same files, (3) port one template at a time keeping
+        the existing e2e image/geometry baselines green, (4) delete the old layout CSS
+    - Known gap: a card with both power_toughness and loyalty draws the planeswalker layout
+      (loyalty only); a template that shows both is part of this stage.
+  - [ ] Later: split / adventure / flip / modal; custom templates per account (editor,
+        per-account storage, the whitelist enforced on save)
 
 ## Notes
 

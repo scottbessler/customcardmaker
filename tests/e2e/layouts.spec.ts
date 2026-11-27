@@ -31,7 +31,9 @@ test("planeswalker abilities and saga chapters are read from the rules text", as
   });
 });
 
-test("a card can be made a planeswalker, a saga or a token, and keeps it", async ({ page }) => {
+const feature = (page, id: string) => page.locator(`input[name="feature-${id}"]`);
+
+test("a card becomes a planeswalker, a saga or a token by what it has and how it is drawn, and keeps it", async ({ page }) => {
   await registerUser(page, "layouter");
   await page.fill('.new-set input[name="name"]', "Layouts");
   await page.fill('.new-set input[name="code"]', "LAY");
@@ -40,14 +42,17 @@ test("a card can be made a planeswalker, a saga or a token, and keeps it", async
   await page.click(".add-card");
   const preview = page.locator(".preview .mtg-card");
   await expect(preview).toHaveClass(/lay-normal/);
-  // A new card is a spell: no power/toughness until it is a creature.
+  // A new card has a mana cost and no stats.
+  await expect(feature(page, "cost")).toBeChecked();
   await expect(page.locator('input[name="power_toughness"]')).toHaveCount(0);
-  await page.locator(".cardtypes .tint-option", { hasText: "Creature" }).click();
+  await feature(page, "power_toughness").check();
   await expect(page.locator('input[name="power_toughness"]')).toBeVisible();
 
-  await page.locator(".cardtypes .tint-option", { hasText: "Planeswalker" }).click();
+  // Loyalty makes it a planeswalker; the stats combine, so power/toughness may stay.
+  await feature(page, "loyalty").check();
   await expect(preview).toHaveClass(/lay-planeswalker/);
-  // Loyalty replaces power/toughness.
+  await expect(page.locator('input[name="power_toughness"]')).toBeVisible();
+  await feature(page, "power_toughness").uncheck();
   await expect(page.locator('input[name="power_toughness"]')).toHaveCount(0);
   await page.fill('input[name="loyalty"]', "4");
   await page.fill('textarea[name="rules_text"]', "+1: Draw a card\n−3: Destroy target creature\n: Static ability");
@@ -60,22 +65,26 @@ test("a card can be made a planeswalker, a saga or a token, and keeps it", async
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-planeswalker/);
   await expect(page.locator(".preview .pw-row")).toHaveCount(3);
 
-  // A saga is a spell drawn by the Saga template.
-  await page.locator(".cardtypes .tint-option", { hasText: "Spell" }).click();
+  // A saga is any card drawn by the Saga template, which has nowhere for a stat.
+  await feature(page, "loyalty").uncheck();
   await page.locator(".look-option", { hasText: "Saga" }).click();
   await page.fill('textarea[name="rules_text"]', ": (Reminder.)\nI: One\nII, III: Two");
   await expect(page.locator(".preview .saga-row")).toHaveCount(2);
   await expect(page.locator(".preview .saga-mark")).toHaveCount(3);
-  await expect(page.locator('input[name="power_toughness"]')).toHaveCount(0);
-  await expect(page.locator('input[name="loyalty"]')).toHaveCount(0);
+  await feature(page, "power_toughness").check();
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-normal/);
+  await expect(page.locator(".look-option", { hasText: "Saga" })).toHaveCount(0);
+  await feature(page, "power_toughness").uncheck();
 
-  await page.locator(".cardtypes .tint-option", { hasText: "Token" }).click();
+  // A token is a card with no mana cost, drawn by the Token template.
+  await expect(page.locator(".look-option", { hasText: "Token" })).toHaveCount(0);
+  await feature(page, "cost").uncheck();
+  await page.locator(".look-option", { hasText: "Token" }).click();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-token/);
-  await expect(page.locator(".preview .mtg-cost")).toBeHidden();
   await expect(page.locator('input[name="mana_cost"]')).toHaveCount(0);
-  await page.locator(".cardtypes .tint-option", { hasText: "Spell" }).click();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-saga/);
-  await page.locator(".look-option", { hasText: "Modern" }).click();
+  await expect(page.locator(".preview .mtg-cost")).toBeHidden();
+  // Giving it a cost again takes the token look off it.
+  await feature(page, "cost").check();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-normal/);
 });
 

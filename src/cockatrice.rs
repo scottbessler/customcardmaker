@@ -6,7 +6,6 @@
 //! file from a newer exporter still imports.
 
 use crate::card::{Card, Rarity};
-use crate::cardtype;
 use crate::error::AppError;
 use roxmltree::Node;
 
@@ -107,14 +106,22 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
     let printed_layout =
         ours.is_empty() && !matches!(layout.as_str(), "" | "normal" | "transform" | "modal_dfc");
 
-    // Our type for it: what fields it has. A saga has a spell's, drawn by a template.
-    let cardtype = match ours {
-        "token" => "token",
-        "planeswalker" => "planeswalker",
-        _ if lowered.contains("creature") => "creature",
-        _ => "spell",
-    };
-    let mut card = Card::of(cardtype);
+    // The features it has on, from what the file gives it: a token has no cost; a stat is on if
+    // the card has one (a creature by its type line, a planeswalker by its layout or type).
+    let creature = lowered.contains("creature");
+    let walker = ours == "planeswalker";
+    let mut features = Vec::new();
+    if ours != "token" {
+        features.push("cost");
+    }
+    if !field("pt").is_empty() || creature {
+        features.push("power_toughness");
+    }
+    if walker || !field("loyalty").is_empty() {
+        features.push("loyalty");
+    }
+    let features: Vec<String> = features.into_iter().map(String::from).collect();
+    let mut card = Card::with_features(&features);
     card.set("name", text(node, "name").unwrap_or_default());
     card.set("type_line", type_line);
     card.set(
@@ -126,13 +133,14 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
         ("power_toughness", "pt"),
         ("loyalty", "loyalty"),
     ] {
-        // Only what the type has a field for; the rest of the file's keys are ignored.
-        if cardtype::get(cardtype).is_some_and(|ty| ty.field(key).is_some()) {
+        // Only what the card has a field for; the rest of the file's keys are ignored.
+        if card.fields.contains_key(key) {
             card.set(key, field(tag));
         }
     }
-    if ours == "saga" {
-        card.template = "saga".to_string();
+    // A saga and a token are drawn by templates of their own.
+    if matches!(ours, "saga" | "token") {
+        card.template = ours.to_string();
     }
     card.rarity = set
         .and_then(|set| set.attribute("rarity"))
@@ -403,8 +411,12 @@ You can only Activate this Ability: Sacrifice Bandage
         assert_eq!(cards[0].card.rarity, Rarity::Mythic);
         // Token and planeswalker are types of our own now; a saga is a spell drawn by the
         // saga template.
-        let types: Vec<_> = cards.iter().map(|c| c.card.cardtype.as_str()).collect();
-        assert_eq!(types, ["spell", "token", "planeswalker", "spell", "spell"]);
+        let features: Vec<_> = cards.iter().map(|c| c.card.features.join("+")).collect();
+        assert_eq!(
+            features,
+            ["cost", "power_toughness", "cost+loyalty", "cost", "cost"]
+        );
+        assert_eq!(cards[1].card.template, "token");
         assert_eq!(cards[3].card.template, "saga");
         assert_eq!(cards[2].card.get("loyalty"), "4");
         // One we have no geometry for keeps its picture as printed.

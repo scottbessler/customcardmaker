@@ -740,7 +740,7 @@ mod tests {
     }
 
     fn named(name: &str) -> Card {
-        Card::of("spell").with("name", name)
+        Card::default().with("name", name)
     }
 
     #[test]
@@ -798,7 +798,7 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
-        let saved = Card::of("spell")
+        let saved = Card::default()
             .with("name", "Final")
             .with("rules_text", "Flying");
         store

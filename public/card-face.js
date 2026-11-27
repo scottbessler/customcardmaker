@@ -21,8 +21,8 @@ const LOOKS = new Set(["modern", "classic", "borderless", "full-art"]);
 
 /** What is on the card and where, from its type and template. */
 function layoutOf(card) {
-  if (card.cardtype === "planeswalker") return "planeswalker";
-  if (card.cardtype === "token") return "token";
+  if (card.features.includes("loyalty")) return "planeswalker";
+  if (card.template === "token") return "token";
   return card.template === "saga" ? "saga" : "normal";
 }
 

@@ -24,7 +24,7 @@ test("a card can be given a back face, turned over, and keeps both", async ({ pa
   await expect(preview.locator(".mtg-title")).toContainText("Untitled");
   await expect(preview).toHaveClass(/frame-r/);
   await page.fill('input[name="name"]', "Night Side");
-  await page.locator(".cardtypes .tint-option", { hasText: "Creature" }).click();
+  await page.check('input[name="feature-power_toughness"]');
   await page.fill('input[name="power_toughness"]', "3/3");
   await expect(preview.locator(".mtg-title")).toHaveText("Night Side");
   await expect(preview.locator(".mtg-dfc")).toHaveClass(/dfc-back/);
