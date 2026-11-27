@@ -48,6 +48,8 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/art-card/);
   await expect(page.locator('input[name="art_is_card"]')).toBeChecked();
 
+  // Boxes are measured from the top of the page, wherever the checkbox clicks left it scrolled.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expectLayout(page, "scan", [".preview .mtg-card", ".preview .mtg-name", ".preview .mtg-type", ".preview .mtg-box"]);
   await expectImage(page.locator(".preview .mtg-card"), "scan.png");
 
