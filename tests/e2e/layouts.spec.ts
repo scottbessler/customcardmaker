@@ -3,13 +3,15 @@ import { expectLayout } from "./layout";
 import { expectImage } from "./rendering";
 import { registerUser } from "./session";
 
-test("planeswalker abilities and saga chapters are read from the rules text", async ({ page }) => {
+test("planeswalker abilities, saga chapters and reminder text are read from the rules text", async ({ page }) => {
   await page.goto("/");
   const parsed = await page.evaluate(async () => {
-    const { abilities, chapters } = await import("/public/frame.js");
+    const { abilities, chapters, reminders } = await import("/public/frame.js");
     return {
       pw: abilities("+1: Add {B}\n-7: Big\n−2: Minus\n0: Draw\n: static\nPlain\nX: not a cost"),
       saga: chapters(": (Reminder)\nI: One\nII, III: Two\nmore\nIV: Four"),
+      reminder: reminders("Flying (It can only be blocked by creatures with flying or reach.) Haste"),
+      none: reminders("No parentheses here"),
     };
   });
   expect(parsed.pw).toEqual([
@@ -29,6 +31,29 @@ test("planeswalker abilities and saga chapters are read from the rules text", as
       { marks: ["IV"], lines: ["Four"] },
     ],
   });
+  expect(parsed.reminder).toEqual([
+    { text: "Flying ", reminder: false },
+    { text: "It can only be blocked by creatures with flying or reach.", reminder: true },
+    { text: " Haste", reminder: false },
+  ]);
+  expect(parsed.none).toEqual([{ text: "No parentheses here", reminder: false }]);
+});
+
+test("reminder text is printed in italics, and the rest is not", async ({ page }) => {
+  await registerUser(page, "reminder");
+  await page.fill('.new-set input[name="name"]', "Reminders");
+  await page.fill('.new-set input[name="code"]', "REM");
+  await page.click(".new-set button");
+  await expect(page.locator("h1")).toBeVisible();
+  await page.click(".add-card");
+  await page.fill(
+    'textarea[name="rules_text"]',
+    "Flying (It can only be blocked by creatures with flying or reach.)",
+  );
+  const reminder = page.locator(".preview .mtg-rules .reminder");
+  await expect(reminder).toHaveText("It can only be blocked by creatures with flying or reach.");
+  await expect(reminder).toHaveCSS("font-style", "italic");
+  await expect(page.locator(".preview .mtg-rules p")).toHaveCSS("font-style", "normal");
 });
 
 const feature = (page, id: string) => page.locator(`input[name="feature-${id}"]`);
@@ -41,7 +66,7 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
   await expect(page.locator("h1")).toBeVisible();
   await page.click(".add-card");
   const preview = page.locator(".preview .mtg-card");
-  await expect(preview).toHaveClass(/lay-normal/);
+  await expect(preview).toHaveClass(/lay-modern/);
   // A new card has a mana cost and no stats.
   await expect(feature(page, "cost")).toBeChecked();
   await expect(page.locator('input[name="power_toughness"]')).toHaveCount(0);
@@ -72,7 +97,7 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
   await expect(page.locator(".preview .saga-row")).toHaveCount(2);
   await expect(page.locator(".preview .saga-mark")).toHaveCount(3);
   await feature(page, "power_toughness").check();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-normal/);
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-modern/);
   await expect(page.locator(".look-option", { hasText: "Saga" })).toHaveCount(0);
   await feature(page, "power_toughness").uncheck();
 
@@ -85,7 +110,7 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
   await expect(page.locator(".preview .mtg-cost")).toBeHidden();
   // Giving it a cost again takes the token look off it.
   await feature(page, "cost").check();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-normal/);
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-modern/);
 });
 
 for (const template of ["modern", "classic", "borderless", "full-art"]) {
@@ -114,3 +139,32 @@ for (const template of ["modern", "classic", "borderless", "full-art"]) {
     await expectImage(page.locator(".frames-grid"), `layouts-${template}.png`);
   });
 }
+
+test("the Nexus template lays a normal card out the way Nexus does, with a tall art box", async ({ page }) => {
+  await registerUser(page, "nexus");
+  await page.fill('.new-set input[name="name"]', "Nexus");
+  await page.fill('.new-set input[name="code"]', "NEX");
+  await page.click(".new-set button");
+  await expect(page.locator("h1")).toBeVisible();
+  await page.click(".add-card");
+  await page.fill('input[name="name"]', "Tall Art");
+  await page.fill('input[name="mana_cost"]', "{1}{U}");
+  await page.check('input[name="feature-power_toughness"]');
+  await page.fill('input[name="power_toughness"]', "2/2");
+  const art = page.locator(".preview .mtg-art");
+  const standard = (await art.boundingBox())!.height;
+
+  await page.locator(".look-option", { hasText: "Nexus" }).click();
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-nexus/);
+  // The art box is 62 card-widths tall there, against 41 in the standard layout.
+  const tall = (await art.boundingBox())!.height;
+  expect(tall / standard).toBeGreaterThan(1.4);
+  await expect(page.locator(".preview .mtg-pt")).toHaveText("2/2");
+  await expect(page.locator(".save-state")).toHaveText(/Saved/);
+
+  await page.reload();
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-nexus/);
+  // Nexus takes its frame from the card's look, so the set can still choose that.
+  await page.locator(".set-settings summary").click();
+  await expect(page.locator('select[name="default-template"] option')).toHaveText(["Modern", "Classic", "Borderless", "Full art"]);
+});

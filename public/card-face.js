@@ -1,6 +1,6 @@
 import { html } from "/public/vendor/htm-preact.js";
 import { artUrl } from "/public/art.js";
-import { abilities, chapters, costSymbols, frameOf, rulesSize, symbolKey, tokenize } from "/public/frame.js";
+import { abilities, chapters, costSymbols, frameOf, reminders, rulesSize, symbolKey, tokenize } from "/public/frame.js";
 import { resolveTemplate } from "/public/templates.js";
 
 /**
@@ -13,8 +13,14 @@ export function Mana({ symbol }) {
   return html`<i class=${`mana ms ms-cost ms-shadow ms-${key}`} data-symbol=${symbol} role="img" aria-label=${symbol}></i>`;
 }
 
+/** One line of rules text: symbols drawn, reminder text in italics. */
+const tokens = (text) =>
+  tokenize(text).map((t) => (t.symbol ? html`<${Mana} symbol=${t.symbol} />` : t.text));
+
 function Line({ text }) {
-  return html`<p>${tokenize(text).map((t) => (t.symbol ? html`<${Mana} symbol=${t.symbol} />` : t.text))}</p>`;
+  return html`<p>${reminders(text).map((part) =>
+    part.reminder ? html`<i class="reminder">${tokens(part.text)}</i>` : tokens(part.text),
+  )}</p>`;
 }
 
 /** A planeswalker's abilities: a loyalty cost beside each line. */
@@ -45,9 +51,15 @@ function Chapters({ text }) {
  * One printed card. Its size is its container's: every measurement inside is
  * in container-width units, so it renders the same at any scale.
  */
-/** Where a template puts an element, in card-width units from the frame's own corner. */
+/**
+ * Where a template puts an element, in card-width units from the frame's own corner.
+ * An element with no w/h (a <stat> that is as big as its value) is anchored by its
+ * bottom-right corner instead, which is where a printed card's P/T box grows from.
+ */
 const place = ({ x, y, w, h }) =>
-  `position:absolute;left:calc(${x}cqw - var(--fx));top:calc(${y}cqw - var(--fy));width:${w}cqw;height:${h}cqw;right:auto;bottom:auto`;
+  w == null || h == null
+    ? `position:absolute;right:calc(100cqw - var(--fx) - ${x}cqw);bottom:calc(var(--card-h) - var(--fb) - ${y}cqw);left:auto;top:auto`
+    : `position:absolute;left:calc(${x}cqw - var(--fx));top:calc(${y}cqw - var(--fy));width:${w}cqw;height:${h}cqw;right:auto;bottom:auto`;
 
 /** The rules text, read the way a template says (plain, as a planeswalker's abilities, a saga's chapters). */
 function Rules({ card, as }) {
@@ -73,8 +85,13 @@ function Part({ part, card, turned, whole }) {
   if (part.tag === "plate") return html`<div class="mtg-type" style=${style}><span>${card.type_line}</span><i class="mtg-pip"></i></div>`;
   if (part.tag === "box") {
     const rules = field("rules_text");
+    const flavor = field("flavor_text");
+    const lines = flavor && card.flavor_text ? card.flavor_text.split("\n") : [];
     return html`<div class="mtg-box" style=${style}>
-      <div class="mtg-rules" style=${`font-size:${rulesSize(card)}cqw`}>${rules ? html`<${Rules} card=${card} as=${rules.as} />` : null}</div>
+      <div class="mtg-rules" style=${`font-size:${rulesSize(card)}cqw`}>
+        ${rules ? html`<${Rules} card=${card} as=${rules.as} />` : null}
+        ${lines.length ? html`<div class="mtg-flavor">${lines.map((text) => html`<p>${text}</p>`)}</div>` : null}
+      </div>
     </div>`;
   }
   // A stat: the first of its fields the card has a value for.
@@ -94,39 +111,22 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
   // A back with no cost of its own keeps the front's colour, as printed ones do.
   const frame = card.frame || (turned && !card.mana_cost ? frameOf(whole) : frameOf(card));
   // Which template places the parts, and which look (frame) it wears; a back wears its own.
-  const { layout, look } = resolveTemplate(card.template ? card : { ...card, template: whole.template }, template);
   // A whole-card picture is the card; the plates and text box go on top of it.
   const scan = card.art && card.art_is_card;
-  const own = layout.body.length > 0;
+  const { layout, look } = resolveTemplate(card.template ? card : { ...card, template: whole.template }, template, !!scan);
   const collector = number ? `${String(number).padStart(3, "0")}${total ? `/${String(total).padStart(3, "0")}` : ""}` : "";
   const label = card.name || "Untitled card";
   const Tag = onClick ? "button" : "article";
-  const flavor = card.flavor_text ? card.flavor_text.split("\n") : [];
   return html`<${Tag}
     data-face=${whole.back ? (turned ? "back" : "front") : undefined}
-    class=${`mtg-card tpl-${look} lay-${own ? layout.id : "normal"} frame-${frame} rarity-${card.rarity}${whole.back ? " has-back" : ""}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
+    class=${`mtg-card tpl-${look} lay-${layout.id} frame-${frame} rarity-${card.rarity}${whole.back ? " has-back" : ""}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
     style=${scan ? `background-image:url(${artUrl(card.art)})` : undefined}
     aria-label=${label}
     aria-pressed=${onClick ? String(selected) : undefined}
     onClick=${onClick}
   >
     <div class="mtg-frame">
-      ${own
-        ? layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} whole=${whole} />`)
-        : html`<header class="mtg-name">
-              ${whole.back ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
-              <span class="mtg-title">${card.name || html`<em>Untitled</em>`}</span>
-              <span class="mtg-cost">${costSymbols(card.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>
-            </header>
-            <div class=${`mtg-art${card.art ? " has-art" : ""}`} style=${card.art ? `background-image:url(${artUrl(card.art)})` : undefined}></div>
-            <div class="mtg-type"><span>${card.type_line}</span><i class="mtg-pip"></i></div>
-            <div class="mtg-box">
-              <div class="mtg-rules" style=${`font-size:${rulesSize(card)}cqw`}>
-                <${Rules} card=${card} />
-                ${flavor.length ? html`<div class="mtg-flavor">${flavor.map((text) => html`<p>${text}</p>`)}</div>` : null}
-              </div>
-            </div>
-            ${card.power_toughness ? html`<div class="mtg-pt">${card.power_toughness}</div>` : null}`}
+      ${layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} whole=${whole} />`)}
       <footer class="mtg-foot">
         <span>${collector}${collector && code ? " • " : ""}${code}</span>
         <span>${card.artist ? `Illus. ${card.artist}` : ""}</span>

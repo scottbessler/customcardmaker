@@ -48,7 +48,10 @@ nothing about real Magic cards.
   generic 0–20, `W U B R G C`, `X Y Z`, `S` (snow), `E` (energy), `P`, `CHAOS`,
   `T` (tap) and `Q` (untap), hybrid (`W/U`, either order), two-colour generic
   (`2/W`), colourless hybrid (`C/W`), Phyrexian (`W/P`) and Phyrexian hybrid
-  (`G/U/P`, either order). They are drawn with the Mana font (R6).
+  (`G/U/P`, either order). They are drawn with the Mana font (R6). A symbol beside
+  text is centred on the middle of the capitals beside it, not on its line box (which
+  has room for descenders and sits low); a palette key centres its symbol in the key.
+  Both are pinned by measurement, not by a screenshot (`tests/e2e/symbols.spec.ts`).
 - **R6.** Symbols are the Mana font's, vendored under `public/vendor/`. Something
   typed in braces that the font has no symbol for is shown as typed, never as a
   blank disc. The footer says this is an unofficial fan tool and whose symbols
@@ -77,6 +80,9 @@ nothing about real Magic cards.
   public set with its default. (`src/card.rs`, `public/card-face.js`)
 - **R5.** A card's art fills the art box, cropped to cover it and centred; a card
   with none shows the striped placeholder.
+- **R11.** Reminder text — the words in parentheses in `rules_text` — is printed in
+  italics; the rest of the line is not. Parentheses do not nest, so the first `)`
+  closes the run. (`reminders` in `public/frame.js`)
 
 ## 5. Art
 
@@ -183,13 +189,17 @@ nothing about real Magic cards.
   (split, flip, adventure...) gets `keep_printed_text`, so its picture shows as printed.
   A transform's two `<card>`s (the back marked `side=back`, each naming the other in
   `<related>`) become one card with a back face (R10), each face with its own picture; a
-  back whose front is not in the file stays a card of its own.
-  A transform's two `<card>`s (the back marked `side=back`, each naming the other in
-  `<related>`) become one card with a back face, each face with its own picture; a back
-  whose front is not in the file stays a card of its own. Rules text drops blank lines
+  back whose front is not in the file stays a card of its own. Rules text drops blank lines
   between paragraphs, and Nexus's `special` rarity is read as mythic. The set and its cards are written together or not at all,
   and only into the signed-in account. A signed-out visitor to `/import` is sent
-  to `/`.
+  to `/`. The page previews first: it says what would be created, and what the file had
+  that we could not keep as it was (a layout we cannot draw, a back face with no front, a
+  rarity we do not have, a card with no picture), and creates nothing until the import is
+  confirmed. A confirmed import runs in the background: the page is given a job to poll and
+  shows a bar (cards read, pictures fetched of N), names the pictures that would not
+  download so they can be retried, and a page left and come back to picks the job up
+  again. One import runs at a time per account, and one that outlives ten minutes is
+  stopped.
 
 - **R9.** Every card has the base fields (name, type line, rules text, flavor text, artist)
   and turns on **features** (`card.features`: `cost`, `power_toughness`, `loyalty`,

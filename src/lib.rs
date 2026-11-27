@@ -6,6 +6,7 @@ pub mod cardtype;
 pub mod cockatrice;
 pub mod db;
 pub mod error;
+pub mod imports;
 pub mod openverse;
 pub mod render;
 pub mod routes;

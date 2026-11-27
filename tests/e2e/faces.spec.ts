@@ -66,6 +66,8 @@ test("an imported double-faced card is one card with both faces", async ({ page 
   await page.setInputFiles('#import-form input[name="file"]', { name: "c.xml", mimeType: "text/xml", buffer: Buffer.from(xml) });
   await page.uncheck('#import-form input[name="images"]');
   await page.click('#import-form button[type="submit"]');
+  await expect(page.locator("#import-preview")).toContainText("1 card would be created");
+  await page.click("#import-preview .import-confirm");
   await expect(page.locator("#import-result")).toContainText("Imported 1 card");
   await page.click("#import-result a");
   await expect(page.locator(".strip-item")).toHaveCount(1);

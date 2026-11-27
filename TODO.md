@@ -19,9 +19,11 @@ that changes behaviour, not here.
   - [x] Real frame art per colour: borders, textured boxes, name/type plates
         (`/frames` shows every frame; collector line and P/T box are placed as
         on a printed card)
-  - [ ] Rules text: reminder text in italics, symbol sizing, line spacing
-  - [ ] Set symbol by rarity in the type line; collector footer layout
+  - [x] Rules text: reminder text in italics (R11), symbol sizing, line spacing
+  - [x] Set symbol by rarity in the type line (the pip); collector footer layout
   - [ ] Proper P/T box, and layouts for planeswalker, saga, split, transform
+        (planeswalker, saga, token and transform came with items 12 and 14; split
+        is item 14's later work)
 - [x] **3. Type line help** — dropdowns / typeahead for each part.
   - [x] Supertype, card type(s), and subtypes as separate parts
   - [x] Subtype typeahead filtered by the chosen card type
@@ -33,8 +35,11 @@ that changes behaviour, not here.
         export: parse sets and cards into a new set
   - [x] Nexus's pictures are whole cards: an option to use them as such, with our
         text laid over them (`art_is_card`)
-  - [ ] Map every field we have; keep what we cannot map and say so
-  - [ ] Preview what will be created before it is, and report what was skipped
+  - [x] Map every field we have; keep what we cannot map and say so (a note on
+        the preview and on the import)
+  - [x] Preview what will be created before it is, and report what was skipped
+        (a layout we cannot draw, a back with no front, a rarity we do not have,
+        a card with no picture), and create nothing until it is confirmed
   - [ ] More requirements are expected once we have a real MTG Nexus export;
         see the note below
   - [ ] Maybe later: export *to* Cockatrice XML, so sets round-trip
@@ -75,10 +80,11 @@ that changes behaviour, not here.
   - [ ] Works without a key configured (the button is simply absent), and is tested
         against a fake OpenRouter so no test spends money
 
-- [ ] **11. Symbols still not quite vertically aligned** — found by eye, so measure
+- [x] **11. Symbols still not quite vertically aligned** — found by eye, so measure
       *where*: the rules text, the mana cost in the name plate, the palette.
-  - [ ] Decide what "centred" means for a symbol beside mixed-case text, check it
-        at several sizes, and pin it with a measurement, not a screenshot
+  - [x] Decide what "centred" means for a symbol beside mixed-case text (the middle of
+        the capitals), check it at several sizes, and pin it with a measurement, not a
+        screenshot: rules text, the plates, and now a palette key (`symbols.spec.ts`)
 - [x] **12. Choose a frame / template, like MTG Nexus** — not only the one a card
       gets from its mana cost.
   - [x] A **frame colour** the author can set (or leave on Auto, from the cost):
@@ -98,14 +104,16 @@ that changes behaviour, not here.
   - [ ] Still to do: match the real MTG Nexus template list (Nexus's creator refuses automated
         fetches, so ask for names or screenshots)
 
-- [ ] **13. Progress for a large import** — a real Nexus export is ~300 cards and one
+- [x] **13. Progress for a large import** — a real Nexus export is ~300 cards and one
       picture download each, which can take minutes; the import page shows nothing until
       it ends.
-  - [ ] Run the import in the background and report progress (cards read, pictures
-        fetched of N, failures so far), e.g. a job the page polls or an event stream
-  - [ ] Show it on the import page with a bar, and let the person leave and come back
-  - [ ] Say at the end which pictures failed, so they can be retried
-  - [ ] A cap on how long one import may run, and one import at a time per account
+  - [x] Run the import in the background and report progress (cards read, pictures
+        fetched of N, failures so far), as a job the page polls
+  - [x] Show it on the import page with a bar, and let the person leave and come back
+        (the job's id is kept, and a page that returns follows it again)
+  - [x] Say at the end which pictures failed, so they can be retried
+  - [x] A cap on how long one import may run (ten minutes), and one import at a time per
+        account
 
 - [ ] **14. Card features and templates** — design in `CARDTYPES.md`. A card has the base
       fields (name, type line, rules text, flavor, artist) plus **features** it turns on
@@ -121,17 +129,20 @@ that changes behaviour, not here.
     - [x] renderer: `public/templates.js` (`allTemplates`, `resolveTemplate`), `card-face.js`
           draws a template with a body; planeswalker, saga and token are data now, their
           geometry removed from `04-cards.css` (only styling is left there)
-    - [ ] port the four looks' standard grid layout (name plate, art, type plate, text box, P/T,
-          foot; `.mtg-frame` grid in `04-cards.css` for modern/classic/borderless/full-art) into
-          `<template>` bodies so a look is data too; keep the e2e image/geometry baselines green
-    - [ ] `scan-*` templates (the Nexus overlay, now `.art-card` rules in `04-cards.css`) replacing
-          the `art_is_card` special case; a scan template per layout (normal, planeswalker, saga,
-          token); `keep_printed_text` becomes "no template body"
+    - [x] `nexus` template (a normal card as Nexus draws it, tall art): the scan overlay's
+          geometry now comes from it (`resolveTemplate(..., scan)`), so `.art-card` in
+          `04-cards.css` holds only styling; a scan of a planeswalker/saga/token already used
+          their own templates. (`keep_printed_text` stays: "draw none of ours".)
+    - [x] port the four looks' standard grid layout (name plate, art, type plate, text box, P/T)
+          into `<template>` bodies so a look is data too; the geometry baselines are unchanged
+          (only `display`/`position` moved). The footer stays in the stylesheet: its place is a
+          look's, not a layout's (a saga card in the borderless look must get the borderless
+          foot), so a `<foot>` element would need the look/layout split reworked first
     - [ ] a set keeps a default template per kind of card (today one look for all, only a look)
     - [ ] both stats at once: a template that draws power/toughness and loyalty (creature
           planeswalker); today the planeswalker layout shows loyalty only
-    - [ ] delete what the above makes dead: the `.lay-*` position group and `layoutOf` leftovers,
-          `.art-card` geometry, `TEMPLATES`-style lists in `set.js`
+    - [x] delete what the above makes dead: the `.mtg-frame` grid, the `.lay-*` position group,
+          and the per-look P/T overrides
   - [ ] Later: split / adventure / flip / modal; custom templates per account (editor,
         per-account storage, the whitelist enforced on save)
 

@@ -21,6 +21,7 @@ const FILES: &[&str] = &[
     include_str!("../public/templates/classic.xml"),
     include_str!("../public/templates/borderless.xml"),
     include_str!("../public/templates/full-art.xml"),
+    include_str!("../public/templates/nexus.xml"),
     include_str!("../public/templates/planeswalker.xml"),
     include_str!("../public/templates/saga.xml"),
     include_str!("../public/templates/token.xml"),
@@ -49,9 +50,10 @@ impl Template {
         self.requires.iter().all(has) && !self.excludes.iter().any(has)
     }
 
-    /// A look any card can wear, so a set may make it its default.
+    /// A look: a frame of its own that any card can wear, so a set may make it its default. A
+    /// template that takes its frame from the card (`inherit`) is a layout, not a look.
     pub fn is_look(&self) -> bool {
-        self.requires.is_empty() && self.excludes.is_empty()
+        self.requires.is_empty() && self.excludes.is_empty() && self.frame != "inherit"
     }
 }
 
@@ -165,12 +167,23 @@ pub fn parse(xml: &'static str) -> Result<Template, String> {
             "art" | "box" | "stat" => attrs(element, &["x", "y", "w", "h"])?,
             other => return Err(format!("<{other}> is not a template element")),
         }
+        // A <stat> may leave out w and h: it is then as wide and tall as its value,
+        // anchored by its bottom-right corner (which is where a printed card's P/T
+        // box grows from). Both or neither.
+        let sized =
+            name != "stat" || element.attribute("w").is_some() == element.attribute("h").is_some();
+        if !sized {
+            return Err("a <stat> needs both w and h, or neither".into());
+        }
         for (side, range) in [
             ("x", 0.0..=100.0),
             ("y", 0.0..=140.0),
             ("w", 0.0..=100.0),
             ("h", 0.0..=140.0),
         ] {
+            if name == "stat" && (side == "w" || side == "h") && element.attribute(side).is_none() {
+                continue;
+            }
             number(element, side, range)?;
         }
         for child in element.children().filter(Node::is_element) {
@@ -221,6 +234,7 @@ mod tests {
                 "classic",
                 "borderless",
                 "full-art",
+                "nexus",
                 "planeswalker",
                 "saga",
                 "token"
@@ -235,6 +249,8 @@ mod tests {
     #[test]
     fn the_frames_are_looks_and_the_rest_say_what_they_need() {
         assert!(get("modern").is_some_and(Template::is_look));
+        // A layout takes the card's frame, so it is not a look a set can default to.
+        assert!(!get("nexus").is_some_and(Template::is_look));
         let walker = get("planeswalker").unwrap();
         assert_eq!(walker.requires, ["loyalty"]);
         assert!(!walker.is_look());
@@ -287,6 +303,24 @@ mod tests {
         assert!(
             wrap(r#"<art x="0" y="0" w="50" h="50"><field name="name"/></art>"#)
                 .contains("cannot hold")
+        );
+    }
+
+    #[test]
+    fn a_stat_may_be_as_big_as_its_value() {
+        // Both w and h, or neither.
+        assert!(
+            bad(r#"<template id="a" label="A" frame="modern"><stat x="1" y="2" w="3"><field name="power_toughness"/></stat></template>"#)
+                .contains("both w and h")
+        );
+        // Neither is fine, and the place is still on the card.
+        assert!(
+            parse(r#"<template id="a" label="A" frame="modern"><stat x="90" y="130"><field name="power_toughness"/></stat></template>"#)
+                .is_ok()
+        );
+        assert!(
+            bad(r#"<template id="a" label="A" frame="modern"><stat x="90" y="999"><field name="power_toughness"/></stat></template>"#)
+                .contains("off the card")
         );
     }
 

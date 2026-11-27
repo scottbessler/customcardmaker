@@ -1,3 +1,21 @@
-<!-- Modern: a frame. It has no body, so a card in it is laid out by the standard grid layout
-     (name plate, art, type plate, text box) that the stylesheet draws for this frame. -->
-<template id="modern" label="Modern" frame="modern"/>
+<!-- Modern: our own look, drawn from data. Places are in card-width units (the card is 100
+     wide, 140 tall), measured off the standard grid layout this look used to be drawn by;
+     the stylesheet says how each part looks. The P/T badge has no size of its own: it is as
+     big as its value, anchored by its bottom-right corner. -->
+<template id="modern" label="Modern" frame="modern">
+  <plate role="name" x="6.4" y="5.8" w="87.2" h="7.4">
+    <field name="name"/>
+    <field name="mana_cost"/>
+  </plate>
+  <art x="6.4" y="14.4" w="87.2" h="41"/>
+  <plate role="type" x="6.4" y="56.6" w="87.2" h="6.6">
+    <field name="type_line"/>
+  </plate>
+  <box x="6.4" y="64.4" w="87.2" h="64.88">
+    <field name="rules_text"/>
+    <field name="flavor_text"/>
+  </box>
+  <stat x="94.6" y="135.08">
+    <field name="power_toughness"/>
+  </stat>
+</template>

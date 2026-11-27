@@ -18,7 +18,7 @@ test("a card can be given another template and frame colour, and keeps them", as
   await expect(preview).toHaveClass(/tpl-modern/);
   await expect(preview).toHaveClass(/frame-r/);
   // One thumbnail per template the card can wear: the four looks, plus the saga.
-  await expect(page.locator(".look-option")).toHaveCount(5);
+  await expect(page.locator(".look-option")).toHaveCount(6);
   await expect(page.locator(".look-thumb .mtg-card.tpl-full-art")).toHaveCount(1);
 
   await page.locator(".look-option", { hasText: "Borderless" }).click();

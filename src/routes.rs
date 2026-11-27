@@ -4,6 +4,7 @@ use crate::{
     card::Card,
     cockatrice,
     error::{ApiError, AppError},
+    imports::{self, Progress},
     openverse::{ArtCredit, SearchPage},
     render,
     session::{ApiUser, MaybeUser},
@@ -269,6 +270,9 @@ pub async fn get_art(
 
 /// Import cards from a Cockatrice XML database into a new set owned by the
 /// signed-in account. The set is created and filled in one transaction.
+///
+/// With `preview`, nothing is written: the answer says what would be created and
+/// what the file had that we could not keep as it was.
 pub async fn import_cockatrice(
     State(s): State<AppState>,
     ApiUser(me): ApiUser,
@@ -287,23 +291,231 @@ pub async fn import_cockatrice(
         _ => sets::clean_name(database.set_name.as_deref().unwrap_or(&code))?,
     };
 
+    let notes = import_notes(&database, body.images);
+    if body.preview {
+        return Ok((
+            StatusCode::OK,
+            Json(preview(&database, name, code, body.images, notes)),
+        ));
+    }
+
+    // A big import runs in the background, so the page can show progress; the
+    // answer is the job's id, and the page polls it.
+    if body.background {
+        let id = s.imports.start(
+            me,
+            Progress {
+                state: imports::State::Running,
+                set_code: code.clone(),
+                set_name: name.clone(),
+                cards_total: database.cards.len(),
+                cards_done: 0,
+                pictures_total: if body.images {
+                    picture_count(&database)
+                } else {
+                    0
+                },
+                pictures_done: 0,
+                pictures_tried: 0,
+                failures: Vec::new(),
+                set_id: None,
+                error: None,
+            },
+        )?;
+        let state = s.clone();
+        let job = BackgroundImport {
+            id,
+            owner: me,
+            database,
+            name: name.clone(),
+            code: code.clone(),
+            images: body.images,
+            whole_cards: body.whole_cards,
+        };
+        tokio::spawn(async move {
+            run_import(state, job).await;
+        });
+        return Ok((
+            StatusCode::ACCEPTED,
+            Json(ImportCockatriceResult {
+                set_id: None,
+                job_id: Some(id),
+                set_code: code,
+                set_name: name,
+                cards_imported: 0,
+                images_imported: 0,
+                preview: false,
+                cards: Vec::new(),
+                notes: Vec::new(),
+            }),
+        ));
+    }
+
     let cards_imported = database.cards.len();
-    let (cards, images_imported) = if body.images {
-        attach_pictures(&s, me, database.cards, body.whole_cards).await
+    let (cards, images_imported, _) = if body.images {
+        attach_pictures(&s, me, database.cards, body.whole_cards, None).await
     } else {
-        (detach(database.cards), 0)
+        (detach(database.cards), 0, Vec::new())
     };
     let set = s.sets.create_with_cards(me, name, code, cards).await?;
     Ok((
         StatusCode::CREATED,
         Json(ImportCockatriceResult {
-            set_id: set.id,
+            set_id: Some(set.id),
+            job_id: None,
             set_code: set.code,
             set_name: set.name,
             cards_imported,
             images_imported,
+            preview: false,
+            cards: Vec::new(),
+            notes,
         }),
     ))
+}
+
+/// How many pictures an import would download: a card's front, and the back of a
+/// double-faced one.
+fn picture_count(database: &cockatrice::Database) -> usize {
+    database
+        .cards
+        .iter()
+        .map(|item| {
+            usize::from(item.image_url.is_some()) + usize::from(item.back_image_url.is_some())
+        })
+        .sum()
+}
+
+/// Everything a background import needs to run.
+struct BackgroundImport {
+    id: Uuid,
+    owner: Uuid,
+    database: cockatrice::Database,
+    name: String,
+    code: String,
+    images: bool,
+    whole_cards: bool,
+}
+
+/// The work of a background import: fetch the pictures, then make the set, and
+/// keep the job's progress up to date as it goes. A picture that will not
+/// download is named in the job's failures, not fatal.
+async fn run_import(s: AppState, job: BackgroundImport) {
+    let BackgroundImport {
+        id,
+        owner: me,
+        database,
+        name,
+        code,
+        images,
+        whole_cards,
+    } = job;
+    let cards_total = database.cards.len();
+    s.imports
+        .update(id, |progress| progress.cards_done = cards_total);
+
+    let cards = if images {
+        let fetch = attach_pictures(&s, me, database.cards, whole_cards, Some(id));
+        match tokio::time::timeout(imports::MAX_RUN, fetch).await {
+            Ok((cards, _, _)) => cards,
+            Err(_) => {
+                s.imports.finish(
+                    id,
+                    me,
+                    Err("The import took too long and was stopped.".into()),
+                );
+                return;
+            }
+        }
+    } else {
+        detach(database.cards)
+    };
+
+    match s.sets.create_with_cards(me, name, code, cards).await {
+        Ok(set) => s.imports.finish(id, me, Ok(set.id)),
+        Err(error) => {
+            tracing::error!(%error, "a background import could not be saved");
+            s.imports
+                .finish(id, me, Err("The server could not finish that.".into()));
+        }
+    }
+}
+
+/// How a background import is getting on.
+pub async fn import_progress(
+    State(s): State<AppState>,
+    ApiUser(me): ApiUser,
+    Path(id): Path<Uuid>,
+) -> Api<Progress> {
+    s.imports
+        .get(me, id)
+        .map(Json)
+        .ok_or_else(|| AppError::not_found("There is no such import.").into())
+}
+
+/// What an import did not keep as it was: what the file itself could not give us,
+/// plus, when pictures are asked for, how many cards have none.
+fn import_notes(database: &cockatrice::Database, images: bool) -> Vec<String> {
+    let mut notes = database.notes.clone();
+    if images {
+        let missing = database
+            .cards
+            .iter()
+            .filter(|item| item.image_url.is_none())
+            .count();
+        if missing > 0 {
+            notes.push(format!(
+                "No picture in the file for {missing} card{}.",
+                if missing == 1 { "" } else { "s" }
+            ));
+        }
+    }
+    notes
+}
+
+/// What an import would create, without creating it. The pictures are counted,
+/// not fetched: a preview must be quick, and whether a URL answers is only known
+/// once the import tries.
+fn preview(
+    database: &cockatrice::Database,
+    name: String,
+    code: String,
+    images: bool,
+    notes: Vec<String>,
+) -> ImportCockatriceResult {
+    let cards = database
+        .cards
+        .iter()
+        .map(|item| PreviewCard {
+            name: item.card.get("name").to_string(),
+            type_line: item.card.get("type_line").to_string(),
+            rarity: item.card.rarity,
+            features: item.card.features.clone(),
+            template: item.card.template.clone(),
+            picture: item.image_url.is_some() || item.back_image_url.is_some(),
+            back: item.card.back.is_some(),
+            printed: item.printed_layout || item.back_printed_layout,
+        })
+        .collect();
+    let pictures = database
+        .cards
+        .iter()
+        .map(|item| {
+            usize::from(item.image_url.is_some()) + usize::from(item.back_image_url.is_some())
+        })
+        .sum();
+
+    ImportCockatriceResult {
+        set_id: None,
+        job_id: None,
+        set_code: code,
+        set_name: name,
+        cards_imported: database.cards.len(),
+        images_imported: if images { pictures } else { 0 },
+        preview: true,
+        cards,
+        notes,
+    }
 }
 
 /// The largest picture downloaded from a card database. A card face is a few
@@ -321,13 +533,16 @@ fn detach(cards: Vec<cockatrice::ImportedCard>) -> Vec<Card> {
 /// Downloads each card's picture and stores it as the importer's art, so the
 /// imported cards come with the images the file named. A picture that fails to
 /// download (or is not an image) is skipped: the card still imports, without
-/// art.
+/// art, and the failure is named so it can be retried.
+///
+/// `job` is the background import to report progress to, when there is one.
 async fn attach_pictures(
     s: &AppState,
     me: Uuid,
     cards: Vec<cockatrice::ImportedCard>,
     whole_cards: bool,
-) -> (Vec<Card>, usize) {
+    job: Option<Uuid>,
+) -> (Vec<Card>, usize, Vec<String>) {
     let permits = Arc::new(Semaphore::new(PICTURE_FETCHES));
     let mut set = JoinSet::new();
     // One download per picture: a card's front, and the back of a double-faced one.
@@ -343,7 +558,7 @@ async fn attach_pictures(
                 let _permit = permits.acquire_owned().await.ok()?;
                 let (content_type, bytes) = fetch_picture(&client, &url).await?;
                 let id = store.save(me, content_type, &bytes, None).await.ok()?;
-                Some((index, back, id))
+                Some((index, back, url, id))
             });
         }
     }
@@ -351,14 +566,46 @@ async fn attach_pictures(
     let mut fronts: Vec<Option<Uuid>> = vec![None; cards.len()];
     let mut backs: Vec<Option<Uuid>> = vec![None; cards.len()];
     let mut imported = 0;
+    let mut failures: Vec<String> = Vec::new();
     while let Some(joined) = set.join_next().await {
-        if let Ok(Some((index, back, id))) = joined {
+        let mut fetched = false;
+        if let Ok(Some((index, back, _, id))) = joined {
+            fetched = true;
             if back {
                 backs[index] = Some(id);
             } else {
                 fronts[index] = Some(id);
             }
             imported += 1;
+        }
+        if let Some(job) = job {
+            s.imports.update(job, |progress| {
+                progress.pictures_tried += 1;
+                if fetched {
+                    progress.pictures_done += 1;
+                }
+            });
+        }
+    }
+    // A failure is named by its card, so the page can say what to retry.
+    for (index, item) in cards.iter().enumerate() {
+        for (back, url, art) in [
+            (false, &item.image_url, fronts[index]),
+            (true, &item.back_image_url, backs[index]),
+        ] {
+            if let (Some(url), None) = (url, art) {
+                let name = item.card.get("name");
+                let failure = if back {
+                    format!("{name} (back): {url}")
+                } else {
+                    format!("{name}: {url}")
+                };
+                failures.push(failure.clone());
+                if let Some(job) = job {
+                    s.imports
+                        .update(job, |progress| progress.failures.push(failure));
+                }
+            }
         }
     }
 
@@ -390,7 +637,7 @@ async fn attach_pictures(
             }
         })
         .collect();
-    (cards, imported)
+    (cards, imported, failures)
 }
 
 /// `None` unless the URL answers with a small image of a kind we serve.
@@ -431,21 +678,53 @@ pub struct ImportCockatriceForm {
     /// art: each card is marked so it shows the picture edge to edge.
     #[serde(default)]
     pub whole_cards: bool,
+    /// Say what would be created instead of creating it.
+    #[serde(default)]
+    pub preview: bool,
+    /// Run it in the background and answer with a job to poll, so a large
+    /// import can report progress.
+    #[serde(default)]
+    pub background: bool,
 }
 
-/// Result of Cockatrice import
+/// One card an import would create, for a preview.
+#[derive(serde::Serialize)]
+pub struct PreviewCard {
+    pub name: String,
+    pub type_line: String,
+    pub rarity: crate::card::Rarity,
+    pub features: Vec<String>,
+    /// The template it would wear, when the file says (a saga, a token).
+    pub template: String,
+    /// The file gives a picture for it (or for its back).
+    pub picture: bool,
+    /// It is a double-faced card.
+    pub back: bool,
+    /// A layout we do not draw, so its picture is kept as printed.
+    pub printed: bool,
+}
+
+/// Result of Cockatrice import, or of a preview of one.
 #[derive(serde::Serialize)]
 pub struct ImportCockatriceResult {
-    /// Set ID
-    pub set_id: Uuid,
+    /// Set ID; `None` for a preview, which creates nothing.
+    pub set_id: Option<Uuid>,
+    /// The background job to poll, when the import was started in the background.
+    pub job_id: Option<Uuid>,
     /// Set code
     pub set_code: String,
     /// Set name
     pub set_name: String,
-    /// Number of cards imported
+    /// Number of cards imported (or that would be)
     pub cards_imported: usize,
-    /// Number of card pictures downloaded and attached
+    /// Number of card pictures downloaded and attached (or that would be)
     pub images_imported: usize,
+    /// Nothing was created; this is what would be.
+    pub preview: bool,
+    /// The cards, for a preview.
+    pub cards: Vec<PreviewCard>,
+    /// What the file had that we could not keep as it was.
+    pub notes: Vec<String>,
 }
 
 /// Show the Cockatrice import UI page. It needs an account to import into.

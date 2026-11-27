@@ -45,6 +45,24 @@ export function tokenize(line) {
 }
 
 /**
+ * A line split into reminder text and the rest. Magic prints reminder text — the
+ * words in parentheses — in italics. Parentheses do not nest in reminder text, so
+ * the first `)` closes the run.
+ */
+export function reminders(line) {
+  const text = String(line ?? "");
+  const parts = [];
+  let last = 0;
+  for (const match of text.matchAll(/\(([^()]*)\)/g)) {
+    if (match.index > last) parts.push({ text: text.slice(last, match.index), reminder: false });
+    parts.push({ text: match[1], reminder: true });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) parts.push({ text: text.slice(last), reminder: false });
+  return parts;
+}
+
+/**
  * The symbols the Mana font draws, by its own names: `w`, `2`, `wu` (hybrid),
  * `2w`, `wp` (Phyrexian), `tap`. The `every symbol has a glyph` e2e test checks
  * each one against the font, so this list cannot drift from it.

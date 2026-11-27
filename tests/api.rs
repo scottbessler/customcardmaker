@@ -1114,6 +1114,317 @@ async fn a_cockatrice_file_becomes_a_set_owned_by_its_importer() {
 }
 
 #[tokio::test]
+async fn previewing_an_import_creates_nothing_and_says_what_it_would_do() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+
+    let reply = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some({
+            let mut body = cockatrice_file(Some("https://example.test/bird.jpg"));
+            body["images"] = json!(true);
+            body["preview"] = json!(true);
+            body
+        }),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{:?}", reply.body);
+    assert_eq!(reply.body["preview"], true);
+    assert!(reply.body["set_id"].is_null(), "a preview creates nothing");
+    assert_eq!(reply.body["cards_imported"], 2);
+    assert_eq!(reply.body["images_imported"], 1, "counted, not fetched");
+    assert_eq!(reply.body["set_code"], "IMP");
+    assert_eq!(reply.body["set_name"], "Imported");
+
+    let cards = reply.body["cards"].as_array().unwrap();
+    assert_eq!(cards.len(), 2);
+    assert_eq!(cards[0]["name"], "Art Bird");
+    assert_eq!(cards[0]["type_line"], "Creature — Bird");
+    assert_eq!(cards[0]["rarity"], "common");
+    assert_eq!(cards[0]["features"], json!(["cost", "power_toughness"]));
+    assert_eq!(cards[0]["picture"], true);
+    assert_eq!(cards[1]["picture"], false);
+    assert_eq!(cards[1]["rarity"], "rare");
+    // One card has no picture in the file, and the preview says so.
+    assert!(
+        reply.body["notes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|note| note
+                .as_str()
+                .unwrap()
+                .contains("No picture in the file for 1 card")),
+        "{:?}",
+        reply.body["notes"]
+    );
+
+    // Nothing was written: no set, and no art.
+    assert_eq!(
+        call(&app, "GET", "/api/sets", None, Some(&me)).await.body,
+        json!([])
+    );
+}
+
+#[tokio::test]
+async fn a_preview_says_what_the_file_had_that_we_could_not_keep() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let xml = r#"<cockatrice_carddatabase><cards>
+    <card><name>Cut</name><text>Deal 2.</text><prop><layout>split</layout><side>front</side><type>Instant</type><manacost>{R}</manacost></prop><set rarity="special" picurl="https://example.test/e.jpg">ABC</set></card>
+    <card><name>Orphan</name><text>No front.</text><prop><layout>transform</layout><side>back</side><type>Instant</type></prop><set rarity="rare">ABC</set><related attach="transform">Missing</related></card>
+    </cards></cockatrice_carddatabase>"#;
+
+    let reply = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some(json!({"xml": xml, "preview": true, "images": true})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{:?}", reply.body);
+    let notes: Vec<&str> = reply.body["notes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|note| note.as_str().unwrap())
+        .collect();
+    assert!(
+        notes
+            .iter()
+            .any(|note| note.contains("layout we do not draw") && note.contains("Cut")),
+        "{notes:?}"
+    );
+    assert!(
+        notes
+            .iter()
+            .any(|note| note.contains("no front") && note.contains("Orphan")),
+        "{notes:?}"
+    );
+    assert!(
+        notes.iter().any(|note| note.contains("special")),
+        "{notes:?}"
+    );
+
+    // The card we cannot draw is marked, so the page can say its picture is kept as printed.
+    let cards = reply.body["cards"].as_array().unwrap();
+    assert_eq!(cards[0]["printed"], true);
+    assert_eq!(cards[1]["printed"], false);
+}
+
+/// A picture server that answers only after `delay`, so an import is still
+/// running when the next request arrives.
+async fn slow_picture_server(delay: std::time::Duration) -> String {
+    use axum::routing::get;
+    let app = Router::new().route(
+        "/card.png",
+        get(move || async move {
+            tokio::time::sleep(delay).await;
+            ([(header::CONTENT_TYPE, "image/png")], PNG)
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    format!("http://{addr}/card.png")
+}
+
+/// Polls a job until it stops running, and returns its last progress.
+async fn wait_for(app: &Router, who: &str, job: &str) -> Value {
+    let mut progress = Value::Null;
+    for _ in 0..300 {
+        let reply = call(
+            app,
+            "GET",
+            &format!("/api/import/cockatrice/{job}"),
+            None,
+            Some(who),
+        )
+        .await;
+        assert_eq!(reply.status, StatusCode::OK, "{:?}", reply.body);
+        progress = reply.body;
+        if progress["state"] != "running" {
+            return progress;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    panic!("the import never finished: {progress}");
+}
+
+#[tokio::test]
+async fn a_background_import_reports_progress_and_ends_with_the_set() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let url = picture_server().await;
+
+    let started = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some({
+            let mut body = cockatrice_file(Some(&url));
+            body["images"] = json!(true);
+            body["background"] = json!(true);
+            body
+        }),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(started.status, StatusCode::ACCEPTED, "{:?}", started.body);
+    let job = started.body["job_id"].as_str().unwrap().to_string();
+
+    let progress = wait_for(&app, &me, &job).await;
+    assert_eq!(progress["state"], "done", "{progress}");
+    assert_eq!(progress["cards_total"], 2);
+    assert_eq!(progress["cards_done"], 2);
+    assert_eq!(progress["pictures_total"], 1);
+    assert_eq!(progress["pictures_done"], 1);
+    assert_eq!(progress["pictures_tried"], 1);
+    assert_eq!(progress["set_code"], "IMP");
+
+    // The set it made is really there.
+    let set = progress["set_id"].as_str().unwrap();
+    let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&me)).await;
+    assert_eq!(detail.body["cards"].as_array().unwrap().len(), 2);
+
+    // A job is the account's own: a stranger is turned away, another account
+    // answers as if it were not there.
+    assert_eq!(
+        call(
+            &app,
+            "GET",
+            &format!("/api/import/cockatrice/{job}"),
+            None,
+            None
+        )
+        .await
+        .status,
+        StatusCode::UNAUTHORIZED
+    );
+    let bob = register(&app, "Bob").await;
+    assert_eq!(
+        call(
+            &app,
+            "GET",
+            &format!("/api/import/cockatrice/{job}"),
+            None,
+            Some(&bob)
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        call(
+            &app,
+            "GET",
+            &format!("/api/import/cockatrice/{}", Uuid::new_v4()),
+            None,
+            Some(&me)
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[tokio::test]
+async fn only_one_import_runs_at_a_time_per_account() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let url = slow_picture_server(std::time::Duration::from_millis(300)).await;
+
+    let body = || {
+        let mut body = cockatrice_file(Some(&url));
+        body["images"] = json!(true);
+        body["background"] = json!(true);
+        body
+    };
+    let first = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some(body()),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(first.status, StatusCode::ACCEPTED, "{:?}", first.body);
+
+    let second = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some(body()),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(second.status, StatusCode::CONFLICT, "{:?}", second.body);
+    assert!(
+        second.body["error"].as_str().unwrap().contains("already"),
+        "{:?}",
+        second.body
+    );
+
+    // Another account is not blocked by mine.
+    let bob = register(&app, "Bob").await;
+    assert_eq!(
+        call(
+            &app,
+            "POST",
+            "/api/import/cockatrice",
+            Some(body()),
+            Some(&bob)
+        )
+        .await
+        .status,
+        StatusCode::ACCEPTED
+    );
+
+    // Let the first finish, so the test leaves nothing running.
+    let job = first.body["job_id"].as_str().unwrap().to_string();
+    assert_eq!(wait_for(&app, &me, &job).await["state"], "done");
+}
+
+#[tokio::test]
+async fn a_background_import_names_the_pictures_it_could_not_fetch() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+
+    let started = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some({
+            let mut body = cockatrice_file(Some("http://127.0.0.1:9/nothing.png"));
+            body["images"] = json!(true);
+            body["background"] = json!(true);
+            body
+        }),
+        Some(&me),
+    )
+    .await;
+    let job = started.body["job_id"].as_str().unwrap().to_string();
+
+    let progress = wait_for(&app, &me, &job).await;
+    assert_eq!(progress["state"], "done", "{progress}");
+    assert_eq!(progress["pictures_done"], 0);
+    assert_eq!(progress["pictures_tried"], 1);
+    let failures = progress["failures"].as_array().unwrap();
+    assert_eq!(failures.len(), 1, "{failures:?}");
+    let failure = failures[0].as_str().unwrap();
+    assert!(
+        failure.contains("Art Bird") && failure.contains("nothing.png"),
+        "{failure}"
+    );
+}
+
+#[tokio::test]
 async fn importing_can_download_each_card_picture() {
     let app = app().await;
     let me = register(&app, "Ada").await;
@@ -1134,6 +1445,11 @@ async fn importing_can_download_each_card_picture() {
     assert_eq!(reply.status, StatusCode::CREATED, "{:?}", reply.body);
     assert_eq!(reply.body["cards_imported"], 2);
     assert_eq!(reply.body["images_imported"], 1);
+    // The one card the file has no picture for is reported, as in a preview.
+    assert_eq!(
+        reply.body["notes"],
+        json!(["No picture in the file for 1 card."])
+    );
 
     let set = reply.body["set_id"].as_str().unwrap();
     let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&me)).await;
