@@ -6,7 +6,7 @@ button.mtg-card{cursor:pointer}
 /* Inside the edge, over the black border: outside it the scrolling filmstrip
    clips the ring on the first and last card. */
 .mtg-card.selected{outline:3px solid var(--gold-hi);outline-offset:-3px}
-.mtg-frame{position:absolute;inset:3.4cqw 3.4cqw 7.4cqw;border-radius:2.6cqw;background-color:var(--lo);background-image:repeating-linear-gradient(90deg,color-mix(in srgb,var(--white) 5%,transparent) 0 .3cqw,transparent .3cqw .9cqw),linear-gradient(160deg,var(--hi),var(--lo) 72%,color-mix(in srgb,var(--lo) 80%,black));box-shadow:inset 0 0 0 .4cqw color-mix(in srgb,var(--lo) 45%,black),inset .5cqw .6cqw .9cqw color-mix(in srgb,var(--white) 35%,transparent)}
+.mtg-frame{position:absolute;inset:3.9cqw 3.9cqw 10.5cqw;border-radius:2.6cqw;background-color:var(--lo);background-image:repeating-linear-gradient(90deg,color-mix(in srgb,var(--white) 5%,transparent) 0 .3cqw,transparent .3cqw .9cqw),linear-gradient(160deg,var(--hi),var(--lo) 72%,color-mix(in srgb,var(--lo) 80%,black));box-shadow:inset 0 0 0 .4cqw color-mix(in srgb,var(--lo) 45%,black),inset .5cqw .6cqw .9cqw color-mix(in srgb,var(--white) 35%,transparent)}
 .mtg-card.frame-w{--hi:var(--frame-w-hi);--lo:var(--frame-w-lo);--box:var(--box-w)}
 .mtg-card.frame-u{--hi:var(--frame-u-hi);--lo:var(--frame-u-lo);--box:var(--box-u)}
 .mtg-card.frame-b{--hi:var(--frame-b-hi);--lo:var(--frame-b-lo);--box:var(--box-b)}
@@ -70,47 +70,23 @@ button.mtg-card{cursor:pointer}
 .mana-unknown{opacity:.6}
 
 /* ---- Templates -----------------------------------------------------------
-   `modern` is the rules above. The others change only what they must: the
-   border, how far the frame reaches, and how the plates are drawn. The frame
-   colour (--hi, --lo, --box) is the same in every one. */
-
-/* Classic: a heavier black border, flat plates and square corners, no bevel. */
-.mtg-card.tpl-classic{border-radius:3.4% / 2.4%}
-.tpl-classic .mtg-frame{inset:4.6cqw 4.6cqw 8.6cqw;border-radius:.6cqw;background-image:none;background-color:var(--lo);box-shadow:inset 0 0 0 .5cqw color-mix(in srgb,var(--lo) 30%,black)}
-.tpl-classic .mtg-name,.tpl-classic .mtg-type{border-radius:1.2cqw / 1cqw;background-image:none;box-shadow:0 0 0 .5cqw var(--card-border)}
-.tpl-classic .mtg-art{border-radius:0;box-shadow:0 0 0 .5cqw var(--card-border)}
-.tpl-classic .mtg-box{border-radius:0;background-image:none;box-shadow:0 0 0 .5cqw var(--card-border)}
-.tpl-classic .mtg-pt{background-image:none;border-radius:1cqw}
-
-/* Borderless: the frame runs to the edge of the card, with no black border. */
-.mtg-card.tpl-borderless{background:var(--lo)}
-.tpl-borderless .mtg-frame{inset:0;border-radius:0;box-shadow:none}
-.tpl-borderless .mtg-foot{bottom:2.2cqw;left:3cqw}
-
-/* Full art: the picture is the whole card; the plates and text box float on it. */
-.mtg-card.tpl-full-art{background:var(--lo)}
-.tpl-full-art .mtg-frame{inset:0;border-radius:0;background-image:none;box-shadow:none}
-.tpl-full-art .mtg-art{border-radius:0;box-shadow:none}
-.tpl-full-art .mtg-name,.tpl-full-art .mtg-type,.tpl-full-art .mtg-box{z-index:1}
-.tpl-full-art .mtg-box{background-image:none;background-color:color-mix(in srgb,var(--box) 82%,transparent)}
-.tpl-full-art .mtg-name,.tpl-full-art .mtg-type{background-color:color-mix(in srgb,var(--box) 88%,transparent)}
-.tpl-full-art .mtg-foot{bottom:2.2cqw;left:3cqw;color:var(--card-foot-ink)}
+   One look so far (`modern`), drawn from its template file, plus the layouts a
+   card can be given (a planeswalker, a saga, a token). The frame colour
+   (--hi, --lo, --box) is the same in every one. */
 
 /* A whole-card picture (an import from MTG Nexus, or a scan): the picture is the
    card, edge to edge. Our name plate, type plate and text box are laid over it,
    opaque, so they hide the words printed on the picture and show the card's own.
-   Every number is a place on a Nexus card, in card-width units (the card is 100
-   wide and 140 tall), measured off real exports: they are not our modern frame's
-   places, whose art box is shorter. Each plate is a little bigger than the one it
-   hides, to cover its bevel. The picture brings its own border, so whatever
-   template the card names, this is the geometry. */
+   The places are the card template's; over a picture the frame has none of its
+   own, so they are taken from the card's corner, and the plates are drawn a
+   little bigger than a printed one, to cover its bevel. */
 .mtg-card.art-card{background-size:100% 100%;background-position:center;background-repeat:no-repeat}
-.art-card .mtg-frame{inset:0;display:block;padding:0;background:none;box-shadow:none;border-radius:0}
+.art-card .mtg-frame{inset:0;background:none;box-shadow:none;border-radius:0}
 .art-card .mtg-art{visibility:hidden}
-/* Where the parts go is in nexus.xml; this is how they look. */
-.lay-nexus .mtg-name,.lay-nexus .mtg-type{padding:0 3.4cqw}
-.lay-nexus .mtg-box{padding:2.6cqw 3cqw}
-.lay-nexus .mtg-pt{min-width:0;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw}
+/* How the parts look over a picture. */
+.art-card .mtg-name,.art-card .mtg-type{padding:0 3.4cqw}
+.art-card .mtg-box{padding:2.6cqw 3cqw}
+.art-card .mtg-pt{min-width:0;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw}
 .art-card .mtg-title{font-size:5.6cqw}
 .art-card .mtg-type span{font-size:5cqw}
 .art-card .mana{font-size:4.6cqw}
@@ -125,9 +101,8 @@ button.mtg-card{cursor:pointer}
    its bottom edge is inset, so a place taken from the card's corner lands right; a
    scan has no frame of its own, so it starts at 0. `--card-h` is the card's height in
    card-width units, for a part anchored by its bottom edge. */
-.mtg-card{--fx:3.4cqw;--fy:3.4cqw;--fb:7.4cqw;--card-h:calc(100cqw * 88 / 63)}
-.mtg-card.tpl-classic{--fx:4.6cqw;--fy:4.6cqw;--fb:8.6cqw}
-.mtg-card.tpl-borderless,.mtg-card.tpl-full-art,.mtg-card.art-card{--fx:0cqw;--fy:0cqw;--fb:0cqw}
+.mtg-card{--fx:3.9cqw;--fy:3.9cqw;--fb:10.5cqw;--card-h:calc(100cqw * 88 / 63)}
+.mtg-card.art-card{--fx:0cqw;--fy:0cqw;--fb:0cqw}
 /* Planeswalker: tall art, abilities over its foot, loyalty where power/toughness would be. */
 .lay-planeswalker .mtg-name{padding:0 3.4cqw}
 .lay-planeswalker .mtg-type{padding:0 3.4cqw}

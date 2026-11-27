@@ -90,10 +90,10 @@
     "flexDirection": "row"
   },
   ".preview .mtg-name": {
-    "x": 161,
-    "y": 388,
-    "width": 335,
-    "height": 28,
+    "x": 154,
+    "y": 393,
+    "width": 349,
+    "height": 30,
     "display": "flex",
     "position": "absolute",
     "fontSize": "15px",
@@ -105,10 +105,10 @@
     "flexDirection": "row"
   },
   ".preview .mtg-art": {
-    "x": 161,
-    "y": 421,
-    "width": 335,
-    "height": 157,
+    "x": 166,
+    "y": 426,
+    "width": 325,
+    "height": 238,
     "display": "block",
     "position": "absolute",
     "fontSize": "15px",
@@ -120,10 +120,10 @@
     "flexDirection": "row"
   },
   ".preview .mtg-type": {
-    "x": 161,
-    "y": 583,
-    "width": 335,
-    "height": 25,
+    "x": 154,
+    "y": 664,
+    "width": 349,
+    "height": 32,
     "display": "flex",
     "position": "absolute",
     "fontSize": "15px",
@@ -135,10 +135,10 @@
     "flexDirection": "row"
   },
   ".preview .mtg-box": {
-    "x": 161,
-    "y": 613,
-    "width": 335,
-    "height": 249,
+    "x": 162,
+    "y": 697,
+    "width": 332,
+    "height": 167,
     "display": "flex",
     "position": "absolute",
     "fontSize": "15px",
@@ -150,8 +150,8 @@
     "flexDirection": "column"
   },
   ".preview .mtg-pt": {
-    "x": 442,
-    "y": 858,
+    "x": 441,
+    "y": 852,
     "width": 58,
     "height": 27,
     "display": "block",
@@ -165,9 +165,9 @@
     "flexDirection": "row"
   },
   ".preview .mtg-foot": {
-    "x": 157,
-    "y": 876,
-    "width": 277,
+    "x": 159,
+    "y": 865,
+    "width": 273,
     "height": 21,
     "display": "flex",
     "position": "absolute",

@@ -113,7 +113,7 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
   // Which template places the parts, and which look (frame) it wears; a back wears its own.
   // A whole-card picture is the card; the plates and text box go on top of it.
   const scan = card.art && card.art_is_card;
-  const { layout, look } = resolveTemplate(card.template ? card : { ...card, template: whole.template }, template, !!scan);
+  const { layout, look } = resolveTemplate(card.template ? card : { ...card, template: whole.template }, template);
   const collector = number ? `${String(number).padStart(3, "0")}${total ? `/${String(total).padStart(3, "0")}` : ""}` : "";
   const label = card.name || "Untitled card";
   const Tag = onClick ? "button" : "article";

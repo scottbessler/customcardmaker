@@ -470,7 +470,7 @@ mod tests {
         assert!(
             Card::default()
                 .framed("gold")
-                .wearing("classic")
+                .wearing("modern")
                 .validate()
                 .is_ok()
         );

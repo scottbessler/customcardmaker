@@ -15,10 +15,10 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-frame": {
-    "x": 146,
-    "y": 203,
-    "width": 261,
-    "height": 361,
+    "x": 147,
+    "y": 204,
+    "width": 258,
+    "height": 351,
     "display": "block",
     "position": "absolute",
     "fontSize": "15px",
@@ -30,10 +30,10 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-name": {
-    "x": 154,
-    "y": 210,
-    "width": 244,
-    "height": 21,
+    "x": 149,
+    "y": 213,
+    "width": 254,
+    "height": 22,
     "display": "flex",
     "position": "absolute",
     "fontSize": "15px",
@@ -45,10 +45,10 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-art": {
-    "x": 154,
-    "y": 234,
-    "width": 244,
-    "height": 115,
+    "x": 158,
+    "y": 237,
+    "width": 237,
+    "height": 174,
     "display": "block",
     "position": "absolute",
     "fontSize": "15px",
@@ -60,10 +60,10 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-type": {
-    "x": 154,
-    "y": 352,
-    "width": 244,
-    "height": 18,
+    "x": 149,
+    "y": 411,
+    "width": 254,
+    "height": 24,
     "display": "flex",
     "position": "absolute",
     "fontSize": "15px",
@@ -75,10 +75,10 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-box": {
-    "x": 154,
-    "y": 374,
-    "width": 244,
-    "height": 182,
+    "x": 155,
+    "y": 434,
+    "width": 242,
+    "height": 122,
     "display": "flex",
     "position": "absolute",
     "fontSize": "15px",
@@ -90,8 +90,8 @@
     "flexDirection": "column"
   },
   ".frame-sample:first-child .mtg-pt": {
-    "x": 359,
-    "y": 552,
+    "x": 358,
+    "y": 548,
     "width": 42,
     "height": 20,
     "display": "block",
@@ -105,9 +105,9 @@
     "flexDirection": "row"
   },
   ".frame-sample:first-child .mtg-foot": {
-    "x": 151,
-    "y": 565,
-    "width": 202,
+    "x": 153,
+    "y": 557,
+    "width": 199,
     "height": 15,
     "display": "flex",
     "position": "absolute",

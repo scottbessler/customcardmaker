@@ -18,17 +18,13 @@ use std::sync::OnceLock;
 /// Every built-in template, in the order the editor offers them.
 const FILES: &[&str] = &[
     include_str!("../public/templates/modern.xml"),
-    include_str!("../public/templates/classic.xml"),
-    include_str!("../public/templates/borderless.xml"),
-    include_str!("../public/templates/full-art.xml"),
-    include_str!("../public/templates/nexus.xml"),
     include_str!("../public/templates/planeswalker.xml"),
     include_str!("../public/templates/saga.xml"),
     include_str!("../public/templates/token.xml"),
 ];
 
 /// The frames a template may use. `inherit` is the set's look.
-const FRAMES: &[&str] = &["modern", "classic", "borderless", "full-art", "inherit"];
+const FRAMES: &[&str] = &["modern", "inherit"];
 
 #[derive(Debug, Serialize)]
 pub struct Template {
@@ -227,19 +223,7 @@ mod tests {
     #[test]
     fn every_built_in_template_is_valid_and_has_its_own_id() {
         let ids: Vec<_> = all().iter().map(|t| t.id.as_str()).collect();
-        assert_eq!(
-            ids,
-            [
-                "modern",
-                "classic",
-                "borderless",
-                "full-art",
-                "nexus",
-                "planeswalker",
-                "saga",
-                "token"
-            ]
-        );
+        assert_eq!(ids, ["modern", "planeswalker", "saga", "token"]);
         // A file is named for its template.
         for (file, template) in FILES.iter().zip(all()) {
             assert!(file.contains(&format!("id=\"{}\"", template.id)));
@@ -248,9 +232,9 @@ mod tests {
 
     #[test]
     fn the_frames_are_looks_and_the_rest_say_what_they_need() {
+        // One look, so far; the rest take the card's frame and are layouts.
         assert!(get("modern").is_some_and(Template::is_look));
-        // A layout takes the card's frame, so it is not a look a set can default to.
-        assert!(!get("nexus").is_some_and(Template::is_look));
+        assert!(!get("saga").is_some_and(Template::is_look));
         let walker = get("planeswalker").unwrap();
         assert_eq!(walker.requires, ["loyalty"]);
         assert!(!walker.is_look());

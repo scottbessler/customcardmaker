@@ -1,5 +1,4 @@
 import { expect, test } from "./fixtures";
-import { expectLayout } from "./layout";
 import { expectImage } from "./rendering";
 import { registerUser } from "./session";
 
@@ -47,12 +46,29 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
   await page.reload();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/art-card/);
   await expect(page.locator('input[name="art_is_card"]')).toBeChecked();
-  // The filmstrip is above the preview, so it must be drawn before the boxes are read.
-  await expect(page.locator(".filmstrip .strip-item")).toHaveCount(1);
 
-  // Boxes are measured from the top of the page, wherever the checkbox clicks left it scrolled.
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await expectLayout(page, "scan", [".preview .mtg-card", ".preview .mtg-name", ".preview .mtg-type", ".preview .mtg-box"]);
+  // Our plates against the printed ones, measured from the card's own corner: where the
+  // page happens to sit when it is read must not move them.
+  await page.evaluate(() => document.fonts.ready);
+  const overlay = await page.evaluate(() => {
+    const card = document.querySelector(".preview .mtg-card")!.getBoundingClientRect();
+    const of = (selector: string) => {
+      const box = document.querySelector(selector)!.getBoundingClientRect();
+      return {
+        x: Math.round(box.x - card.x),
+        y: Math.round(box.y - card.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+      };
+    };
+    return {
+      card: { width: Math.round(card.width), height: Math.round(card.height) },
+      name: of(".preview .mtg-name"),
+      type: of(".preview .mtg-type"),
+      box: of(".preview .mtg-box"),
+    };
+  });
+  expect(JSON.stringify(overlay, null, 2)).toMatchSnapshot(["json", "scan.json"]);
   await expectImage(page.locator(".preview .mtg-card"), "scan.png");
 
   // Or keep what the picture says: none of ours is drawn.
@@ -65,5 +81,5 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
   // Taking the picture away takes the flags with it.
   await page.click(".remove-art");
   await expect(page.locator(".preview .mtg-card")).not.toHaveClass(/art-card/);
-  await expect(page.locator(".look-option")).toHaveCount(6);
+  await expect(page.locator(".look-option")).toHaveCount(2);
 });

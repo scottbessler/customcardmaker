@@ -11,24 +11,24 @@ async function newSet(page, code: string) {
   await expect(page.locator(".filmstrip .mtg-card")).toHaveCount(1);
 }
 
-test("a card can be given another template and frame colour, and keeps them", async ({ page }) => {
+test("a card can be given a layout and a frame colour, and keeps them", async ({ page }) => {
   await newSet(page, "LOK");
   await page.fill('input[name="mana_cost"]', "{R}");
   const preview = page.locator(".preview .mtg-card");
   await expect(preview).toHaveClass(/tpl-modern/);
   await expect(preview).toHaveClass(/frame-r/);
-  // One thumbnail per template the card can wear: the four looks, plus the saga.
-  await expect(page.locator(".look-option")).toHaveCount(6);
-  await expect(page.locator(".look-thumb .mtg-card.tpl-full-art")).toHaveCount(1);
+  // One thumbnail per template the card can wear: the one look, and the saga.
+  await expect(page.locator(".look-option")).toHaveCount(2);
+  await expect(page.locator(".look-thumb .mtg-card.lay-saga")).toHaveCount(1);
 
-  await page.locator(".look-option", { hasText: "Borderless" }).click();
-  await expect(preview).toHaveClass(/tpl-borderless/);
+  await page.locator(".look-option", { hasText: "Saga" }).click();
+  await expect(preview).toHaveClass(/lay-saga/);
   await page.locator(".tint-option", { hasText: "Gold" }).click();
   await expect(preview).toHaveClass(/frame-gold/);
   await expect(page.locator(".save-state")).toHaveText(/Saved/);
 
   await page.reload();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/tpl-borderless/);
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-saga/);
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/frame-gold/);
 
   // Auto goes back to following the mana cost.
@@ -36,23 +36,25 @@ test("a card can be given another template and frame colour, and keeps them", as
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/frame-r/);
 });
 
-test("the set's default template applies to every card that names none", async ({ page }) => {
+test("the set has one look, and a card that names its own layout keeps it", async ({ page }) => {
   await newSet(page, "DEF");
   await page.click(".add-card");
   await expect(page.locator(".filmstrip .mtg-card")).toHaveCount(2);
+  await expect(page.locator(".filmstrip .mtg-card.lay-modern")).toHaveCount(2);
+
+  // The set's default is the one look, and only a look may be chosen.
   await page.locator(".set-settings summary").click();
-  await page.selectOption('select[name="default-template"]', "classic");
-  await expect(page.locator(".filmstrip .mtg-card.tpl-classic")).toHaveCount(2);
-  // A card that names its own look keeps it.
-  await page.locator(".look-option", { hasText: "Full art" }).click();
-  await expect(page.locator(".filmstrip .mtg-card.tpl-full-art")).toHaveCount(1);
-  await expect(page.locator(".filmstrip .mtg-card.tpl-classic")).toHaveCount(1);
+  await expect(page.locator('select[name="default-template"] option')).toHaveText(["Modern"]);
+
+  // A card that names a layout is drawn by it, and stays that way across a reload.
+  await page.locator(".filmstrip .mtg-card").first().click();
+  await page.locator(".look-option", { hasText: "Saga" }).click();
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-saga/);
+  await expect(page.locator(".save-state")).toHaveText(/Saved/);
+  // A layout cannot be made the set's default, so the button is off.
+  await expect(page.locator(".set-default-template")).toBeDisabled();
+
   await page.reload();
-  await expect(page.locator(".filmstrip .mtg-card.tpl-classic")).toHaveCount(1);
-  // Making a card's look the set's default restyles the rest. Open that card first: the
-  // reload does not say which one is selected.
-  await page.locator(".filmstrip .mtg-card.tpl-full-art").click();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/tpl-full-art/);
-  await page.click(".set-default-template");
-  await expect(page.locator(".filmstrip .mtg-card.tpl-full-art")).toHaveCount(2);
+  await expect(page.locator(".filmstrip .mtg-card.lay-saga")).toHaveCount(1);
+  await expect(page.locator(".filmstrip .mtg-card.lay-modern")).toHaveCount(1);
 });

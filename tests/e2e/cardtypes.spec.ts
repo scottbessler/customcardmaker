@@ -58,12 +58,12 @@ test("the features a card has say which fields it has and which it must have", a
 test("a template is offered only for cards it can draw", async ({ page }) => {
   await newCard(page);
   const looks = page.locator(".look-option");
-  // A card with a cost can be drawn by the four looks, as Nexus lays it out, and as a saga, not as a token.
-  await expect(looks).toHaveCount(6);
+  // A card with a cost can be drawn by the one look, or as a saga; not as a token.
+  await expect(looks).toHaveCount(2);
   await expect(looks.filter({ hasText: "Saga" })).toHaveCount(1);
   await expect(looks.filter({ hasText: "Token" })).toHaveCount(0);
   await feature(page, "power_toughness").check();
-  await expect(looks).toHaveCount(5);
+  await expect(looks).toHaveCount(1);
   await expect(looks.filter({ hasText: "Saga" })).toHaveCount(0);
 
   // Choosing a feature a chosen template cannot draw puts the card back on the set's look.
@@ -76,5 +76,5 @@ test("a template is offered only for cards it can draw", async ({ page }) => {
 
   // The set's default can only be a look every card can wear.
   await page.locator(".set-settings summary").click();
-  await expect(page.locator('select[name="default-template"] option')).toHaveText(["Modern", "Classic", "Borderless", "Full art"]);
+  await expect(page.locator('select[name="default-template"] option')).toHaveText(["Modern"]);
 });
