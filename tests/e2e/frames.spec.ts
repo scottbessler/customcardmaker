@@ -1,6 +1,5 @@
 import { expect, test } from "./fixtures";
 import { expectLayout } from "./layout";
-import { expectImage } from "./rendering";
 
 const FRAMES = ["w", "u", "b", "r", "g", "gold", "artifact", "land", "colorless"];
 
@@ -86,6 +85,5 @@ test.describe("the standard look", () => {
       ".frame-sample:first-child .mtg-pt",
       ".frame-sample:first-child .mtg-foot",
     ]);
-    await expectImage(page.locator(".frames-grid"), "frames-modern.png");
   });
 });

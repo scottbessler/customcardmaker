@@ -12,19 +12,24 @@ async function newSet(page, code: string) {
 test("a card can be given a back face, turned over, and keeps both", async ({ page }) => {
   await newSet(page, "DFC");
   await page.click(".add-card");
+  await page.getByRole("button", { name: "Start editing" }).click();
   await page.fill('input[name="name"]', "Day Side");
   await page.fill('input[name="mana_cost"]', "{R}");
   const preview = page.locator(".preview .mtg-card");
   await expect(preview).not.toHaveAttribute("data-face", /.*/);
 
-  await page.click(".add-back");
+  await page.click(".edit-template");
+  await page.check('input[name="feature-back"]');
+  await page.getByRole("dialog").getByRole("button", { name: "Back", exact: true }).click();
+  await page.check('input[name="feature-power_toughness"]');
+  await page.click(".apply-template");
+  await page.getByRole("button", { name: "Back", exact: true }).click();
   await expect(preview).toHaveAttribute("data-face", "back");
   await expect(page.locator(".face-tab.chosen")).toHaveText("Back");
   // The back is a blank card of its own, and keeps the front's colour while it has no cost.
   await expect(preview.locator(".mtg-title")).toContainText("Untitled");
   await expect(preview).toHaveClass(/frame-r/);
   await page.fill('input[name="name"]', "Night Side");
-  await page.check('input[name="feature-power_toughness"]');
   await page.fill('input[name="power_toughness"]', "3/3");
   await expect(preview.locator(".mtg-title")).toHaveText("Night Side");
   await expect(preview.locator(".mtg-dfc")).toHaveClass(/dfc-back/);
@@ -48,7 +53,10 @@ test("a card can be given a back face, turned over, and keeps both", async ({ pa
   await expect(page.locator(".preview .mtg-title")).toHaveText("Night Side");
   await expect(page.locator(".preview .mtg-pt")).toHaveText("3/3");
 
-  await page.click(".remove-back");
+  await page.click(".edit-template");
+  await page.getByRole("dialog").getByRole("button", { name: "Front", exact: true }).click();
+  await page.uncheck('input[name="feature-back"]');
+  await page.click(".apply-template");
   await expect(page.locator(".face-tab")).toHaveCount(0);
   await expect(page.locator(".flip-card")).toHaveCount(0);
   await expect(page.locator(".preview .mtg-title")).toHaveText("Day Side");
@@ -80,8 +88,14 @@ test("an imported double-faced card is one card with both faces", async ({ page 
 test("a public set's double-faced card can be turned over by a visitor", async ({ page }) => {
   await newSet(page, "PUB");
   await page.click(".add-card");
+  await page.getByRole("button", { name: "Start editing" }).click();
   await page.fill('input[name="name"]', "Public Day");
-  await page.click(".add-back");
+  await page.click(".edit-template");
+  await page.check('input[name="feature-back"]');
+  await page.getByRole("dialog").getByRole("button", { name: "Back", exact: true }).click();
+  await page.check('input[name="feature-power_toughness"]');
+  await page.click(".apply-template");
+  await page.getByRole("button", { name: "Back", exact: true }).click();
   await page.fill('input[name="name"]', "Public Night");
   await expect(page.locator(".save-state")).toHaveText(/Saved/);
   await page.locator(".set-settings summary").click();

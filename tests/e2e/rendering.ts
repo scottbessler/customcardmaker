@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Locator, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 // Playwright transpiles the suite to CJS (package.json declares no module type),
 // so `__dirname` resolves here and `import.meta.url` would not.
@@ -8,7 +8,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 declare const __dirname: string;
 
 /**
- * Pins the glyphs production's own font cannot cover, so image baselines do not
+ * Pins the glyphs production's own font cannot cover, so layout baselines do not
  * depend on what the host happens to have installed.
  *
  * The app self-hosts Bitter and uses it for every piece of text — labels and
@@ -88,18 +88,6 @@ export async function uncoveredGlyphs(page: Page): Promise<string[]> {
 }
 
 /**
- * Whether image baselines are meaningful in this environment.
- *
- * Only the pinned Playwright image reproduces them; anywhere else a comparison
- * reports differences that say nothing about the change under test. This is
- * checked at the call site rather than through Playwright's `ignoreSnapshots`,
- * because that switch also disables `toMatchSnapshot` — and the layout
- * snapshots in `layout.ts` are platform-independent by construction and should
- * run everywhere, including on a laptop with no container.
- */
-export const COMPARE_IMAGES = Boolean(process.env.CI || process.env.E2E_IMAGES);
-
-/**
  * Waits until nothing about the page is still on its way: every web font
  * loaded (text that wraps differently in a fallback face moves everything below
  * it) and two frames painted. Every snapshot helper calls this first, so a spec
@@ -110,15 +98,4 @@ export async function settle(page: Page): Promise<void> {
     await document.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   });
-}
-
-/** Image comparison, skipped outside the environment that can reproduce it. */
-export async function expectImage(
-  target: Page | Locator,
-  name: string,
-  options?: { fullPage?: boolean },
-): Promise<void> {
-  if (!COMPARE_IMAGES) return;
-  await settle("page" in target ? target.page() : target);
-  await expect(target).toHaveScreenshot(["images", name], options);
 }

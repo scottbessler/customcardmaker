@@ -5,8 +5,8 @@ import { ArtSearchDialog, Credit } from "/public/art-search.js";
 import { CardFace, Mana } from "/public/card-face.js";
 import { BulkBar, TransferDialog } from "/public/bulk.js";
 import { TypeBuilder } from "/public/type-builder.js";
-import { frameOf, worksWith } from "/public/frame.js";
-import { allTemplates, hasAll, isLook } from "/public/templates.js";
+import { frameOf } from "/public/frame.js";
+import { allTemplates, isLook, resolveTemplate } from "/public/templates.js";
 
 const SAVE_DELAY_MS = 500;
 const RARITIES = ["common", "uncommon", "rare", "mythic"];
@@ -16,67 +16,121 @@ const FIELD_LABELS = { mana_cost: "mana cost", rules_text: "rules text" };
 /** The fields a card with these features on has, base first. */
 const fieldsFor = (features) => [...choices.base, ...choices.features.filter((f) => features.includes(f.id)).flatMap((f) => f.fields)];
 
-/**
- * The same card with other features on: what the two share is kept, a field with no place on
- * the new card is dropped, and a template that cannot draw it goes back to the set's default.
- */
-function withFeatures(card, features) {
-  const on = choices.features.map((f) => f.id).filter((id) => features.includes(id));
-  const template = allTemplates().find((t) => t.id === card.template);
+/** Keep shared fields and normalize every face before sending the document. */
+function cleanCard(card) {
   return {
-    features: on,
-    template: template && !worksWith(template, on) ? "" : card.template ?? "",
+    features: card.features,
+    template: card.template ?? "",
     frame: card.frame ?? "",
     rarity: card.rarity ?? "common",
     art: card.art ?? null,
     art_is_card: card.art_is_card ?? false,
     keep_printed_text: card.keep_printed_text ?? false,
-    back: card.back ?? null,
-    ...Object.fromEntries(fieldsFor(on).map((f) => [f.key, card[f.key] ?? ""])),
+    back: card.back ? cleanCard(card.back) : null,
+    half: card.half ? cleanCard(card.half) : null,
+    ...Object.fromEntries(fieldsFor(card.features).map((f) => [f.key, card[f.key] ?? ""])),
   };
 }
 
-/** A new back face: a blank card with the features a new card has. */
-const blankFace = (rarity) => withFeatures({ rarity }, choices.features.filter((f) => f.default).map((f) => f.id));
+const blankFace = (rarity) => cleanCard({ rarity, features: choices.features.filter((f) => f.default).map((f) => f.id) });
+const faceOf = (card, path) => path.reduce((face, key) => face?.[key], card);
+const replaceFace = (card, [key, ...rest], face) => key ? { ...card, [key]: replaceFace(card[key], rest, face) } : face;
+const sameSide = (a, b) => a.join("/") === b.join("/");
 
-const faceOf = (card, which) => (which === "back" ? card.back : which === "half" ? card.half : card) ?? card;
-
-/**
- * A card the given template could draw, for its thumbnail: the card itself when it fits,
- * else one carrying what the template asks for, so the picture is of that layout rather
- * than of the one the card wears now.
- */
-function previewFace(card, template) {
-  if (worksWith(template, hasAll(card))) return { ...card, template: template.id };
-  const features = card.features.filter((id) => !template.excludes.includes(id));
-  for (const id of template.requires) if (id !== "back" && id !== "half" && !features.includes(id)) features.push(id);
-  const preview = { ...card, features, template: template.id };
-  if (template.requires.includes("half") && !preview.half) {
-    preview.half = { ...blankFace(card.rarity), name: "2nd half", type_line: card.type_line, features: [...features] };
+function fitTemplate(card, template) {
+  const next = {
+    ...card,
+    template: template.id,
+    features: choices.features.map(({ id }) => id).filter((id) =>
+      template.requires.includes(id) || (card.features.includes(id) && !template.excludes.includes(id))),
+  };
+  for (const key of ["back", "half"]) {
+    if (template.requires.includes(key)) next[key] ??= blankFace(card.rarity);
+    if (template.excludes.includes(key)) next[key] = null;
   }
-  return preview;
+  return next;
 }
 
-/** A feature id in a few words, for a reason a card cannot wear a template yet. */
-const wordFor = (id) =>
-  id === "back"
-    ? "a second face"
-    : id === "half"
-      ? "a second half"
-      : (choices.features.find((f) => f.id === id)?.label.toLowerCase() ?? id);
-
-/** Why a card cannot wear a template yet, in a few words: `needs a second face`. */
-function whyNot(template, card) {
-  const has = hasAll(card);
-  const needs = template.requires.filter((id) => !has.includes(id)).map(wordFor);
-  const clashes = template.excludes.filter((id) => has.includes(id)).map(wordFor);
+function cardSides(card) {
   return [
-    needs.length ? `needs ${needs.join(" and ")}` : "",
-    clashes.length ? `not with ${clashes.join(" or ")}` : "",
-  ]
-    .filter(Boolean)
-    .join("; ");
+    { path: [], label: "Front" },
+    ...(card.half ? [{ path: ["half"], label: "2nd half" }] : []),
+    ...(card.back ? [{ path: ["back"], label: "Back" }] : []),
+    ...(card.back?.half ? [{ path: ["back", "half"], label: "Back 2nd half" }] : []),
+  ];
 }
+
+function SideTabs({ card, side, onSide }) {
+  const sides = cardSides(card);
+  if (sides.length === 1) return null;
+  return html`<div class="faces" role="group" aria-label="Faces">
+    ${sides.map(({ path, label }) => html`<button type="button" class=${`face-tab${sameSide(side, path) ? " chosen" : ""}`}
+      aria-pressed=${String(sameSide(side, path))} onClick=${() => onSide(path)}>${label}</button>`)}
+  </div>`;
+}
+
+function TemplateSetup({ initial, initialSide, template, creating, onApply, onCancel }) {
+  const [draft, setDraft] = useState(initial);
+  const [side, setSide] = useState(initialSide);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const ref = useRef(null);
+  useEffect(() => { ref.current.showModal(); }, []);
+  const cancel = () => { ref.current.close(); onCancel(); };
+  const card = faceOf(draft, side);
+  const allowed = side.includes("half") ? [] : side.length ? ["half"] : ["back", "half"];
+  const selected = allTemplates().find((t) => t.id === (card.template || template));
+  const change = (next) => setDraft(replaceFace(draft, side, next));
+  const lock = (id) => selected.requires.includes(id) ? "Required" : selected.excludes.includes(id) ? "Unavailable" : "";
+  const toggle = (id, label, checked, update) => html`<label class="tint-option">
+    <input type="checkbox" name=${`feature-${id}`} checked=${checked} disabled=${Boolean(lock(id))} onChange=${(e) => update(e.currentTarget.checked)} />
+    ${label}${lock(id) ? html`<small>${lock(id)}</small>` : null}
+  </label>`;
+  return html`<dialog ref=${ref} class="confirm-dialog template-setup" aria-labelledby="template-title"
+    onCancel=${(e) => { e.preventDefault(); if (!saving) cancel(); }}>
+    <div>
+      <h2 id="template-title">${creating ? "Set up your card" : "Edit card template"}</h2>
+      <${SideTabs} card=${draft} side=${side} onSide=${setSide} />
+      <fieldset class="looks">
+        <legend>Template</legend>
+        ${allTemplates().filter((t) => t.requires.every((id) => !["back", "half"].includes(id) || allowed.includes(id))).map((t) => {
+          const next = fitTemplate(card, t);
+          return html`<label class=${`look-option${selected === t ? " chosen" : ""}`}>
+            <input type="radio" name="template" value=${t.id} checked=${selected === t} onChange=${() => change(next)} />
+            <span class="look-thumb"><${CardFace} card=${{ ...cleanCard(next), art_is_card: false }} template=${template} /></span>
+            <span class="look-name">${t.label}</span>
+          </label>`;
+        })}
+      </fieldset>
+      <fieldset class="tints features">
+        <legend>Features</legend>
+        ${choices.features.map(({ id, label }) => toggle(id, label, card.features.includes(id), (on) =>
+          change({ ...card, features: on ? [...card.features, id] : card.features.filter((f) => f !== id) })))}
+      </fieldset>
+      ${allowed.length ? html`<fieldset class="tints features">
+        <legend>Additional faces</legend>
+        ${allowed.map((id) => toggle(id, id === "back" ? "Back face" : "Second half", Boolean(card[id]), (on) =>
+          change({ ...card, [id]: on ? faceOf(initial, [...side, id]) ?? blankFace(card.rarity) : null })))}
+      </fieldset>` : null}
+      ${error ? html`<p class="error" role="alert">${error}</p>` : null}
+      <footer>
+        <button type="button" class="quiet" disabled=${saving} onClick=${cancel}>Cancel</button>
+        <button type="button" class="apply-template" disabled=${saving} onClick=${async () => {
+          setSaving(true);
+          setError("");
+          try {
+            await onApply(cleanCard(draft));
+            cancel();
+          } catch (e) {
+            setError(e.message);
+            setSaving(false);
+          }
+        }}>${creating ? "Start editing" : "Apply changes"}</button>
+      </footer>
+    </div>
+  </dialog>`;
+}
+
 const app = document.getElementById("app");
 const setId = app.dataset.setId;
 // The server says how long each field may be, so the form never keeps its own copy.
@@ -128,7 +182,7 @@ function Palette({ target, onInsert }) {
   </div>`;
 }
 
-function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
+function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artOpen, onCloseArt }) {
   const fields = fieldsFor(card.features);
   const has = (key) => fields.some((f) => f.key === key);
   const [wanted, setTarget] = useState("mana_cost");
@@ -139,6 +193,15 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
   // button that makes this card's template the set's is off for a layout.
   const chosen = card.template ? allTemplates().find((t) => t.id === card.template) : null;
   const mayDefault = Boolean(chosen && isLook(chosen) && card.template !== template);
+  const artDialog = useRef(null);
+  useEffect(() => {
+    if (artOpen) artDialog.current.showModal();
+    else artDialog.current.close();
+  }, [artOpen]);
+  const closeArt = () => {
+    artDialog.current.close();
+    onCloseArt();
+  };
   const [searching, setSearching] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [artError, setArtError] = useState("");
@@ -221,30 +284,6 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
 
     <fieldset class="form-section frame-section">
       <legend>Frame</legend>
-      <fieldset class="tints features">
-        <legend>This card has</legend>
-        ${choices.features.map(({ id, label }) => html`<label class="tint-option">
-          <input type="checkbox" name=${`feature-${id}`} checked=${card.features.includes(id)} onChange=${(e) => onChange(withFeatures(card, e.currentTarget.checked ? [...card.features, id] : card.features.filter((f) => f !== id)))} />${label}
-        </label>`)}
-      </fieldset>
-      <p class="muted layout-hint">${card.features.includes("loyalty")
-        ? "One ability per line: +1: Draw a card. A line with no cost, or starting with a colon, is a static ability."
-        : card.template === "saga"
-        ? "Reminder text first, then one line per chapter: I: Draw a card. II, III: Gain 2 life."
-        : ""}</p>
-      ${card.art && card.art_is_card
-        ? html`<p class="muted looks-note">A whole-card picture is drawn as it is, so it has no template. The colour below tints our text plates over it.</p>`
-        : html`<fieldset class="looks">
-        <legend>Template</legend>
-        ${allTemplates().map((t) => {
-          const usable = worksWith(t, hasAll(card));
-          return html`<label class=${`look-option${(card.template || template) === t.id ? " chosen" : ""}${usable ? "" : " unavailable"}`}>
-          <input type="radio" name="template" value=${t.id} checked=${(card.template || template) === t.id} disabled=${!usable} onChange=${() => onChange({ ...card, template: t.id === template ? "" : t.id })} />
-          <span class="look-thumb"><${CardFace} card=${previewFace(card, t)} /></span>
-          <span class="look-name">${t.label}${t.id === template ? html` <small>set default</small>` : null}${usable ? null : html` <small class="look-needs">${whyNot(t, card)}</small>`}</span>
-        </label>`;
-        })}
-      </fieldset>`}
       <fieldset class="tints">
         <legend>Colour</legend>
         ${[["", "Auto"], ...choices.frames].map(([id, label]) => html`<label class=${`tint-option tint-${id || "auto"}`}>
@@ -257,6 +296,12 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
 
     <fieldset class="form-section">
       <legend>Text</legend>
+      ${card.features.includes("loyalty")
+        ? html`<p class="muted layout-hint">One ability per line: +1: Draw a card. A line with no cost, or starting with a colon, is a static ability.</p>`
+        : card.template === "saga"
+        ? html`<p class="muted layout-hint">Reminder text first, then one line per chapter: I: Draw a card. II, III: Gain 2 life.</p>`
+        : null}
+
       <${Field} label="Rules text" count=${`${card.rules_text.length}/${limits.rules_text}`}>
         <textarea rows="5" placeholder="Flying\n{T}: Draw a card." ...${text("rules_text")} ...${watch("rules_text")}></textarea>
       <//>
@@ -269,37 +314,6 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
     </fieldset>
 
     <fieldset class="form-section">
-      <legend>Art</legend>
-      <div class="art-row">
-        <div class="art-thumb" style=${card.art ? `background-image:url(${artUrl(card.art)})` : undefined}></div>
-        <div class="art-actions">
-          <label class="file-button" aria-busy=${String(uploading)}>
-            ${uploading ? "Uploading…" : card.art ? "Replace image" : "Upload image"}
-            <input type="file" name="art" accept="image/png,image/jpeg,image/webp" disabled=${uploading} onChange=${chooseArt} />
-          </label>
-          <button type="button" class="quiet search-art" onClick=${() => setSearching(true)}>Find free art…</button>
-          <button type="button" class="quiet remove-art" disabled=${!card.art} onClick=${() => onChange({ ...card, art: null, art_is_card: false, keep_printed_text: false })}>Remove</button>
-          <p class="art-hint muted">PNG, JPEG or WebP. It is shrunk to fit before it is sent.</p>
-        </div>
-      </div>
-      ${card.art
-        ? html`<label class="art-is-card">
-            <input type="checkbox" name="art_is_card" checked=${card.art_is_card} onChange=${(e) => onChange({ ...card, art_is_card: e.currentTarget.checked })} />
-            <span>This picture is a whole card, not just art. It fills the card, with the text laid over it.</span>
-          </label>
-          ${card.art_is_card
-            ? html`<label class="art-is-card keep-printed">
-                <input type="checkbox" name="keep_printed_text" checked=${card.keep_printed_text} onChange=${(e) => onChange({ ...card, keep_printed_text: e.currentTarget.checked })} />
-                <span>Keep the words printed on the picture. Draw none of ours over it.</span>
-              </label>`
-            : null}`
-        : null}
-      ${card.art && credit ? html`<p class="art-credit-line"><${Credit} credit=${credit} /></p>` : null}
-      <${ArtSearchDialog} open=${searching} onPick=${pickedArt} onCancel=${() => setSearching(false)} />
-      <p class="error art-error" role="alert">${artError}</p>
-    </fieldset>
-
-    <fieldset class="form-section">
       <legend>Details</legend>
       <div class="row">
         ${has("loyalty") ? html`<${Field} label="Loyalty"><input placeholder="4" autocomplete="off" ...${text("loyalty")} /><//>` : null}
@@ -308,14 +322,51 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
         ${has("artist") ? html`<${Field} label="Artist"><input autocomplete="off" ...${text("artist")} /><//>` : null}
       </div>
     </fieldset>
-  </form>`;
+  </form>
+    <dialog ref=${artDialog} class="confirm-dialog art-dialog" aria-labelledby="art-title"
+      onCancel=${(e) => { e.preventDefault(); if (!uploading) closeArt(); }}>
+      <div>
+        <h2 id="art-title">Card art</h2>
+        <div class="art-row">
+          <div class="art-thumb" style=${card.art ? `background-image:url(${artUrl(card.art)})` : undefined}></div>
+          <div class="art-actions">
+            <label class="file-button" aria-busy=${String(uploading)}>
+              ${uploading ? "Uploading…" : card.art ? "Replace image" : "Upload image"}
+              <input type="file" name="art" accept="image/png,image/jpeg,image/webp" disabled=${uploading} onChange=${chooseArt} />
+            </label>
+            <button type="button" class="quiet search-art" disabled=${uploading} onClick=${() => setSearching(true)}>Find free art…</button>
+            <button type="button" class="quiet remove-art" disabled=${!card.art || uploading} onClick=${() => onChange({ ...card, art: null, art_is_card: false, keep_printed_text: false })}>Remove</button>
+            <p class="art-hint muted">PNG, JPEG or WebP. It is shrunk to fit before it is sent.</p>
+          </div>
+        </div>
+        ${card.art
+          ? html`<label class="art-is-card">
+              <input type="checkbox" name="art_is_card" checked=${card.art_is_card} onChange=${(e) => onChange({ ...card, art_is_card: e.currentTarget.checked })} />
+              <span>This picture is a whole card, not just art. It fills the card, with the text laid over it.</span>
+            </label>
+            ${card.art_is_card
+              ? html`<label class="art-is-card keep-printed">
+                  <input type="checkbox" name="keep_printed_text" checked=${card.keep_printed_text} onChange=${(e) => onChange({ ...card, keep_printed_text: e.currentTarget.checked })} />
+                  <span>Keep the words printed on the picture. Draw none of ours over it.</span>
+                </label>`
+              : null}`
+          : null}
+        ${card.art && credit ? html`<p class="art-credit-line"><${Credit} credit=${credit} /></p>` : null}
+        <${ArtSearchDialog} open=${searching} onPick=${pickedArt} onCancel=${() => setSearching(false)} />
+        <p class="error art-error" role="alert">${artError}</p>
+        <footer><button type="button" disabled=${uploading} onClick=${closeArt}>Done</button></footer>
+      </div>
+    </dialog>
+  `;
 }
 
 function SetPage() {
   const [detail, setDetail] = useState(null);
   const [selected, setSelected] = useState(null);
   // Which face of a double-faced card is being edited.
-  const [side, setSide] = useState("front");
+  const [side, setSide] = useState([]);
+  const [setup, setSetup] = useState(null);
+  const [artOpen, setArtOpen] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(null);
@@ -372,7 +423,7 @@ function SetPage() {
   }, [selected]);
 
   // Choosing another card starts on its front.
-  useEffect(() => setSide("front"), [selected]);
+  useEffect(() => { setSide([]); setArtOpen(false); }, [selected]);
 
   function edit(id, card) {
     setDetail((d) => ({ ...d, cards: d.cards.map((c) => (c.id === id ? { ...c, card } : c)) }));
@@ -445,16 +496,12 @@ function SetPage() {
     setError("");
   }
 
-  async function addCard(card = {}) {
+  async function addCard(card) {
     await flush();
-    try {
-      const stored = await api("POST", `/api/sets/${setId}/cards`, card);
-      setDetail((d) => ({ ...d, set: { ...d.set, card_count: d.set.card_count + 1 }, cards: [...d.cards, stored] }));
-      setSelected(stored.id);
-      setError("");
-    } catch (e) {
-      setError(e.message);
-    }
+    const stored = await api("POST", `/api/sets/${setId}/cards`, card);
+    setDetail((d) => ({ ...d, set: { ...d.set, card_count: d.set.card_count + 1 }, cards: [...d.cards, stored] }));
+    setSelected(stored.id);
+    setError("");
   }
 
   async function deleteCard(id) {
@@ -495,9 +542,22 @@ function SetPage() {
   const current = cards.find((c) => c.id === selected);
   // Which face of the card is being edited: its own, a back face (one you turn to), or a
   // second half (a whole card drawn beside it). A back is not a half.
-  const editing = current ? faceOf(current.card, side) : undefined;
-  const turned = side === "back" && Boolean(current?.card.back);
-  const face = (c) => html`<${CardFace} card=${c.card} flipped=${!!turned} template=${set.default_template} code=${set.code} number=${c.position} total=${cards.length} />`;
+  const editing = current ? faceOf(current.card, side) ?? current.card : undefined;
+  const turned = side[0] === "back" && Boolean(current?.card.back);
+  const visibleSide = turned ? ["back"] : [];
+  const visibleFace = current && faceOf(current.card, visibleSide);
+  const layout = visibleFace && resolveTemplate(
+    visibleFace.template ? visibleFace : { ...visibleFace, template: current.card.template }, set.default_template,
+  ).layout;
+  const artParts = layout?.body.filter((part) => part.tag === "art") ?? [];
+  const hasArtControl = visibleFace && (visibleFace.art && visibleFace.art_is_card
+    ? sameSide(side, visibleSide)
+    : artParts.some((part) => sameSide(side, part.face === "half" ? [...visibleSide, "half"] : visibleSide)));
+  function openArt(path) {
+    setSide(path);
+    setArtOpen(true);
+  }
+
 
   return html`
     <section class="set-bar">
@@ -560,7 +620,7 @@ function SetPage() {
           onClick=${bulk ? () => togglePicked(c.id) : async () => { await flush(); setSelected(c.id); }}
         />
       </div>`)}
-      ${bulk ? null : html`<button type="button" class="add-card" onClick=${() => addCard()}><span class="plus">+</span>Add card</button>`}
+      ${bulk ? null : html`<button type="button" class="add-card" onClick=${() => setSetup({ initial: blankFace(), initialSide: [] })}><span class="plus">+</span>Add card</button>`}
     </section>
 
     ${bulk
@@ -568,39 +628,31 @@ function SetPage() {
       : current
       ? html`<section class="creator">
           <div class="stage">
-            <div class="preview">${face(current)}</div>
+            <div class="preview"><${CardFace} card=${current.card} flipped=${turned} template=${set.default_template}
+              code=${set.code} number=${current.position} total=${cards.length}
+              onArt=${(half) => openArt(half ? [...visibleSide, "half"] : visibleSide)} /></div>
             <div class="stage-actions">
               ${current.card.back
-                ? html`<button type="button" class="quiet flip-card" onClick=${() => setSide(turned ? "front" : "back")}>Flip</button>`
+                ? html`<button type="button" class="quiet flip-card" onClick=${() => setSide(turned ? [] : ["back"])}>Flip</button>`
                 : null}
-              <button type="button" class="quiet duplicate-card" onClick=${() => addCard(current.card)}>Duplicate</button>
+              <button type="button" class="quiet duplicate-card" onClick=${() => addCard(current.card).catch((e) => setError(e.message))}>Duplicate</button>
               <button type="button" class="quiet danger-quiet delete-card" onClick=${() => setConfirming("card")}>Delete</button>
             </div>
           </div>
           <div class="editing">
-            <div class="faces" role="group" aria-label="Faces">
-              ${current.card.back || current.card.half
-                ? html`<button type="button" class=${`face-tab${side === "front" ? " chosen" : ""}`} aria-pressed=${String(side === "front")} onClick=${() => setSide("front")}>Front</button>
-                  ${current.card.back
-                    ? html`<button type="button" class=${`face-tab${side === "back" ? " chosen" : ""}`} aria-pressed=${String(side === "back")} onClick=${() => setSide("back")}>Back</button>`
-                    : null}
-                  ${current.card.half
-                    ? html`<button type="button" class=${`face-tab${side === "half" ? " chosen" : ""}`} aria-pressed=${String(side === "half")} onClick=${() => setSide("half")}>2nd half</button>`
-                    : null}`
-                : null}
-              ${current.card.back
-                ? html`<button type="button" class="quiet danger-quiet remove-back" onClick=${() => { setSide("front"); edit(current.id, { ...current.card, back: null }); }}>Remove back face</button>`
-                : html`<button type="button" class="quiet add-back" onClick=${() => { edit(current.id, { ...current.card, back: blankFace(current.card.rarity) }); setSide("back"); }}>Add a back face</button>`}
-              ${current.card.half
-                ? html`<button type="button" class="quiet danger-quiet remove-half" onClick=${() => { setSide("front"); edit(current.id, { ...current.card, half: null }); }}>Remove 2nd half</button>`
-                : html`<button type="button" class="quiet add-half" onClick=${() => { edit(current.id, { ...current.card, half: blankFace(current.card.rarity) }); setSide("half"); }}>Add a second half</button>`}
+            <div class="faces">
+              <${SideTabs} card=${current.card} side=${side} onSide=${setSide} />
+              <button type="button" class="quiet edit-template" onClick=${() => setSetup({ initial: current.card, initialSide: side, id: current.id })}>Edit card template</button>
+              ${hasArtControl ? null : html`<button type="button" class="quiet" onClick=${() => openArt(side)}>Edit art</button>`}
             </div>
             <${Editor}
               key=${`${current.id}-${side}`}
               card=${editing}
               template=${set.default_template}
               credit=${credits[editing?.art]}
-              onChange=${(card) => edit(current.id, side === "back" ? { ...current.card, back: card } : side === "half" ? { ...current.card, half: card } : card)}
+              onChange=${(card) => edit(current.id, replaceFace(current.card, side, card))}
+              artOpen=${artOpen}
+              onCloseArt=${() => setArtOpen(false)}
               onSetDefault=${(default_template) => patchSet({ default_template })}
               onCredit=${(id, credit) => setCredits((now) => ({ ...now, [id]: credit }))}
             />
@@ -608,6 +660,12 @@ function SetPage() {
         </section>`
       : html`<p class="muted empty">No cards yet. Add the first one.</p>`}
 
+    ${setup ? html`<${TemplateSetup} ...${setup} template=${set.default_template} creating=${!setup.id}
+      onCancel=${() => setSetup(null)} onApply=${async (card) => {
+        if (!setup.id) return addCard(card);
+        if (!faceOf(card, side)) setSide([]);
+        edit(setup.id, card);
+      }} />` : null}
     <${Confirm}
       open=${confirming === "bulk"}
       title=${`Delete ${picked.size} ${picked.size === 1 ? "card" : "cards"}?`}

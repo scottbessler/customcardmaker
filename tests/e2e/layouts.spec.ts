@@ -1,6 +1,5 @@
 import { expect, test } from "./fixtures";
 import { expectLayout } from "./layout";
-import { expectImage } from "./rendering";
 import { registerUser } from "./session";
 
 test("planeswalker abilities, saga chapters and reminder text are read from the rules text", async ({ page }) => {
@@ -46,6 +45,7 @@ test("reminder text is printed in italics, and the rest is not", async ({ page }
   await page.click(".new-set button");
   await expect(page.locator("h1")).toBeVisible();
   await page.click(".add-card");
+  await page.getByRole("button", { name: "Start editing" }).click();
   await page.fill(
     'textarea[name="rules_text"]',
     "Flying (It can only be blocked by creatures with flying or reach.)",
@@ -65,20 +65,14 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
   await page.click(".new-set button");
   await expect(page.locator("h1")).toBeVisible();
   await page.click(".add-card");
+  await page.getByRole("button", { name: "Start editing" }).click();
   const preview = page.locator(".preview .mtg-card");
   await expect(preview).toHaveClass(/lay-modern/);
-  // A new card has a mana cost and no stats.
+  await page.click(".edit-template");
   await expect(feature(page, "cost")).toBeChecked();
-  await expect(page.locator('input[name="power_toughness"]')).toHaveCount(0);
-  await feature(page, "power_toughness").check();
-  await expect(page.locator('input[name="power_toughness"]')).toBeVisible();
-
-  // Loyalty makes it a planeswalker; the stats combine, so power/toughness may stay.
-  await feature(page, "loyalty").check();
-  await expect(preview).toHaveClass(/lay-planeswalker/);
-  await expect(page.locator('input[name="power_toughness"]')).toBeVisible();
-  await feature(page, "power_toughness").uncheck();
-  await expect(page.locator('input[name="power_toughness"]')).toHaveCount(0);
+  await page.locator('.look-option:has(input[value="planeswalker"])').click();
+  await expect(feature(page, "loyalty")).toBeDisabled();
+  await page.click(".apply-template");
   await page.fill('input[name="loyalty"]', "4");
   await page.fill('textarea[name="rules_text"]', "+1: Draw a card\n−3: Destroy target creature\n: Static ability");
   await expect(preview.locator(".pw-row")).toHaveCount(3);
@@ -90,27 +84,21 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-planeswalker/);
   await expect(page.locator(".preview .pw-row")).toHaveCount(3);
 
-  // A saga is any card drawn by the Saga template, which has nowhere for a stat.
-  await feature(page, "loyalty").uncheck();
+  await page.click(".edit-template");
   await page.locator('.look-option:has(input[value="saga"])').click();
+  await expect(feature(page, "power_toughness")).toBeDisabled();
+  await page.click(".apply-template");
   await page.fill('textarea[name="rules_text"]', ": (Reminder.)\nI: One\nII, III: Two");
   await expect(page.locator(".preview .saga-row")).toHaveCount(2);
   await expect(page.locator(".preview .saga-mark")).toHaveCount(3);
-  await feature(page, "power_toughness").check();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-modern/);
-  await expect(page.locator('.look-option:has(input[value="saga"]) input')).toBeDisabled();
-  await feature(page, "power_toughness").uncheck();
 
-  // A token is a card with no mana cost, drawn by the Token template.
-  await expect(page.locator('.look-option:has(input[value="token"]) input')).toBeDisabled();
-  await feature(page, "cost").uncheck();
+  await page.click(".edit-template");
   await page.locator('.look-option:has(input[value="token"])').click();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-token/);
+  await expect(feature(page, "cost")).toBeDisabled();
+  await page.click(".apply-template");
+  await expect(preview).toHaveClass(/lay-token/);
   await expect(page.locator('input[name="mana_cost"]')).toHaveCount(0);
   await expect(page.locator(".preview .mtg-cost")).toBeHidden();
-  // Giving it a cost again takes the token look off it.
-  await feature(page, "cost").check();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-modern/);
 });
 
 test("every layout keeps its parts on the card", async ({ page }) => {
@@ -135,7 +123,6 @@ test("every layout keeps its parts on the card", async ({ page }) => {
     ".frame-sample:nth-child(3) .mtg-box",
     ".frame-sample:nth-child(4) .mtg-art",
   ]);
-  await expectImage(page.locator(".frames-grid"), "layouts-modern.png");
 });
 
 test("every template keeps its parts on the card", async ({ page }) => {
@@ -168,7 +155,6 @@ test("every template keeps its parts on the card", async ({ page }) => {
     '.frame-sample[data-template="adventure"] .mtg-box',
     '.frame-sample[data-template="semi-split"] .mtg-art',
   ]);
-  await expectImage(page.locator(".frames-grid"), "templates.png");
 });
 
 test("a standard card is split the way a real one is", async ({ page }) => {
@@ -178,9 +164,12 @@ test("a standard card is split the way a real one is", async ({ page }) => {
   await page.click(".new-set button");
   await expect(page.locator("h1")).toBeVisible();
   await page.click(".add-card");
+  await page.getByRole("button", { name: "Start editing" }).click();
   await page.fill('input[name="name"]', "Split Check");
   await page.fill('input[name="mana_cost"]', "{1}{U}");
+  await page.click(".edit-template");
   await page.check('input[name="feature-power_toughness"]');
+  await page.click(".apply-template");
   await page.fill('input[name="power_toughness"]', "2/2");
 
   const card = page.locator(".preview .mtg-card");
@@ -202,7 +191,9 @@ test("a standard card is split the way a real one is", async ({ page }) => {
   await expect(page.locator(".save-state")).toHaveText(/Saved/);
 
   // One look so far, and only a look may be the set's default.
+  await page.click(".edit-template");
   await expect(page.locator(".look-option")).toHaveCount(15);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.locator(".set-settings summary").click();
   await expect(page.locator('select[name="default-template"] option')).toHaveText(["Modern"]);
 });

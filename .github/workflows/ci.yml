@@ -2,8 +2,6 @@ name: CI
 on:
   push:
   pull_request:
-  # The image snapshot workflow dispatches CI after its GITHUB_TOKEN push,
-  # because that push does not start workflows on its own.
   workflow_dispatch:
 jobs:
   rust:
@@ -44,8 +42,7 @@ jobs:
   e2e:
     needs: server
     runs-on: ubuntu-24.04
-    # Running the job in the image gives the same pinned fonts and rasterizer the
-    # baselines were rendered with, without a Docker daemon in the loop.
+    # Pin the browser and fonts used for the geometry checks.
     container: mcr.microsoft.com/playwright:v1.54.1-noble
     steps:
       - uses: actions/checkout@v4
