@@ -1026,6 +1026,7 @@ async fn gallery_pages_are_for_everyone_but_only_for_public_sets() {
             .1
             .contains("Sign out")
     );
+}
 
 // ---- importing a Cockatrice file -----------------------------------------
 
