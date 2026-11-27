@@ -119,6 +119,10 @@ pub struct Card {
     /// The picture is a whole printed card (a scan, or an MTG Nexus render), not
     /// just art: it fills the card, and our plates and text box are laid over it.
     pub art_is_card: bool,
+    /// With `art_is_card`: the words printed on the picture are kept, and nothing
+    /// of ours is drawn over it. For layouts we have no overlay for (a token, a
+    /// planeswalker, a saga) or a scan whose own text is wanted.
+    pub keep_printed_text: bool,
     /// A frame colour forced by the author; empty means "from the mana cost".
     pub frame: String,
     /// The look of the card; empty means "the set's default".

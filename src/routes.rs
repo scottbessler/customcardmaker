@@ -359,6 +359,7 @@ async fn attach_pictures(
         .zip(arts)
         .map(|(item, art)| Card {
             art_is_card: whole_cards && art.is_some(),
+            keep_printed_text: whole_cards && art.is_some() && item.printed_layout,
             art,
             ..item.card
         })

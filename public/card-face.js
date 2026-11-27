@@ -32,7 +32,7 @@ export function CardFace({ card, template = "modern", code = "", number = 0, tot
   const label = card.name || "Untitled card";
   const Tag = onClick ? "button" : "article";
   return html`<${Tag}
-    class=${`mtg-card tpl-${look} frame-${frame} rarity-${card.rarity}${scan ? " art-card" : ""}${selected ? " selected" : ""}`}
+    class=${`mtg-card tpl-${look} frame-${frame} rarity-${card.rarity}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
     style=${scan ? `background-image:url(${artUrl(card.art)})` : undefined}
     aria-label=${label}
     aria-pressed=${onClick ? String(selected) : undefined}
