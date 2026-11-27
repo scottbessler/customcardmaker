@@ -1216,6 +1216,214 @@ async fn a_preview_says_what_the_file_had_that_we_could_not_keep() {
     assert_eq!(cards[1]["printed"], false);
 }
 
+/// A picture server that answers only after `delay`, so an import is still
+/// running when the next request arrives.
+async fn slow_picture_server(delay: std::time::Duration) -> String {
+    use axum::routing::get;
+    let app = Router::new().route(
+        "/card.png",
+        get(move || async move {
+            tokio::time::sleep(delay).await;
+            ([(header::CONTENT_TYPE, "image/png")], PNG)
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    format!("http://{addr}/card.png")
+}
+
+/// Polls a job until it stops running, and returns its last progress.
+async fn wait_for(app: &Router, who: &str, job: &str) -> Value {
+    let mut progress = Value::Null;
+    for _ in 0..300 {
+        let reply = call(
+            app,
+            "GET",
+            &format!("/api/import/cockatrice/{job}"),
+            None,
+            Some(who),
+        )
+        .await;
+        assert_eq!(reply.status, StatusCode::OK, "{:?}", reply.body);
+        progress = reply.body;
+        if progress["state"] != "running" {
+            return progress;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    }
+    panic!("the import never finished: {progress}");
+}
+
+#[tokio::test]
+async fn a_background_import_reports_progress_and_ends_with_the_set() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let url = picture_server().await;
+
+    let started = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some({
+            let mut body = cockatrice_file(Some(&url));
+            body["images"] = json!(true);
+            body["background"] = json!(true);
+            body
+        }),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(started.status, StatusCode::ACCEPTED, "{:?}", started.body);
+    let job = started.body["job_id"].as_str().unwrap().to_string();
+
+    let progress = wait_for(&app, &me, &job).await;
+    assert_eq!(progress["state"], "done", "{progress}");
+    assert_eq!(progress["cards_total"], 2);
+    assert_eq!(progress["cards_done"], 2);
+    assert_eq!(progress["pictures_total"], 1);
+    assert_eq!(progress["pictures_done"], 1);
+    assert_eq!(progress["pictures_tried"], 1);
+    assert_eq!(progress["set_code"], "IMP");
+
+    // The set it made is really there.
+    let set = progress["set_id"].as_str().unwrap();
+    let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&me)).await;
+    assert_eq!(detail.body["cards"].as_array().unwrap().len(), 2);
+
+    // A job is the account's own: a stranger is turned away, another account
+    // answers as if it were not there.
+    assert_eq!(
+        call(
+            &app,
+            "GET",
+            &format!("/api/import/cockatrice/{job}"),
+            None,
+            None
+        )
+        .await
+        .status,
+        StatusCode::UNAUTHORIZED
+    );
+    let bob = register(&app, "Bob").await;
+    assert_eq!(
+        call(
+            &app,
+            "GET",
+            &format!("/api/import/cockatrice/{job}"),
+            None,
+            Some(&bob)
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        call(
+            &app,
+            "GET",
+            &format!("/api/import/cockatrice/{}", Uuid::new_v4()),
+            None,
+            Some(&me)
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[tokio::test]
+async fn only_one_import_runs_at_a_time_per_account() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let url = slow_picture_server(std::time::Duration::from_millis(300)).await;
+
+    let body = || {
+        let mut body = cockatrice_file(Some(&url));
+        body["images"] = json!(true);
+        body["background"] = json!(true);
+        body
+    };
+    let first = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some(body()),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(first.status, StatusCode::ACCEPTED, "{:?}", first.body);
+
+    let second = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some(body()),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(second.status, StatusCode::CONFLICT, "{:?}", second.body);
+    assert!(
+        second.body["error"].as_str().unwrap().contains("already"),
+        "{:?}",
+        second.body
+    );
+
+    // Another account is not blocked by mine.
+    let bob = register(&app, "Bob").await;
+    assert_eq!(
+        call(
+            &app,
+            "POST",
+            "/api/import/cockatrice",
+            Some(body()),
+            Some(&bob)
+        )
+        .await
+        .status,
+        StatusCode::ACCEPTED
+    );
+
+    // Let the first finish, so the test leaves nothing running.
+    let job = first.body["job_id"].as_str().unwrap().to_string();
+    assert_eq!(wait_for(&app, &me, &job).await["state"], "done");
+}
+
+#[tokio::test]
+async fn a_background_import_names_the_pictures_it_could_not_fetch() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+
+    let started = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some({
+            let mut body = cockatrice_file(Some("http://127.0.0.1:9/nothing.png"));
+            body["images"] = json!(true);
+            body["background"] = json!(true);
+            body
+        }),
+        Some(&me),
+    )
+    .await;
+    let job = started.body["job_id"].as_str().unwrap().to_string();
+
+    let progress = wait_for(&app, &me, &job).await;
+    assert_eq!(progress["state"], "done", "{progress}");
+    assert_eq!(progress["pictures_done"], 0);
+    assert_eq!(progress["pictures_tried"], 1);
+    let failures = progress["failures"].as_array().unwrap();
+    assert_eq!(failures.len(), 1, "{failures:?}");
+    let failure = failures[0].as_str().unwrap();
+    assert!(
+        failure.contains("Art Bird") && failure.contains("nothing.png"),
+        "{failure}"
+    );
+}
+
 #[tokio::test]
 async fn importing_can_download_each_card_picture() {
     let app = app().await;

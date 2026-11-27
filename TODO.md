@@ -101,14 +101,16 @@ that changes behaviour, not here.
   - [ ] Still to do: match the real MTG Nexus template list (Nexus's creator refuses automated
         fetches, so ask for names or screenshots)
 
-- [ ] **13. Progress for a large import** — a real Nexus export is ~300 cards and one
+- [x] **13. Progress for a large import** — a real Nexus export is ~300 cards and one
       picture download each, which can take minutes; the import page shows nothing until
       it ends.
-  - [ ] Run the import in the background and report progress (cards read, pictures
-        fetched of N, failures so far), e.g. a job the page polls or an event stream
-  - [ ] Show it on the import page with a bar, and let the person leave and come back
-  - [ ] Say at the end which pictures failed, so they can be retried
-  - [ ] A cap on how long one import may run, and one import at a time per account
+  - [x] Run the import in the background and report progress (cards read, pictures
+        fetched of N, failures so far), as a job the page polls
+  - [x] Show it on the import page with a bar, and let the person leave and come back
+        (the job's id is kept, and a page that returns follows it again)
+  - [x] Say at the end which pictures failed, so they can be retried
+  - [x] A cap on how long one import may run (ten minutes), and one import at a time per
+        account
 
 - [ ] **14. Card features and templates** — design in `CARDTYPES.md`. A card has the base
       fields (name, type line, rules text, flavor, artist) plus **features** it turns on

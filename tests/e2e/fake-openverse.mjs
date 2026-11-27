@@ -40,6 +40,12 @@ createServer((request, response) => {
   const detail = url.pathname.match(/^\/v1\/images\/([0-9a-f-]{36})\/$/);
   if (detail && RECORDS[detail[1]]) return json(200, record(detail[1]));
   const thumb = url.pathname.match(/^\/v1\/images\/([0-9a-f-]{36})\/thumb\/$/);
-  if (thumb && RECORDS[thumb[1]]) { response.writeHead(200, { "content-type": "image/png" }); return response.end(PNG); }
+  if (thumb && RECORDS[thumb[1]]) {
+    // `?delay=300` answers slowly, so a test can watch an import run.
+    const delay = Number(url.searchParams.get("delay") ?? 0);
+    const send = () => { response.writeHead(200, { "content-type": "image/png" }); response.end(PNG); };
+    if (delay > 0) return void setTimeout(send, delay);
+    return void send();
+  }
   json(404, { detail: "not found" });
 }).listen(PORT, "127.0.0.1");

@@ -189,7 +189,11 @@ nothing about real Magic cards.
   to `/`. The page previews first: it says what would be created, and what the file had
   that we could not keep as it was (a layout we cannot draw, a back face with no front, a
   rarity we do not have, a card with no picture), and creates nothing until the import is
-  confirmed.
+  confirmed. A confirmed import runs in the background: the page is given a job to poll and
+  shows a bar (cards read, pictures fetched of N), names the pictures that would not
+  download so they can be retried, and a page left and come back to picks the job up
+  again. One import runs at a time per account, and one that outlives ten minutes is
+  stopped.
 
 - **R9.** Every card has the base fields (name, type line, rules text, flavor text, artist)
   and turns on **features** (`card.features`: `cost`, `power_toughness`, `loyalty`,

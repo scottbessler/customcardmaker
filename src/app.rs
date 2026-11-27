@@ -2,6 +2,7 @@ use crate::{
     art::{self, ArtStore},
     auth,
     db::Db,
+    imports::Imports,
     openverse::{self, Openverse},
     render, routes,
     sets::SetStore,
@@ -34,6 +35,8 @@ pub struct AppState {
     pub users: UserStore,
     pub art: ArtStore,
     pub openverse: Arc<Openverse>,
+    /// Imports running in the background, and their progress.
+    pub imports: Imports,
     pub webauthn: Arc<Webauthn>,
     pub key: Key,
     /// Fetches card pictures named by an imported file. One client for the
@@ -66,6 +69,7 @@ impl AppState {
             openverse: Arc::new(Openverse::new(
                 &env::var("OPENVERSE_URL").unwrap_or_else(|_| openverse::DEFAULT_BASE.into()),
             )?),
+            imports: Imports::default(),
             webauthn: Arc::new(build_webauthn()?),
             key: load_key(),
             http: build_http_client()?,
@@ -114,6 +118,7 @@ pub fn router(s: AppState) -> Router {
             "/api/import/cockatrice",
             post(routes::import_cockatrice).layer(DefaultBodyLimit::max(8 * 1024 * 1024)),
         )
+        .route("/api/import/cockatrice/{id}", get(routes::import_progress))
         .route(
             "/api/art",
             post(routes::upload_art).layer(DefaultBodyLimit::max(art::MAX_BYTES)),
