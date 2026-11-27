@@ -78,8 +78,12 @@ nothing about real Magic cards.
   template names what the card needs and what it cannot draw, and a card may not name one that
   cannot draw what it has (400). A two-halved layout (a split, adventure or prepared card) draws
   the card's second **half** beside its own, so the card is one document with a `half` — which is
-  not a `back` (R13). The editor shows a thumbnail of the card in
-  each, and a colour chip for each frame colour plus Auto. An unknown template or frame is a
+  not a `back` (R13). **Add card** opens template setup before fields or art. Choose
+  a template by thumbnail, configure features and faces, then **Start editing**.
+  **Edit card template** reopens setup for an existing card. Template requirements
+  turn on and lock matching features or faces. Exclusions turn them off and lock
+  them. Apply keeps compatible content. Cancel discards setup changes. The editor
+  shows a colour chip for each frame colour plus Auto. An unknown template or frame is a
   400. The gallery draws a public set with its default. (`src/card.rs`, `public/card-face.js`)
 - **R12.** The standard layout is a real card's: the art box is the top half of the card
   and the text box the bottom third, with the name plate above the art and the type line
@@ -93,7 +97,10 @@ nothing about real Magic cards.
 
 ## 5. Art
 
-- **U1.** An image is chosen in the creator, shrunk (longest side 1400px) and
+- **U1.** Preview art region exposes **Edit art** on hover, keyboard focus or touch.
+  It opens upload, search, removal and whole-card image settings for that region's
+  face or half. The editor provides access when the layout has no art region for
+  the selected face. An upload is shrunk (longest side 1400px) and
   re-encoded as a JPEG in the browser, then sent as the request body. The
   browser's re-draw also drops metadata such as location and applies the
   photo's rotation.
@@ -117,7 +124,7 @@ nothing about real Magic cards.
   and where it came from. The server contacts only the configured Openverse host,
   never a URL taken from a result, never follows a redirect elsewhere, and refuses
   an image over the upload cap or whose bytes are not a PNG, JPEG or WebP.
-- **U8.** The credit is shown wherever borrowed art is: under the art in the editor
+- **U8.** The credit is shown wherever borrowed art is: in the editor’s art dialog
   and in an *Art credits* list on a public set's page. Picking art fills the card's
   *artist* from the credit only if it was empty.
 - **U5.** Removing art from a card drops the reference; the file is kept
@@ -234,7 +241,7 @@ nothing about real Magic cards.
   card. The back is a card of its own — its own features, fields, art and template — but has
   no back of its own, and is checked like a front (a bad back is a 400). Its art follows the
   front's rules: only the owner's uploads may go on it, and it is public with the set. The
-  editor has Front / Back tabs and Add / Remove back face; a card shows one face at a time
+  editor has Front / Back tabs, with back face setup in **Edit card template**. A card shows one face at a time
   and a Flip turns it, in the editor and in the public gallery. A back with no cost of its
   own wears the front's colour. A name plate carries an open ring on the front and a solid
   disc on the back (not over a scan, which has its own).
@@ -252,7 +259,7 @@ nothing about real Magic cards.
   template (the picture brings its border); the frame colour still tints the plates.
   The places are those of a normal MTG Nexus card (400x560, measured off real exports),
   not our modern frame's. With `keep_printed_text` nothing of ours is drawn, for layouts
-  we have no overlay for. The editor has a checkbox for each under the art, and removing
+  we have no overlay for. The art dialog has a checkbox for each. Removing
   the art clears both.
 
 ## 8. Not yet built

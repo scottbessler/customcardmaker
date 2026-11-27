@@ -81,8 +81,7 @@ export async function readLayout(page: Page, selectors: string[]): Promise<Layou
  * Records `selectors` and compares them with the stored JSON baseline.
  *
  * Baselines are plain text and land in each spec's `*-snapshots/json/` folder.
- * Unlike images they are reviewable, and they compare on every platform, so
- * they are checked even when `bun run test:e2e` skips image comparison.
+ * They are checked on every platform by `bun run test:e2e`.
  */
 export async function expectLayout(page: Page, name: string, selectors: string[]): Promise<void> {
   await settle(page);

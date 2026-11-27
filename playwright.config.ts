@@ -25,12 +25,6 @@ const serverCommand = process.env.E2E_SERVER_BIN
 export default defineConfig<DeviceOptions>({
   testDir: "./tests/e2e",
   snapshotPathTemplate: "{testDir}/{testFileName}-snapshots/{arg}-{projectName}{ext}",
-  expect: {
-    toHaveScreenshot: {
-      animations: "disabled",
-      maxDiffPixelRatio: 0.01,
-    },
-  },
   reporter: [["html", { outputFolder: "playwright-report", open: "never" }]],
   use: {
     baseURL: process.env.TEST_BASE_URL || "http://127.0.0.1:18080",
