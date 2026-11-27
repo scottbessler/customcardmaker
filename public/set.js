@@ -1,6 +1,6 @@
 import { html, render, useCallback, useEffect, useLayoutEffect, useRef, useState } from "/public/vendor/htm-preact.js";
 import { api, uploadArt } from "/public/api.js";
-import { artUrl, prepareArt } from "/public/art.js";
+import { artPosition, artUrl, prepareArt } from "/public/art.js";
 import { ArtSearchDialog, Credit } from "/public/art-search.js";
 import { CardFace, Mana } from "/public/card-face.js";
 import { BulkBar, TransferDialog } from "/public/bulk.js";
@@ -24,6 +24,7 @@ function cleanCard(card) {
     frame: card.frame ?? "",
     rarity: card.rarity ?? "common",
     art: card.art ?? null,
+    art_position: card.art_position ?? null,
     art_is_card: card.art_is_card ?? false,
     keep_printed_text: card.keep_printed_text ?? false,
     back: card.back ? cleanCard(card.back) : null,
@@ -182,7 +183,7 @@ function Palette({ target, onInsert }) {
   </div>`;
 }
 
-function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artOpen, onCloseArt }) {
+function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artOpen, onCloseArt, artPart }) {
   const fields = fieldsFor(card.features);
   const has = (key) => fields.some((f) => f.key === key);
   const [wanted, setTarget] = useState("mana_cost");
@@ -245,7 +246,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
     setSearching(false);
     onCredit(id, found);
     const artist = latest.current.artist || found.creator.slice(0, limits.artist);
-    onChange({ ...latest.current, art: id, artist });
+    onChange({ ...latest.current, art: id, art_position: null, artist });
   }
 
   async function chooseArt(event) {
@@ -257,13 +258,16 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
     setArtError("");
     try {
       const { id } = await uploadArt(await prepareArt(file));
-      onChange({ ...latest.current, art: id });
+      onChange({ ...latest.current, art: id, art_position: null });
     } catch (e) {
       setArtError(e.message);
     } finally {
       setUploading(false);
     }
   }
+
+  const crop = !card.art_is_card && artPart;
+  const [artX, artY] = card.art_position ?? [50, 50];
 
   return html`<form class="panel card-form" onSubmit=${(e) => e.preventDefault()}>
     <fieldset class="form-section">
@@ -328,17 +332,34 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
       <div>
         <h2 id="art-title">Card art</h2>
         <div class="art-row">
-          <div class="art-thumb" style=${card.art ? `background-image:url(${artUrl(card.art)})` : undefined}></div>
+          <div class="art-thumb" style=${card.art ? {
+            backgroundImage: `url(${artUrl(card.art)})`,
+            backgroundPosition: crop ? artPosition(card.art_position) : undefined,
+            aspectRatio: crop ? `${crop.w} / ${crop.h}` : undefined,
+          } : undefined}></div>
           <div class="art-actions">
             <label class="file-button" aria-busy=${String(uploading)}>
               ${uploading ? "Uploading…" : card.art ? "Replace image" : "Upload image"}
               <input type="file" name="art" accept="image/png,image/jpeg,image/webp" disabled=${uploading} onChange=${chooseArt} />
             </label>
             <button type="button" class="quiet search-art" disabled=${uploading} onClick=${() => setSearching(true)}>Find free art…</button>
-            <button type="button" class="quiet remove-art" disabled=${!card.art || uploading} onClick=${() => onChange({ ...card, art: null, art_is_card: false, keep_printed_text: false })}>Remove</button>
+            <button type="button" class="quiet remove-art" disabled=${!card.art || uploading} onClick=${() => onChange({ ...card, art: null, art_position: null, art_is_card: false, keep_printed_text: false })}>Remove</button>
             <p class="art-hint muted">PNG, JPEG or WebP. It is shrunk to fit before it is sent.</p>
           </div>
         </div>
+        ${card.art && crop ? html`<fieldset class="form-section art-crop">
+          <legend>Crop position</legend>
+          <${Field} label="Horizontal">
+            <input type="range" min="0" max="100" value=${artX} disabled=${uploading}
+              onInput=${(e) => onChange({ ...card, art_position: [e.currentTarget.valueAsNumber, artY] })} />
+          <//>
+          <${Field} label="Vertical">
+            <input type="range" min="0" max="100" value=${artY} disabled=${uploading}
+              onInput=${(e) => onChange({ ...card, art_position: [artX, e.currentTarget.valueAsNumber] })} />
+          <//>
+          <button type="button" class="quiet" disabled=${uploading || (artX === 50 && artY === 50)}
+            onClick=${() => onChange({ ...card, art_position: null })}>Center art</button>
+        </fieldset>` : null}
         ${card.art
           ? html`<label class="art-is-card">
               <input type="checkbox" name="art_is_card" checked=${card.art_is_card} onChange=${(e) => onChange({ ...card, art_is_card: e.currentTarget.checked })} />
@@ -550,9 +571,9 @@ function SetPage() {
     visibleFace.template ? visibleFace : { ...visibleFace, template: current.card.template }, set.default_template,
   ).layout;
   const artParts = layout?.body.filter((part) => part.tag === "art") ?? [];
-  const hasArtControl = visibleFace && (visibleFace.art && visibleFace.art_is_card
-    ? sameSide(side, visibleSide)
-    : artParts.some((part) => sameSide(side, part.face === "half" ? [...visibleSide, "half"] : visibleSide)));
+  const artPart = artParts.find((part) => sameSide(side, part.face === "half" ? [...visibleSide, "half"] : visibleSide));
+  const scan = visibleFace?.art && visibleFace.art_is_card;
+  const hasArtControl = scan ? sameSide(side, visibleSide) : Boolean(artPart);
   function openArt(path) {
     setSide(path);
     setArtOpen(true);
@@ -652,6 +673,7 @@ function SetPage() {
               credit=${credits[editing?.art]}
               onChange=${(card) => edit(current.id, replaceFace(current.card, side, card))}
               artOpen=${artOpen}
+              artPart=${scan ? undefined : artPart}
               onCloseArt=${() => setArtOpen(false)}
               onSetDefault=${(default_template) => patchSet({ default_template })}
               onCredit=${(id, credit) => setCredits((now) => ({ ...now, [id]: credit }))}

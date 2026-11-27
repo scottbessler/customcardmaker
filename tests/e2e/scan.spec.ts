@@ -40,6 +40,7 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
 
   await page.check('input[name="art_is_card"]');
   await expect(preview).toHaveClass(/art-card/);
+  await expect(page.getByRole("slider")).toHaveCount(0);
   await expect(preview.locator(".mtg-title")).toHaveText("Overlaid Name");
   await expect(page.locator(".save-state")).toHaveText(/Saved/);
 
