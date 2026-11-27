@@ -216,3 +216,19 @@ test("a creature planeswalker draws both stats without overlapping badges or foo
   expect(pt.x + pt.width).toBeLessThan(badge.x);
   expect(footer.x + footer.width).toBeLessThan(pt.x);
 });
+
+test("Adventure places its spell type and rules below the art and left of the main text", async ({ page }) => {
+  await page.goto("/dev/frames?templates=1");
+  const adventure = page.locator('.frame-sample[data-template="adventure"]');
+  const spellType = adventure.locator('.mtg-type[data-part-face="half"]');
+  const spellRules = adventure.locator(".mtg-box").filter({ hasText: "Draw a card." });
+  const mainRules = adventure.locator(".mtg-box").filter({ hasText: "Adventure sample." });
+  await expect(spellType).toHaveText("Instant");
+  await expect(spellRules).toBeVisible();
+  const [art, type, spell, main] = await Promise.all(
+    [adventure.locator(".mtg-art"), spellType, spellRules, mainRules].map(async (part) => (await part.boundingBox())!),
+  );
+  expect(art.y + art.height).toBeLessThan(type.y);
+  expect(type.y).toBeLessThan(spell.y);
+  expect(Math.round(spell.x + spell.width)).toBeLessThanOrEqual(Math.round(main.x));
+});

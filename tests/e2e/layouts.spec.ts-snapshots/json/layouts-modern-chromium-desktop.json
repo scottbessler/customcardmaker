@@ -32,7 +32,7 @@
   ".frame-sample:nth-child(3) .mtg-box": {
     "x": 741,
     "y": 235,
-    "width": 127,
+    "width": 121,
     "height": 287,
     "display": "flex",
     "position": "absolute",

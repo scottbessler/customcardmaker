@@ -32,7 +32,7 @@ button.mtg-card{cursor:pointer}
 .rarity-rare .mtg-pip{background:var(--rarity-rare)}
 .rarity-mythic .mtg-pip{background:var(--rarity-mythic)}
 .mtg-box{border-radius:.9cqw;background-color:var(--box);background-image:radial-gradient(ellipse at 50% 35%,var(--box),color-mix(in srgb,var(--box) 88%,var(--lo)));padding:2.4cqw 3cqw;box-shadow:0 0 0 .45cqw color-mix(in srgb,var(--lo) 40%,black),inset 0 0 2.6cqw color-mix(in srgb,var(--lo) 22%,transparent);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
-.mtg-rules{line-height:1.22}
+.mtg-rules{font-size:var(--rules-size);line-height:1.22}
 .mtg-rules p{margin:0 0 .6em}
 .mtg-rules p:last-child{margin-bottom:0}
 /* Reminder text — the words in parentheses — is printed in italics. */
@@ -65,7 +65,7 @@ button.mtg-card{cursor:pointer}
    height. `middle` puts it half an x-height up, which is about two pixels too low
    beside capitals and tall letters, so it is raised by the difference. `top` moves it
    without touching the line's height. */
-.mtg-rules .mana{font-size:.86em;position:relative;top:-.14em}
+.mtg-rules .mana{font-size:.86em;position:relative;top:-.137em}
 .mtg-card .ms-cost.ms-tap{background-color:var(--card-text);color:var(--card-foot-ink)}
 .mana-unknown{opacity:.6}
 
@@ -103,6 +103,24 @@ button.mtg-card{cursor:pointer}
    card-width units, for a part anchored by its bottom edge. */
 .mtg-card{--fx:3.9cqw;--fy:3.9cqw;--fb:10.5cqw;--card-h:calc(100cqw * 88 / 63)}
 .mtg-card.art-card{--fx:0cqw;--fy:0cqw;--fb:0cqw}
+/* Printed frame details. Whole-card scans carry their own plate geometry. */
+.lay-modern:not(.art-card) :is(.mtg-name,.mtg-type){border-radius:1.6cqw;background-image:linear-gradient(180deg,color-mix(in srgb,var(--box) 78%,var(--white)),var(--box) 58%,color-mix(in srgb,var(--box) 88%,var(--lo)));box-shadow:0 0 0 .35cqw color-mix(in srgb,var(--lo) 35%,var(--card-border)),inset 0 0 0 .25cqw color-mix(in srgb,var(--white) 65%,transparent),0 .28cqw .5cqw var(--shadow-40)}
+.lay-modern:not(.art-card) .mtg-title{font-size:5.1cqw}
+.lay-modern:not(.art-card) .mtg-type span{font-size:4.45cqw}
+.lay-modern:not(.art-card) .mtg-cost .mana{font-size:4.2cqw}
+.lay-modern:not(.art-card) .mtg-pt{border-radius:1.3cqw;box-shadow:0 0 0 .4cqw var(--card-text),inset 0 0 0 .25cqw var(--white)}
+.lay-modern:not(.art-card) .mtg-flavor:not(:first-child),.lay-adventure:not(.art-card) .mtg-flavor:not(:first-child){border-top:.22cqw solid color-mix(in srgb,var(--card-text) 26%,transparent);padding-top:.45em}
+
+/* The Adventure inset has its own name and type but shares the main card's set mark. */
+.lay-adventure :is(.mtg-name,.mtg-type)[data-part-face=half]{padding-inline:1.5cqw;border-radius:.65cqw}
+.lay-adventure [data-part-face=half] .mtg-title{font-size:3.8cqw}
+.lay-adventure [data-part-face=half] .mtg-cost .mana{font-size:3.2cqw}
+.lay-adventure .mtg-type[data-part-face=half] span{font-size:3.35cqw}
+.lay-adventure [data-part-face=half] .mtg-pip{display:none}
+.lay-adventure .mtg-box{padding:1.45cqw 1.8cqw}
+.lay-adventure .mtg-box[data-part-face=half]{justify-content:flex-start;background-color:color-mix(in srgb,var(--box) 92%,var(--lo))}
+.lay-adventure .mtg-rules{font-size:calc(var(--rules-size) * .83)}
+
 /* Planeswalker: tall art, abilities over its foot, loyalty where power/toughness would be. */
 .lay-planeswalker .mtg-name{padding:0 3.4cqw}
 .lay-planeswalker .mtg-type{padding:0 3.4cqw}
@@ -130,11 +148,11 @@ button.mtg-card{cursor:pointer}
 .pw-cost{justify-self:center;min-width:8.4cqw;padding:.8cqw 1cqw;border-radius:1cqw;background:var(--card-border);color:var(--card-foot-ink);font-size:4.4cqw;font-weight:800;line-height:1;text-align:center;clip-path:polygon(12% 0,88% 0,100% 50%,88% 100%,12% 100%,0 50%)}
 .pw-static .pw-cost{visibility:hidden}
 /* Saga chapters: a numeral hexagon beside each, and the reminder text above. */
-.lay-saga .mtg-rules{font-size:3.3cqw !important}
-.saga-rows{display:grid;gap:1.2cqw}
+.lay-saga .mtg-rules{font-size:min(3.3cqw,var(--rules-size));height:100%}
+.saga-rows{display:flex;flex-direction:column;height:100%}
 .saga-reminder{font-style:italic;padding-bottom:1.2cqw}
 .saga-reminder p{margin:0 0 .4em}
-.saga-row{display:grid;grid-template-columns:8cqw minmax(0,1fr);align-items:center;gap:1.4cqw}
+.saga-row{flex:1 0 auto;padding-block:1.15cqw;border-top:.22cqw solid color-mix(in srgb,var(--card-text) 26%,transparent);display:grid;grid-template-columns:8cqw minmax(0,1fr);align-items:center;gap:1.4cqw}
 .saga-marks{display:grid;gap:.4cqw;justify-items:center}
 .saga-mark{display:grid;place-items:center;width:7cqw;height:7.8cqw;font-style:normal;font-weight:800;font-size:3.4cqw;color:var(--card-text);background:linear-gradient(160deg,var(--frame-gold-hi),var(--frame-gold-lo));clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
 .saga-text p{margin:0 0 .3em}
