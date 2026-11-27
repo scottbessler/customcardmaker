@@ -88,8 +88,11 @@ pub struct Card {
     /// of ours is drawn over it.
     pub keep_printed_text: bool,
     /// The other face of a double-faced (transform) card: a card of its own. A back face
-    /// has no back of its own.
+    /// has no back of its own, but may have a second half.
     pub back: Option<Box<Card>>,
+    /// The other half of a split, adventure or prepared card: a card of its own, drawn
+    /// beside this one rather than turned to. It has no back and no half of its own.
+    pub half: Option<Box<Card>>,
     /// The fields, by key. Every field the card's features allow is present, empty if unset.
     #[serde(flatten)]
     pub fields: BTreeMap<String, String>,
@@ -108,6 +111,7 @@ struct CardDoc {
     art_is_card: bool,
     keep_printed_text: bool,
     back: Option<Box<Card>>,
+    half: Option<Box<Card>>,
     #[serde(flatten)]
     fields: BTreeMap<String, String>,
 }
@@ -145,6 +149,7 @@ impl<'de> Deserialize<'de> for Card {
             art_is_card: doc.art_is_card,
             keep_printed_text: doc.keep_printed_text,
             back: doc.back,
+            half: doc.half,
             fields: doc.fields,
         };
         if legacy {
@@ -177,6 +182,7 @@ impl Card {
             art_is_card: false,
             keep_printed_text: false,
             back: None,
+            half: None,
             fields: BTreeMap::new(),
         };
         card.normalise();
@@ -215,11 +221,15 @@ impl Card {
     }
 
     /// What the card has, for a template to check its `requires` against: the features it
-    /// turned on, plus a second face when it has one.
+    /// turned on, a second face when it has one (`card.back`), and a second half
+    /// (`card.half`) — which are not the same thing.
     pub fn has_all(&self) -> Vec<String> {
         let mut ids = self.features.clone();
         if self.back.is_some() {
             ids.push(template::SECOND_FACE.to_string());
+        }
+        if self.half.is_some() {
+            ids.push(template::HALF.to_string());
         }
         ids
     }
@@ -324,15 +334,27 @@ impl Card {
             }
             back.validate()?;
         }
+        if let Some(half) = &self.half {
+            if half.back.is_some() || half.half.is_some() {
+                return Err(AppError::bad_request(
+                    "A second half cannot have a face or a half of its own.",
+                ));
+            }
+            half.validate()?;
+        }
         Ok(())
     }
 
-    /// Every upload this card shows, on either face.
+    /// Every upload this card shows, on any face or half.
     pub fn art_ids(&self) -> Vec<Uuid> {
-        self.art
+        let mut ids: Vec<Uuid> = self.art.into_iter().collect();
+        for other in [self.back.as_deref(), self.half.as_deref()]
             .into_iter()
-            .chain(self.back.as_ref().and_then(|back| back.art))
-            .collect()
+            .flatten()
+        {
+            ids.extend(other.art_ids());
+        }
+        ids
     }
 }
 
@@ -530,6 +552,60 @@ mod tests {
             bad_back.validate().is_err(),
             "the back is checked like a front"
         );
+    }
+
+    #[test]
+    fn a_second_half_is_its_own_thing_not_a_back() {
+        // A card may have a half, a back, or both; a layout asks for one or the other.
+        let half = Card {
+            half: Some(Box::new(of(&["cost"]).with("name", "Other half"))),
+            ..Card::default()
+        };
+        assert!(half.validate().is_ok());
+        assert!(half.has_all().contains(&"half".to_string()));
+        assert!(!half.has_all().contains(&"back".to_string()));
+
+        // A back may have a half of its own.
+        let back_with_half = Card {
+            back: Some(Box::new(Card {
+                half: Some(Box::new(Card::default())),
+                ..of(&["cost"])
+            })),
+            ..Card::default()
+        };
+        assert!(back_with_half.validate().is_ok());
+
+        // A half has neither a back nor a half.
+        for bad in [
+            Card {
+                half: Some(Box::new(Card::default())),
+                ..Card::default()
+            },
+            Card {
+                back: Some(Box::new(Card::default())),
+                ..Card::default()
+            },
+        ] {
+            let nested = Card {
+                half: Some(Box::new(bad)),
+                ..Card::default()
+            };
+            assert!(
+                nested.validate().is_err(),
+                "a half cannot have a face or a half"
+            );
+        }
+
+        // Every half's art is the card's art, for the owner-only rule.
+        let art = uuid::Uuid::new_v4();
+        let with_art = Card {
+            half: Some(Box::new(Card {
+                art: Some(art),
+                ..Card::default()
+            })),
+            ..Card::default()
+        };
+        assert_eq!(with_art.art_ids(), [art]);
     }
 
     #[test]

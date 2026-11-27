@@ -38,8 +38,18 @@ const FILES: &[&str] = &[
 const FRAMES: &[&str] = &["modern", "inherit"];
 
 /// A requirement a card meets by having a second face (`card.back`) rather than by a
-/// feature: the split, adventure and prepared layouts draw both faces at once.
+/// feature: a layout may want a card that turns over.
 pub const SECOND_FACE: &str = "back";
+
+/// A requirement a card meets by having a second half (`card.half`): the split, adventure
+/// and prepared layouts draw both halves at once. Not the same as a second face — a half is
+/// a whole card, and the card you turn to is not the card that is split in two.
+pub const HALF: &str = "half";
+
+/// The ids a template's `requires` / `excludes` may name, beyond the card's features.
+pub fn reserved(id: &str) -> bool {
+    id == SECOND_FACE || id == HALF
+}
 
 #[derive(Debug, Serialize)]
 pub struct Template {
@@ -121,7 +131,7 @@ fn list(value: Option<&str>) -> Result<Vec<String>, String> {
         .map(String::from)
         .collect();
     for id in &ids {
-        if id != SECOND_FACE && cardtype::feature(id).is_none() {
+        if !reserved(id) && cardtype::feature(id).is_none() {
             return Err(format!("\"{id}\" is not a card feature"));
         }
     }
@@ -178,10 +188,10 @@ pub fn parse(xml: &'static str) -> Result<Template, String> {
             "art" | "box" | "stat" => attrs(element, &["x", "y", "w", "h", "face"])?,
             other => return Err(format!("<{other}> is not a template element")),
         }
-        // `face="back"` draws the second face's fields in this place; anything else is
+        // `face="half"` draws the second half's fields in this place; anything else is
         // the card's own.
         if let Some(face) = element.attribute("face")
-            && !matches!(face, "front" | "back")
+            && !matches!(face, "front" | "half")
         {
             return Err(format!("face=\"{face}\" is not a face"));
         }
@@ -350,23 +360,25 @@ mod tests {
     }
 
     #[test]
-    fn a_part_may_draw_the_second_face() {
-        // A part that names the second face, and a template that needs one.
-        let xml: &'static str = r#"<template id="split" label="Split" requires="back cost" frame="inherit">
+    fn a_part_may_draw_the_second_half() {
+        // A part that names the second half, and a template that needs one.
+        let xml: &'static str = r#"<template id="split" label="Split" requires="half cost" frame="inherit">
             <art x="1" y="2" w="3" h="4"/>
-            <box x="1" y="2" w="3" h="4" face="back"><field name="rules_text"/></box>
+            <box x="1" y="2" w="3" h="4" face="half"><field name="rules_text"/></box>
         </template>"#;
         let split = parse(xml).unwrap();
-        assert_eq!(split.requires, ["back", "cost"]);
-        assert!(!split.is_look(), "a two-faced layout is not a look");
-        assert!(split.works_with(&["back".into(), "cost".into()]));
-        assert!(!split.works_with(&["cost".into()]), "no second face");
+        assert_eq!(split.requires, ["half", "cost"]);
+        assert!(!split.is_look(), "a two-halved layout is not a look");
+        assert!(split.works_with(&["half".into(), "cost".into()]));
+        assert!(!split.works_with(&["cost".into()]), "no second half");
+        // A second face is not a second half.
+        assert!(!split.works_with(&["back".into(), "cost".into()]));
 
         assert!(
             bad(r#"<template id="a" label="A" frame="modern"><art x="1" y="2" w="3" h="4" face="side"/></template>"#)
                 .contains("not a face")
         );
-        // `back` is a requirement, not a feature, but anything else still has to be one.
+        // `back` and `half` are requirements, not features; anything else still has to be one.
         assert!(
             bad(r#"<template id="a" label="A" frame="modern" requires="wings"/>"#)
                 .contains("not a card feature")
@@ -374,10 +386,10 @@ mod tests {
     }
 
     #[test]
-    fn the_two_faced_layouts_are_the_ones_that_need_a_back() {
+    fn the_two_halved_layouts_are_the_ones_that_need_a_half() {
         let needing: Vec<&str> = all()
             .iter()
-            .filter(|t| t.requires.iter().any(|id| id == SECOND_FACE))
+            .filter(|t| t.requires.iter().any(|id| id == HALF))
             .map(|t| t.id.as_str())
             .collect();
         assert_eq!(
@@ -392,6 +404,12 @@ mod tests {
                 "semi-split",
                 "landscape"
             ]
+        );
+        // Nothing asks for a second face: a card you turn over is not a card that is split.
+        assert!(
+            all()
+                .iter()
+                .all(|t| !t.requires.iter().any(|id| id == SECOND_FACE))
         );
         assert!(all().iter().all(|t| t.is_look() == (t.id == "modern")));
     }

@@ -38,6 +38,45 @@ function withFeatures(card, features) {
 
 /** A new back face: a blank card with the features a new card has. */
 const blankFace = (rarity) => withFeatures({ rarity }, choices.features.filter((f) => f.default).map((f) => f.id));
+
+const faceOf = (card, which) => (which === "back" ? card.back : which === "half" ? card.half : card) ?? card;
+
+/**
+ * A card the given template could draw, for its thumbnail: the card itself when it fits,
+ * else one carrying what the template asks for, so the picture is of that layout rather
+ * than of the one the card wears now.
+ */
+function previewFace(card, template) {
+  if (worksWith(template, hasAll(card))) return { ...card, template: template.id };
+  const features = card.features.filter((id) => !template.excludes.includes(id));
+  for (const id of template.requires) if (id !== "back" && id !== "half" && !features.includes(id)) features.push(id);
+  const preview = { ...card, features, template: template.id };
+  if (template.requires.includes("half") && !preview.half) {
+    preview.half = { ...blankFace(card.rarity), name: "2nd half", type_line: card.type_line, features: [...features] };
+  }
+  return preview;
+}
+
+/** A feature id in a few words, for a reason a card cannot wear a template yet. */
+const wordFor = (id) =>
+  id === "back"
+    ? "a second face"
+    : id === "half"
+      ? "a second half"
+      : (choices.features.find((f) => f.id === id)?.label.toLowerCase() ?? id);
+
+/** Why a card cannot wear a template yet, in a few words: `needs a second face`. */
+function whyNot(template, card) {
+  const has = hasAll(card);
+  const needs = template.requires.filter((id) => !has.includes(id)).map(wordFor);
+  const clashes = template.excludes.filter((id) => has.includes(id)).map(wordFor);
+  return [
+    needs.length ? `needs ${needs.join(" and ")}` : "",
+    clashes.length ? `not with ${clashes.join(" or ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
 const app = document.getElementById("app");
 const setId = app.dataset.setId;
 // The server says how long each field may be, so the form never keeps its own copy.
@@ -197,11 +236,14 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
         ? html`<p class="muted looks-note">A whole-card picture is drawn as it is, so it has no template. The colour below tints our text plates over it.</p>`
         : html`<fieldset class="looks">
         <legend>Template</legend>
-        ${allTemplates().filter((t) => worksWith(t, hasAll(card))).map(({ id, label }) => html`<label class=${`look-option${(card.template || template) === id ? " chosen" : ""}`}>
-          <input type="radio" name="template" value=${id} checked=${(card.template || template) === id} onChange=${() => onChange({ ...card, template: id === template ? "" : id })} />
-          <span class="look-thumb"><${CardFace} card=${{ ...card, template: id }} /></span>
-          <span class="look-name">${label}${id === template ? html` <small>set default</small>` : null}</span>
-        </label>`)}
+        ${allTemplates().map((t) => {
+          const usable = worksWith(t, hasAll(card));
+          return html`<label class=${`look-option${(card.template || template) === t.id ? " chosen" : ""}${usable ? "" : " unavailable"}`}>
+          <input type="radio" name="template" value=${t.id} checked=${(card.template || template) === t.id} disabled=${!usable} onChange=${() => onChange({ ...card, template: t.id === template ? "" : t.id })} />
+          <span class="look-thumb"><${CardFace} card=${previewFace(card, t)} /></span>
+          <span class="look-name">${t.label}${t.id === template ? html` <small>set default</small>` : null}${usable ? null : html` <small class="look-needs">${whyNot(t, card)}</small>`}</span>
+        </label>`;
+        })}
       </fieldset>`}
       <fieldset class="tints">
         <legend>Colour</legend>
@@ -262,6 +304,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
       <div class="row">
         ${has("loyalty") ? html`<${Field} label="Loyalty"><input placeholder="4" autocomplete="off" ...${text("loyalty")} /><//>` : null}
         ${has("power_toughness") ? html`<${Field} label="Power / toughness"><input placeholder="2/3" autocomplete="off" ...${text("power_toughness")} /><//>` : null}
+        ${has("defense") ? html`<${Field} label="Defense"><input placeholder="5" autocomplete="off" ...${text("defense")} /><//>` : null}
         ${has("artist") ? html`<${Field} label="Artist"><input autocomplete="off" ...${text("artist")} /><//>` : null}
       </div>
     </fieldset>
@@ -450,7 +493,10 @@ function SetPage() {
   if (!detail) return html`<p class="error" role="alert">${error}</p>`;
   const { set, cards } = detail;
   const current = cards.find((c) => c.id === selected);
-  const turned = side === "back" && current?.card.back;
+  // Which face of the card is being edited: its own, a back face (one you turn to), or a
+  // second half (a whole card drawn beside it). A back is not a half.
+  const editing = current ? faceOf(current.card, side) : undefined;
+  const turned = side === "back" && Boolean(current?.card.back);
   const face = (c) => html`<${CardFace} card=${c.card} flipped=${!!turned} template=${set.default_template} code=${set.code} number=${c.position} total=${cards.length} />`;
 
   return html`
@@ -533,18 +579,28 @@ function SetPage() {
           </div>
           <div class="editing">
             <div class="faces" role="group" aria-label="Faces">
+              ${current.card.back || current.card.half
+                ? html`<button type="button" class=${`face-tab${side === "front" ? " chosen" : ""}`} aria-pressed=${String(side === "front")} onClick=${() => setSide("front")}>Front</button>
+                  ${current.card.back
+                    ? html`<button type="button" class=${`face-tab${side === "back" ? " chosen" : ""}`} aria-pressed=${String(side === "back")} onClick=${() => setSide("back")}>Back</button>`
+                    : null}
+                  ${current.card.half
+                    ? html`<button type="button" class=${`face-tab${side === "half" ? " chosen" : ""}`} aria-pressed=${String(side === "half")} onClick=${() => setSide("half")}>2nd half</button>`
+                    : null}`
+                : null}
               ${current.card.back
-                ? html`<button type="button" class=${`face-tab${turned ? "" : " chosen"}`} aria-pressed=${String(!turned)} onClick=${() => setSide("front")}>Front</button>
-                  <button type="button" class=${`face-tab${turned ? " chosen" : ""}`} aria-pressed=${String(!!turned)} onClick=${() => setSide("back")}>Back</button>
-                  <button type="button" class="quiet danger-quiet remove-back" onClick=${() => { setSide("front"); edit(current.id, { ...current.card, back: null }); }}>Remove back face</button>`
+                ? html`<button type="button" class="quiet danger-quiet remove-back" onClick=${() => { setSide("front"); edit(current.id, { ...current.card, back: null }); }}>Remove back face</button>`
                 : html`<button type="button" class="quiet add-back" onClick=${() => { edit(current.id, { ...current.card, back: blankFace(current.card.rarity) }); setSide("back"); }}>Add a back face</button>`}
+              ${current.card.half
+                ? html`<button type="button" class="quiet danger-quiet remove-half" onClick=${() => { setSide("front"); edit(current.id, { ...current.card, half: null }); }}>Remove 2nd half</button>`
+                : html`<button type="button" class="quiet add-half" onClick=${() => { edit(current.id, { ...current.card, half: blankFace(current.card.rarity) }); setSide("half"); }}>Add a second half</button>`}
             </div>
             <${Editor}
-              key=${`${current.id}${turned ? "-back" : ""}`}
-              card=${turned ? current.card.back : current.card}
+              key=${`${current.id}-${side}`}
+              card=${editing}
               template=${set.default_template}
-              credit=${credits[(turned ? current.card.back : current.card).art]}
-              onChange=${(card) => edit(current.id, turned ? { ...current.card, back: card } : card)}
+              credit=${credits[editing?.art]}
+              onChange=${(card) => edit(current.id, side === "back" ? { ...current.card, back: card } : side === "half" ? { ...current.card, half: card } : card)}
               onSetDefault=${(default_template) => patchSet({ default_template })}
               onCredit=${(id, credit) => setCredits((now) => ({ ...now, [id]: credit }))}
             />

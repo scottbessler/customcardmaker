@@ -51,8 +51,8 @@ function cardFor(template) {
   if (has.has("power_toughness")) card.power_toughness = "2/2";
   if (has.has("loyalty")) card.loyalty = "4";
   if (has.has("defense")) card.defense = "5";
-  if (template.requires.includes("back")) {
-    card.back = { ...card, name: `${template.label} (back)`, template: "", type_line: "Instant", rules_text: "Draw a card." };
+  if (template.requires.includes("half")) {
+    card.half = { ...card, name: `${template.label} (2nd half)`, template: "", type_line: "Instant", rules_text: "Draw a card." };
   }
   return card;
 }

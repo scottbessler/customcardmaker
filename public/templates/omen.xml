@@ -1,5 +1,5 @@
 <!-- Omen: like prepared, with the omen's own text given the wider box. -->
-<template id="omen" label="Omen" requires="back" frame="inherit">
+<template id="omen" label="Omen" requires="half" frame="inherit">
   <plate role="name" x="4.6" y="6.9" w="90.8" h="7.9">
     <field name="name"/>
     <field name="mana_cost"/>
@@ -11,7 +11,7 @@
   <box x="6.8" y="80.5" w="34" h="47.5">
     <field name="rules_text"/>
   </box>
-  <box x="43" y="80.5" w="52" h="47.5" face="back">
+  <box x="43" y="80.5" w="52" h="47.5" face="half">
     <field name="rules_text"/>
   </box>
 </template>

@@ -30,10 +30,15 @@ export function allTemplates() {
 }
 
 /**
- * What a card has, for a template's `requires`: the features it turned on, plus a second
- * face when it has one (the split, adventure and prepared layouts draw both at once).
+ * What a card has, for a template's `requires`: the features it turned on, a second face
+ * when it has one, and a second half — which are not the same thing. A half is a whole
+ * card drawn beside this one; a face is one you turn to.
  */
-export const hasAll = (card) => (card.back ? [...card.features, "back"] : card.features);
+export const hasAll = (card) => [
+  ...card.features,
+  ...(card.back ? ["back"] : []),
+  ...(card.half ? ["half"] : []),
+];
 
 /** A look: a frame of its own that any card can wear, so a set may default to it (the server's rule). */
 export const isLook = (template) => !template.requires.length && !template.excludes.length && template.frame !== "inherit";
@@ -54,8 +59,13 @@ export function resolveTemplate(card, setDefault = "modern") {
   const layout =
     (named?.body.length ? named : null) ??
     // Features only decide a layout for you (a card with loyalty is a planeswalker); a
-    // layout that wants a second face is the author's to pick, never automatic.
-    list.find((t) => t.requires.length && !t.requires.includes("back") && worksWith(t, has)) ??
+    // layout that wants a second face or half is the author's to pick, never automatic.
+    list.find(
+      (t) =>
+        t.requires.length &&
+        !t.requires.some((id) => id === "back" || id === "half") &&
+        worksWith(t, has),
+    ) ??
     list.find((t) => t.id === look);
   return { layout, look: layout?.frame && layout.frame !== "inherit" ? layout.frame : look };
 }

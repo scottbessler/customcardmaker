@@ -1,6 +1,6 @@
 <!-- Adventure: the card, with the adventure's own name and text in a box beside its
      text. The adventure is the back face. -->
-<template id="adventure" label="Adventure" requires="back cost" frame="inherit">
+<template id="adventure" label="Adventure" requires="half cost" frame="inherit">
   <plate role="name" x="4.6" y="6.9" w="90.8" h="7.9">
     <field name="name"/>
     <field name="mana_cost"/>
@@ -13,11 +13,11 @@
     <field name="rules_text"/>
     <field name="flavor_text"/>
   </box>
-  <plate role="name" x="51" y="80.5" w="44" h="7.9" face="back">
+  <plate role="name" x="51" y="80.5" w="44" h="7.9" face="half">
     <field name="name"/>
     <field name="mana_cost"/>
   </plate>
-  <box x="51" y="89" w="44" h="39" face="back">
+  <box x="51" y="89" w="44" h="39" face="half">
     <field name="rules_text"/>
   </box>
   <stat x="94.4" y="133.6">

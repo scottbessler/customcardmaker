@@ -76,8 +76,9 @@ nothing about real Magic cards.
   `omen`, `split`, `fuse`, `aftermath`, `semi-split`, `landscape` (`card.template`; empty means
   the set's `default_template`, itself `modern`, and only ever a look every card can wear). A
   template names what the card needs and what it cannot draw, and a card may not name one that
-  cannot draw what it has (400). A two-halved layout draws the card's second face beside its
-  own, so the card is one document with a `back`. The editor shows a thumbnail of the card in
+  cannot draw what it has (400). A two-halved layout (a split, adventure or prepared card) draws
+  the card's second **half** beside its own, so the card is one document with a `half` — which is
+  not a `back` (R13). The editor shows a thumbnail of the card in
   each, and a colour chip for each frame colour plus Auto. An unknown template or frame is a
   400. The gallery draws a public set with its default. (`src/card.rs`, `public/card-face.js`)
 - **R12.** The standard layout is a real card's: the art box is the top half of the card
@@ -236,6 +237,13 @@ nothing about real Magic cards.
   and a Flip turns it, in the editor and in the public gallery. A back with no cost of its
   own wears the front's colour. A name plate carries an open ring on the front and a solid
   disc on the back (not over a scan, which has its own).
+- **R13.** A card may have a **second half** (`card.half`), the other half of a split, adventure
+  or prepared card. A half is a card of its own — its own features, fields, art and template —
+  but it has no back and no half of its own, because it is read at once rather than turned to.
+  A layout asks for one with the reserved requirement `half` (never with a feature), and the
+  two-halved layouts draw the card and its half together; neither gets the transform marker.
+  A **back** and a **half** are different things: a back (`card.back`) is a whole card you turn
+  to (R10) and may itself have a half; a half is a whole card drawn beside this one.
 - **B14.** `card.art_is_card` says the card's picture is a whole printed card, not
   just art. Such a card is drawn with the picture edge to edge and our name plate,
   type plate and text box laid over it, in a Nexus card's places and opaque, so
