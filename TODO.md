@@ -91,8 +91,10 @@ that changes behaviour, not here.
         what it gave the tests (every frame rendered side by side) as a dev-only page
   - [x] Layouts: token, planeswalker (with loyalty) and saga, drawn natively and over
         a Nexus scan, in every template
-  - [ ] Still to do: transform / double-faced cards (two faces, flip in the editor, linked
-        on import by `<related>`), then split, adventure, flip and modal layouts
+  - [x] Transform / double-faced cards: a back face, Front/Back tabs and a Flip, linked on
+        import by `<related>`
+  - [ ] Still to do: Nexus draws a transform front with its own crown frame, which peeks out
+        above our plate on a scan; measure it. Then split, adventure, flip and modal layouts
   - [ ] Still to do: match the real MTG Nexus template list (Nexus's creator refuses automated
         fetches, so ask for names or screenshots)
 

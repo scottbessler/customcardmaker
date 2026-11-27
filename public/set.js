@@ -12,6 +12,11 @@ const RARITIES = ["common", "uncommon", "rare", "mythic"];
 // Left to right as they are printed on the cards.
 const PALETTE = ["W", "U", "B", "R", "G", "C", "X", "0", "1", "2", "3", "4", "5", "6", "T"];
 const FIELD_LABELS = { mana_cost: "mana cost", rules_text: "rules text" };
+// What a new back face starts as: every field the API would send for a blank card.
+const BLANK_FACE = {
+  name: "", mana_cost: "", type_line: "", rarity: "common", rules_text: "", flavor_text: "", power_toughness: "",
+  loyalty: "", layout: "", artist: "", art: null, art_is_card: false, keep_printed_text: false, frame: "", template: "", back: null,
+};
 const app = document.getElementById("app");
 const setId = app.dataset.setId;
 // The server says how long each field may be, so the form never keeps its own copy.
@@ -236,6 +241,8 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
 function SetPage() {
   const [detail, setDetail] = useState(null);
   const [selected, setSelected] = useState(null);
+  // Which face of a double-faced card is being edited.
+  const [side, setSide] = useState("front");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(null);
@@ -290,6 +297,9 @@ function SetPage() {
   useEffect(() => {
     document.querySelector(".filmstrip .mtg-card.selected")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [selected]);
+
+  // Choosing another card starts on its front.
+  useEffect(() => setSide("front"), [selected]);
 
   function edit(id, card) {
     setDetail((d) => ({ ...d, cards: d.cards.map((c) => (c.id === id ? { ...c, card } : c)) }));
@@ -410,7 +420,8 @@ function SetPage() {
   if (!detail) return html`<p class="error" role="alert">${error}</p>`;
   const { set, cards } = detail;
   const current = cards.find((c) => c.id === selected);
-  const face = (c) => html`<${CardFace} card=${c.card} template=${set.default_template} code=${set.code} number=${c.position} total=${cards.length} />`;
+  const turned = side === "back" && current?.card.back;
+  const face = (c) => html`<${CardFace} card=${c.card} flipped=${!!turned} template=${set.default_template} code=${set.code} number=${c.position} total=${cards.length} />`;
 
   return html`
     <section class="set-bar">
@@ -483,19 +494,31 @@ function SetPage() {
           <div class="stage">
             <div class="preview">${face(current)}</div>
             <div class="stage-actions">
+              ${current.card.back
+                ? html`<button type="button" class="quiet flip-card" onClick=${() => setSide(turned ? "front" : "back")}>Flip</button>`
+                : null}
               <button type="button" class="quiet duplicate-card" onClick=${() => addCard(current.card)}>Duplicate</button>
               <button type="button" class="quiet danger-quiet delete-card" onClick=${() => setConfirming("card")}>Delete</button>
             </div>
           </div>
-          <${Editor}
-            key=${current.id}
-            card=${current.card}
-            template=${set.default_template}
-            credit=${credits[current.card.art]}
-            onChange=${(card) => edit(current.id, card)}
-            onSetDefault=${(default_template) => patchSet({ default_template })}
-            onCredit=${(id, credit) => setCredits((now) => ({ ...now, [id]: credit }))}
-          />
+          <div class="editing">
+            <div class="faces" role="group" aria-label="Faces">
+              ${current.card.back
+                ? html`<button type="button" class=${`face-tab${turned ? "" : " chosen"}`} aria-pressed=${String(!turned)} onClick=${() => setSide("front")}>Front</button>
+                  <button type="button" class=${`face-tab${turned ? " chosen" : ""}`} aria-pressed=${String(!!turned)} onClick=${() => setSide("back")}>Back</button>
+                  <button type="button" class="quiet danger-quiet remove-back" onClick=${() => { setSide("front"); edit(current.id, { ...current.card, back: null }); }}>Remove back face</button>`
+                : html`<button type="button" class="quiet add-back" onClick=${() => { edit(current.id, { ...current.card, back: { ...BLANK_FACE, rarity: current.card.rarity } }); setSide("back"); }}>Add a back face</button>`}
+            </div>
+            <${Editor}
+              key=${`${current.id}${turned ? "-back" : ""}`}
+              card=${turned ? current.card.back : current.card}
+              template=${set.default_template}
+              credit=${credits[(turned ? current.card.back : current.card).art]}
+              onChange=${(card) => edit(current.id, turned ? { ...current.card, back: card } : card)}
+              onSetDefault=${(default_template) => patchSet({ default_template })}
+              onCredit=${(id, credit) => setCredits((now) => ({ ...now, [id]: credit }))}
+            />
+          </div>
         </section>`
       : html`<p class="muted empty">No cards yet. Add the first one.</p>`}
 

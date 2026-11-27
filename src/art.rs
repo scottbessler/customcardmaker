@@ -140,7 +140,9 @@ impl ArtStore {
                      WHERE a.id = ?1
                        AND (a.owner_id = ?2
                             OR EXISTS (SELECT 1 FROM cards c JOIN sets s ON s.id = c.set_id
-                                       WHERE s.is_public = 1 AND json_extract(c.doc, '$.art') = a.id))",
+                                       WHERE s.is_public = 1
+                                         AND a.id IN (json_extract(c.doc, '$.art'),
+                                                      json_extract(c.doc, '$.back.art'))))",
                     [id.to_string(), viewer],
                     |row| row.get(0),
                 )

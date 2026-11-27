@@ -44,10 +44,14 @@ function Chapters({ text }) {
  * One printed card. Its size is its container's: every measurement inside is
  * in container-width units, so it renders the same at any scale.
  */
-export function CardFace({ card, template = "modern", code = "", number = 0, total = 0, selected = false, onClick }) {
-  const frame = frameOf(card);
+export function CardFace({ card: whole, flipped = false, template = "modern", code = "", number = 0, total = 0, selected = false, onClick }) {
+  // A double-faced card shows one face at a time; the back is a card of its own.
+  const turned = flipped && whole.back;
+  const card = turned ? whole.back : whole;
+  // A back with no cost of its own keeps the front's colour, as printed ones do.
+  const frame = card.frame || (turned && !card.mana_cost ? frameOf(whole) : frameOf(card));
   // A card that names a template wears it; otherwise it wears the set's.
-  const look = card.template || template;
+  const look = card.template || whole.template || template;
   // A whole-card picture is the card; the plates and text box go on top of it.
   const scan = card.art && card.art_is_card;
   // What is on the card and where; the template is how it is drawn.
@@ -58,7 +62,8 @@ export function CardFace({ card, template = "modern", code = "", number = 0, tot
   const label = card.name || "Untitled card";
   const Tag = onClick ? "button" : "article";
   return html`<${Tag}
-    class=${`mtg-card tpl-${look} lay-${layout} frame-${frame} rarity-${card.rarity}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
+    data-face=${whole.back ? (turned ? "back" : "front") : undefined}
+    class=${`mtg-card tpl-${look} lay-${layout} frame-${frame} rarity-${card.rarity}${whole.back ? " has-back" : ""}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
     style=${scan ? `background-image:url(${artUrl(card.art)})` : undefined}
     aria-label=${label}
     aria-pressed=${onClick ? String(selected) : undefined}
@@ -66,6 +71,7 @@ export function CardFace({ card, template = "modern", code = "", number = 0, tot
   >
     <div class="mtg-frame">
       <header class="mtg-name">
+        ${whole.back ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
         <span class="mtg-title">${card.name || html`<em>Untitled</em>`}</span>
         <span class="mtg-cost">${costSymbols(card.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>
       </header>

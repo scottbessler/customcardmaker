@@ -1399,3 +1399,135 @@ async fn a_card_may_name_a_layout_and_a_loyalty_but_only_real_layouts() {
         assert_eq!(put(bad).await.status, StatusCode::BAD_REQUEST);
     }
 }
+
+#[tokio::test]
+async fn a_back_face_is_part_of_the_card_and_its_art_follows_the_same_rules() {
+    let app = app().await;
+    let ada = register(&app, "Ada").await;
+    let bob = register(&app, "Bob").await;
+
+    let front_art = upload(&app, &ada, PNG).await.1["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let back_art = upload(&app, &ada, PNG).await.1["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let set = call(
+        &app,
+        "POST",
+        "/api/sets",
+        Some(json!({"name": "Two", "code": "TWO"})),
+        Some(&ada),
+    )
+    .await
+    .body["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let made = call(
+        &app,
+        "POST",
+        &format!("/api/sets/{set}/cards"),
+        Some(json!({"name": "Day", "art": front_art, "back": {"name": "Night", "art": back_art, "layout": "saga"}})),
+        Some(&ada),
+    )
+    .await;
+    assert_eq!(made.status, StatusCode::CREATED, "{:?}", made.body);
+    let card = made.body["id"].as_str().unwrap().to_string();
+    assert_eq!(made.body["card"]["back"]["name"], "Night");
+    assert_eq!(made.body["card"]["back"]["layout"], "saga");
+
+    // A back face is checked like a front, and has no back of its own.
+    for bad in [
+        json!({"back": {"layout": "split"}}),
+        json!({"back": {"back": {"name": "Deeper"}}}),
+    ] {
+        let put = call(
+            &app,
+            "PUT",
+            &format!("/api/cards/{card}"),
+            Some(bad),
+            Some(&ada),
+        )
+        .await;
+        assert_eq!(put.status, StatusCode::BAD_REQUEST);
+    }
+
+    // Someone else's upload cannot be put on the back.
+    let bobs = call(
+        &app,
+        "POST",
+        "/api/sets",
+        Some(json!({"name": "Bobs", "code": "BOB"})),
+        Some(&bob),
+    )
+    .await
+    .body["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let stolen = call(
+        &app,
+        "POST",
+        &format!("/api/sets/{bobs}/cards"),
+        Some(json!({"back": {"art": back_art}})),
+        Some(&bob),
+    )
+    .await;
+    assert_eq!(stolen.status, StatusCode::BAD_REQUEST);
+
+    // Publishing the set shows the back's art too, and credits for both faces travel with it.
+    let get = |who: Option<&str>, id: &str| {
+        let app = app.clone();
+        let uri = format!("/api/art/{id}");
+        let who = who.map(str::to_string);
+        async move { raw(&app, "GET", &uri, vec![], who.as_deref()).await.0 }
+    };
+    assert_eq!(get(None, &back_art).await, StatusCode::NOT_FOUND);
+    publish(&app, &ada, &set, true).await;
+    assert_eq!(get(None, &back_art).await, StatusCode::OK);
+    assert_eq!(get(None, &front_art).await, StatusCode::OK);
+    publish(&app, &ada, &set, false).await;
+    assert_eq!(get(None, &back_art).await, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn importing_a_double_faced_card_brings_both_faces_and_both_pictures() {
+    let app = app().await;
+    let me = register(&app, "Ada").await;
+    let url = picture_server().await;
+    let xml = format!(
+        r#"<cockatrice_carddatabase><cards>
+<card><name>Day</name><text>Flip.</text><prop><layout>transform</layout><side>front</side><type>Creature — Human</type><manacost>{{1}}{{W}}</manacost><pt>1/1</pt></prop><set rarity="rare" picurl="{url}">ABC</set><related attach="transform">Night</related></card>
+<card><name>Night</name><text>Flipped.</text><prop><layout>transform</layout><side>back</side><type>Creature — Werewolf</type><pt>2/2</pt></prop><set rarity="rare" picurl="{url}">ABC</set><related attach="transform">Day</related></card>
+</cards></cockatrice_carddatabase>"#
+    );
+    let reply = call(
+        &app,
+        "POST",
+        "/api/import/cockatrice",
+        Some(json!({"xml": xml, "set_code": "ABC", "images": true, "whole_cards": true})),
+        Some(&me),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{:?}", reply.body);
+    assert_eq!(reply.body["cards_imported"], 1, "two faces are one card");
+    assert_eq!(reply.body["images_imported"], 2);
+
+    let set = reply.body["set_id"].as_str().unwrap();
+    let detail = call(&app, "GET", &format!("/api/sets/{set}"), None, Some(&me)).await;
+    let card = &detail.body["cards"][0]["card"];
+    assert_eq!(card["name"], "Day");
+    assert_eq!(card["back"]["name"], "Night");
+    let (front, back) = (
+        card["art"].as_str().unwrap(),
+        card["back"]["art"].as_str().unwrap(),
+    );
+    assert_ne!(front, back, "each face has a picture of its own");
+    assert_eq!(card["art_is_card"], true);
+    assert_eq!(card["back"]["art_is_card"], true);
+    // Both pictures are the importer's own uploads, credits included.
+    assert!(detail.body["credits"].is_object());
+}

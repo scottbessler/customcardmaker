@@ -176,3 +176,10 @@ button.mtg-card{cursor:pointer}
 /* Over a scan the text box must hide what is printed under it, so a token's, which is
    see-through over its art, is solid there. */
 .art-card.lay-token .mtg-box{background-color:var(--box)}
+
+/* A double-faced card marks its name plate: an open ring on the front, a solid disc on
+   the back, as the printed ones do. A scan has its own printed one. */
+.mtg-dfc{flex:none;width:3.6cqw;height:3.6cqw;margin-right:1.4cqw;border-radius:50%;box-sizing:border-box;border:.6cqw solid var(--card-text)}
+.mtg-dfc.dfc-back{background:var(--card-text)}
+.has-back .mtg-title{flex:1;min-width:0}
+.art-card .mtg-dfc{display:none}

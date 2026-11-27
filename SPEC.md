@@ -178,7 +178,10 @@ nothing about real Magic cards.
   asks whether they are; if so each card with a picture is marked `art_is_card`
   (B14). A token (by its type line), planeswalker or saga (by its type line or layout)
   becomes that layout (R9) and its loyalty is read; a layout we have no geometry for
-  (split, flip, adventure...) gets `keep_printed_text`, so its picture shows as printed. Rules text drops blank lines
+  (split, flip, adventure...) gets `keep_printed_text`, so its picture shows as printed.
+  A transform's two `<card>`s (the back marked `side=back`, each naming the other in
+  `<related>`) become one card with a back face, each face with its own picture; a back
+  whose front is not in the file stays a card of its own. Rules text drops blank lines
   between paragraphs, and Nexus's `special` rarity is read as mythic. The set and its cards are written together or not at all,
   and only into the signed-in account. A signed-out visitor to `/import` is sent
   to `/`.
@@ -194,6 +197,14 @@ nothing about real Magic cards.
   numeral. A token has no mana cost, a centred name, and the art behind it all. An unknown
   layout, or a loyalty over 4 characters, is a 400. (`public/frame.js`: `abilities`,
   `chapters`.)
+- **R10.** A card may have a **back face** (`card.back`), making it a double-faced (transform)
+  card. The back is a card of its own — name, cost, type, art, layout, template — but has no
+  back of its own, and is checked like a front (a bad back is a 400). Its art follows the
+  front's rules: only the owner's uploads may go on it, and it is public with the set. The
+  editor has Front / Back tabs and Add / Remove back face; a card shows one face at a time
+  and a Flip turns it, in the editor and in the public gallery. A back with no cost of its
+  own wears the front's colour. A name plate carries an open ring on the front and a solid
+  disc on the back (not over a scan, which has its own).
 - **B14.** `card.art_is_card` says the card's picture is a whole printed card, not
   just art. Such a card is drawn with the picture edge to edge and our name plate,
   type plate and text box laid over it, in a Nexus card's places and opaque, so

@@ -149,6 +149,9 @@ pub struct Card {
     pub frame: String,
     /// The look of the card; empty means "the set's default".
     pub template: String,
+    /// The other face of a double-faced (transform) card: a whole card of its own, with
+    /// its own name, type, art and layout. A back face has no back of its own.
+    pub back: Option<Box<Card>>,
 }
 
 fn within(field: &str, value: &str, max: usize, multiline: bool) -> Result<(), AppError> {
@@ -192,7 +195,23 @@ impl Card {
         if !self.template.is_empty() && !is_template(&self.template) {
             return Err(AppError::bad_request("That is not a card template."));
         }
+        if let Some(back) = &self.back {
+            if back.back.is_some() {
+                return Err(AppError::bad_request(
+                    "A back face cannot have a back face of its own.",
+                ));
+            }
+            back.validate()?;
+        }
         Ok(())
+    }
+
+    /// Every upload this card shows, on either face.
+    pub fn art_ids(&self) -> Vec<Uuid> {
+        self.art
+            .into_iter()
+            .chain(self.back.as_ref().and_then(|back| back.art))
+            .collect()
     }
 }
 
@@ -292,5 +311,37 @@ mod tests {
             ..Card::default()
         };
         assert!(long.validate().is_err());
+    }
+
+    #[test]
+    fn a_card_may_have_a_back_face_but_the_back_may_not_have_one() {
+        let ok = Card {
+            name: "Front".into(),
+            back: Some(Box::new(Card {
+                name: "Back".into(),
+                ..Card::default()
+            })),
+            ..Card::default()
+        };
+        assert!(ok.validate().is_ok());
+        let nested = Card {
+            back: Some(Box::new(Card {
+                back: Some(Box::default()),
+                ..Card::default()
+            })),
+            ..Card::default()
+        };
+        assert!(nested.validate().is_err());
+        let bad_back = Card {
+            back: Some(Box::new(Card {
+                layout: "split".into(),
+                ..Card::default()
+            })),
+            ..Card::default()
+        };
+        assert!(
+            bad_back.validate().is_err(),
+            "the back is checked like a front"
+        );
     }
 }

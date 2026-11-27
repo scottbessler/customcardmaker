@@ -17,10 +17,17 @@ pub struct ImportedCard {
     pub card: Card,
     /// The `picurl` on the card's `<set>`, if the file gives one.
     pub image_url: Option<String>,
-    /// A layout MTG Nexus draws differently from a normal card (token, planeswalker,
-    /// saga), so our text cannot be laid over its picture: the picture is kept as
-    /// printed.
+    /// A layout Nexus draws in a way we have no geometry for, so our text cannot be
+    /// laid over its picture: the picture is kept as printed.
     pub printed_layout: bool,
+    /// The file marks this as the back face of a double-faced card.
+    pub is_back: bool,
+    /// The other face's name, from `<related attach="transform">`.
+    pub related: Option<String>,
+    /// Once the two faces are joined: the back's picture, and whether it is kept as
+    /// printed. (`card.back` holds the rest of it.)
+    pub back_image_url: Option<String>,
+    pub back_printed_layout: bool,
 }
 
 /// What a Cockatrice file says about the set and the cards in it.
@@ -42,6 +49,7 @@ pub fn parse(xml: &str) -> Result<Database, AppError> {
         .filter(|node| node.has_tag_name("card"))
         .map(card)
         .collect::<Result<Vec<_>, _>>()?;
+    let cards = join_faces(cards);
     if cards.is_empty() {
         return Err(AppError::bad_request("That file has no cards in it."));
     }
@@ -121,7 +129,54 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
             .and_then(|set| set.attribute("picurl"))
             .and_then(web_url),
         printed_layout,
+        is_back: prop
+            .and_then(|prop| text(prop, "side"))
+            .is_some_and(|side| side.eq_ignore_ascii_case("back")),
+        related: node
+            .children()
+            .find(|child| child.has_tag_name("related"))
+            .filter(|related| {
+                related
+                    .attribute("attach")
+                    .is_none_or(|attach| attach.eq_ignore_ascii_case("transform"))
+            })
+            .and_then(|related| related.text())
+            .map(|name| name.trim().to_string())
+            .filter(|name| !name.is_empty()),
+        back_image_url: None,
+        back_printed_layout: false,
     })
+}
+
+/// Nexus writes a double-faced card as two `<card>`s, the back marked `side=back`, each
+/// naming the other in `<related>`. They become one card with a back face. A back whose
+/// front is not in the file (or does not name it in return) stays a card of its own.
+fn join_faces(cards: Vec<ImportedCard>) -> Vec<ImportedCard> {
+    let mut joined: Vec<ImportedCard> = Vec::new();
+    let mut backs: Vec<ImportedCard> = Vec::new();
+    for item in cards {
+        if item.is_back && item.related.is_some() {
+            backs.push(item);
+        } else {
+            joined.push(item);
+        }
+    }
+    for back in backs {
+        let front = joined.iter_mut().find(|front| {
+            front.card.back.is_none()
+                && front.related.as_deref() == Some(back.card.name.as_str())
+                && back.related.as_deref() == Some(front.card.name.as_str())
+        });
+        match front {
+            Some(front) => {
+                front.back_image_url = back.image_url;
+                front.back_printed_layout = back.printed_layout;
+                front.card.back = Some(Box::new(back.card));
+            }
+            None => joined.push(back),
+        }
+    }
+    joined
 }
 
 /// Only an `http`/`https` URL is worth fetching; anything else (a `file:` or a
@@ -331,5 +386,34 @@ You can only Activate this Ability: Sacrifice Bandage
         // One we have no geometry for keeps its picture as printed.
         let printed: Vec<_> = cards.iter().map(|c| c.printed_layout).collect();
         assert_eq!(printed, [false, false, false, false, true]);
+    }
+
+    #[test]
+    fn the_two_faces_of_a_transform_card_become_one_card() {
+        let xml = r#"<cockatrice_carddatabase><cards>
+<card><name>Day</name><text>Flip me.</text><prop><layout>transform</layout><side>front</side><type>Creature — Human</type><manacost>{1}{W}</manacost><pt>1/1</pt></prop><set rarity="rare" picurl="https://example.test/day-a.jpg" num="7">ABC</set><related attach="transform">Night</related></card>
+<card><name>Solo</name><text>Alone.</text><prop><layout>normal</layout><side>front</side><type>Instant</type></prop><set rarity="common">ABC</set></card>
+<card><name>Night</name><text>Flipped.</text><prop><layout>transform</layout><side>back</side><type>Creature — Werewolf</type><pt>2/2</pt></prop><set rarity="rare" picurl="https://example.test/day-b.jpg" num="7">ABC</set><related attach="transform">Day</related></card>
+<card><name>Orphan</name><text>No front.</text><prop><layout>transform</layout><side>back</side><type>Instant</type></prop><set rarity="rare">ABC</set><related attach="transform">Missing</related></card>
+</cards></cockatrice_carddatabase>"#;
+        let db = parse(xml).unwrap();
+        let names: Vec<_> = db.cards.iter().map(|c| c.card.name.as_str()).collect();
+        // The back leaves the list; a back with no front in the file stays, at the end.
+        assert_eq!(names, ["Day", "Solo", "Orphan"]);
+        let day = &db.cards[0];
+        let back = day.card.back.as_ref().expect("Day has a back face");
+        assert_eq!(
+            (back.name.as_str(), back.power_toughness.as_str()),
+            ("Night", "2/2")
+        );
+        assert_eq!(
+            day.image_url.as_deref(),
+            Some("https://example.test/day-a.jpg")
+        );
+        assert_eq!(
+            day.back_image_url.as_deref(),
+            Some("https://example.test/day-b.jpg")
+        );
+        assert!(db.cards[1].card.back.is_none());
     }
 }
