@@ -160,7 +160,7 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
 | `token` | | cost | picture behind everything, centred name |
 | `textless-token` | | cost | the picture, a name and a stat, and nothing else |
 | `game-marker` | | cost | a name and a box for what it does; no art |
-| `planeswalker` | loyalty | | tall art, abilities over its foot, loyalty badge |
+| `planeswalker` | loyalty | | tall art, abilities over its foot, loyalty badge and optional P/T badge |
 | `battle` | defense | stats | the standard frame with a defense badge |
 | `adventure` | half cost | | the card, with the adventure's own name and text beside it |
 | `prepared` | half | | the card, with the prepared spell's text beside it |

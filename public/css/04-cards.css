@@ -108,6 +108,7 @@ button.mtg-card{cursor:pointer}
 .lay-planeswalker .mtg-type{padding:0 3.4cqw}
 .lay-planeswalker .mtg-box{padding:1.6cqw 3cqw 1.6cqw 1.4cqw;justify-content:space-evenly}
 .lay-planeswalker .mtg-loyalty{min-width:0;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw;border-radius:1.4cqw}
+.lay-planeswalker:has(.mtg-pt:not(.mtg-loyalty)) .mtg-foot{right:46cqw}
 /* Saga: chapters down the left, art on the right, the type line across the foot. */
 .lay-saga .mtg-name{padding:0 3.4cqw}
 .lay-saga .mtg-box{padding:2cqw 2cqw 2cqw 3.4cqw;justify-content:space-evenly;border-radius:0}
