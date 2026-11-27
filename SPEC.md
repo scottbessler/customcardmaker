@@ -221,7 +221,8 @@ nothing about real Magic cards.
   (`cost` unless it was a token; a stat if it had a value; `loyalty` for a planeswalker; a
   saga or token layout becomes that template). How a card is drawn is its **template** (R8),
   which must be able to draw its features. For now the layout follows from the features and
-  template: a card with `loyalty` has tall art, abilities over its foot and a loyalty badge;
+  template: a card with `loyalty` has tall art, abilities over its foot and a loyalty badge. With `power_toughness`, draw a
+  second badge beside loyalty;
   the `token` template (no cost) puts the art behind everything; the `saga` template (no
   stats) has chapters down the left and art on the right. The places are those of a real MTG
   Nexus card, in card-width units, so a card drawn natively and a scan with our text laid

@@ -13,6 +13,9 @@
   <box x="5.4" y="88" w="87.6" h="38.4">
     <field name="rules_text" as="abilities"/>
   </box>
+  <stat x="77" y="133.6">
+    <field name="power_toughness"/>
+  </stat>
   <stat x="79.5" y="124.4" w="15" h="9.8">
     <field name="loyalty"/>
   </stat>

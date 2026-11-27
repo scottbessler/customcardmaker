@@ -206,3 +206,22 @@ test("a standard card is split the way a real one is", async ({ page }) => {
   await page.locator(".set-settings summary").click();
   await expect(page.locator('select[name="default-template"] option')).toHaveText(["Modern"]);
 });
+
+test("a creature planeswalker draws both stats without overlapping badges or footer text", async ({ page }) => {
+  await registerUser(page);
+  const set = await (await page.request.post("/api/sets", { data: { name: "Creature planeswalkers", code: "CPW" } })).json();
+  const created = await page.request.post(`/api/sets/${set.id}/cards`, { data: {
+    features: ["power_toughness", "loyalty"], template: "planeswalker",
+    name: "Living Planeswalker", type_line: "Creature Planeswalker", power_toughness: "2/3", loyalty: "4",
+  } });
+  expect(created.ok()).toBe(true);
+  await page.goto(`/sets/${set.id}`);
+  const preview = page.locator(".preview .mtg-card");
+  const power = preview.locator(".mtg-pt:not(.mtg-loyalty)");
+  const loyalty = preview.locator(".mtg-loyalty");
+  await expect(power).toHaveText("2/3");
+  await expect(loyalty).toHaveText("4");
+  const [pt, badge, footer] = await Promise.all([power, loyalty, preview.locator(".mtg-foot")].map(async (part) => (await part.boundingBox())!));
+  expect(pt.x + pt.width).toBeLessThan(badge.x);
+  expect(footer.x + footer.width).toBeLessThan(pt.x);
+});
