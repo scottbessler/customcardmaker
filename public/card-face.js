@@ -1,5 +1,5 @@
 import { html } from "/public/vendor/htm-preact.js";
-import { artUrl } from "/public/art.js";
+import { artPosition, artUrl } from "/public/art.js";
 import { abilities, chapters, costSymbols, frameOf, reminders, rulesSize, symbolKey, tokenize } from "/public/frame.js";
 import { resolveTemplate } from "/public/templates.js";
 
@@ -77,7 +77,7 @@ function Part({ part, card, turned, marker }) {
   const source = part.face === "half" && card.half ? card.half : card;
   const field = (name) => part.fields.find((f) => f.name === name);
   if (part.tag === "art") {
-    return html`<div class=${`mtg-art${source.art ? " has-art" : ""}`} style=${`${style}${source.art ? `;background-image:url(${artUrl(source.art)})` : ""}`}></div>`;
+    return html`<div class=${`mtg-art${source.art ? " has-art" : ""}`} style=${`${style}${source.art ? `;background-image:url(${artUrl(source.art)});background-position:${artPosition(source.art_position)}` : ""}`}></div>`;
   }
   if (part.tag === "plate" && part.role === "name") {
     return html`<header class="mtg-name" style=${style}>

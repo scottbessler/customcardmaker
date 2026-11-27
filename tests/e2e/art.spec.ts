@@ -95,3 +95,32 @@ test("another account cannot fetch your art", async ({ page, browser }) => {
   expect((await stranger.request.get(`/api/art/${id}`)).status()).toBe(404);
   await stranger.close();
 });
+
+test("crop position updates the art, survives reload, and can be centered", async ({ page }) => {
+  await setWithCard(page);
+  await upload(page);
+  const preview = page.locator(".preview .mtg-art");
+  const thumb = page.locator(".art-thumb");
+  const horizontal = page.getByRole("slider", { name: "Horizontal" });
+  const vertical = page.getByRole("slider", { name: "Vertical" });
+  await expect(preview).toHaveCSS("background-position", "50% 50%");
+  await horizontal.press("ArrowRight");
+  await vertical.press("ArrowLeft");
+  await expect(thumb).toHaveCSS("background-position", "51% 49%");
+  await expect(preview).toHaveCSS("background-position", "51% 49%");
+  await expect(page.locator(".filmstrip .mtg-art")).toHaveCSS("background-position", "51% 49%");
+  await expect(page.locator(".save-state")).toHaveText("Saved");
+
+  await page.reload();
+  await page.click(".preview .card-art-control");
+  await expect(horizontal).toHaveValue("51");
+  await expect(vertical).toHaveValue("49");
+  await page.getByRole("button", { name: "Center art" }).click();
+  await expect(preview).toHaveCSS("background-position", "50% 50%");
+  await expect(page.locator(".save-state")).toHaveText("Saved");
+
+  await horizontal.press("ArrowRight");
+  await expect(preview).toHaveCSS("background-position", "51% 50%");
+  await upload(page);
+  await expect(preview).toHaveCSS("background-position", "50% 50%");
+});

@@ -81,6 +81,9 @@ pub struct Card {
     /// An upload (`/api/art/<id>`) shown in the art box. Only the owner's own
     /// uploads may be referenced; the route checks, the document just holds it.
     pub art: Option<Uuid>,
+    /// Horizontal and vertical crop alignment in percent. Missing means centered.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub art_position: Option<[u8; 2]>,
     /// The picture is a whole printed card (a scan, or an MTG Nexus render), not
     /// just art: it fills the card, and our plates and text box are laid over it.
     pub art_is_card: bool,
@@ -108,6 +111,7 @@ struct CardDoc {
     frame: String,
     rarity: Rarity,
     art: Option<Uuid>,
+    art_position: Option<[u8; 2]>,
     art_is_card: bool,
     keep_printed_text: bool,
     back: Option<Box<Card>>,
@@ -146,6 +150,7 @@ impl<'de> Deserialize<'de> for Card {
             frame: doc.frame,
             rarity: doc.rarity,
             art: doc.art,
+            art_position: doc.art_position,
             art_is_card: doc.art_is_card,
             keep_printed_text: doc.keep_printed_text,
             back: doc.back,
@@ -179,6 +184,7 @@ impl Card {
             frame: String::new(),
             rarity: Rarity::default(),
             art: None,
+            art_position: None,
             art_is_card: false,
             keep_printed_text: false,
             back: None,
@@ -313,6 +319,11 @@ impl Card {
                 })?;
             within(field.label, value, field.max, field.kind == Kind::Text)?;
         }
+        if self.art_position.is_some_and(|[x, y]| x > 100 || y > 100) {
+            return Err(AppError::bad_request(
+                "Art position must be between 0 and 100 on each axis.",
+            ));
+        }
         if !self.frame.is_empty() && !is_frame(&self.frame) {
             return Err(AppError::bad_request("That is not a frame colour."));
         }
@@ -373,6 +384,18 @@ mod tests {
 
     fn of(ids: &[&str]) -> Card {
         Card::with_features(&on(ids))
+    }
+
+    #[test]
+    fn art_position_is_optional_and_bounded() {
+        assert_eq!(card(json!({})).art_position, None);
+        let positioned = card(json!({"art_position": [0, 100]}));
+        assert!(positioned.validate().is_ok());
+        assert_eq!(
+            serde_json::to_value(&positioned).unwrap()["art_position"],
+            json!([0, 100])
+        );
+        assert!(card(json!({"art_position": [101, 50]})).validate().is_err());
     }
 
     #[test]

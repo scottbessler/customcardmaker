@@ -37,3 +37,9 @@ export async function prepareArt(file) {
 export function artUrl(id) {
   return `/api/art/${id}`;
 }
+
+/** CSS alignment for a cover crop, shared by the art dialog and card renderer. */
+export function artPosition(position) {
+  const [x, y] = position ?? [50, 50];
+  return `${x}% ${y}%`;
+}

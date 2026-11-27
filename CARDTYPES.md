@@ -51,7 +51,7 @@ with its own features and template.
 
 Every card also has fields that belong to no feature because every card has them:
 `rarity`, `frame` (a colour forced by the author; empty means from the mana cost),
-`template`, and the picture flags `art_is_card` and `keep_printed_text`.
+`template`, and the picture settings `art_position`, `art_is_card` and `keep_printed_text`.
 
 ### A back is not a half
 

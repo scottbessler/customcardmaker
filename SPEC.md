@@ -127,6 +127,10 @@ nothing about real Magic cards.
 - **U8.** The credit is shown wherever borrowed art is: in the editor’s art dialog
   and in an *Art credits* list on a public set's page. Picking art fills the card's
   *artist* from the credit only if it was empty.
+- **U9.** Art dialog adjusts horizontal and vertical cover-crop alignment with a
+  live preview. Each face or half stores its own optional `art_position` pair
+  (0–100 per axis). Missing position centers art. Replacing or removing art resets
+  the crop. Whole-card images keep their edge-to-edge placement.
 - **U5.** Removing art from a card drops the reference; the file is kept
   (cleanup is a known gap, see TODO.md).
 
