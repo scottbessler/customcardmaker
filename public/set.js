@@ -146,14 +146,16 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
 
     <fieldset class="form-section frame-section">
       <legend>Frame</legend>
-      <fieldset class="looks">
+      ${card.art && card.art_is_card
+        ? html`<p class="muted looks-note">A whole-card picture is drawn as it is, so it has no template. The colour below tints our text plates over it.</p>`
+        : html`<fieldset class="looks">
         <legend>Template</legend>
         ${choices.templates.map(([id, label]) => html`<label class=${`look-option${(card.template || template) === id ? " chosen" : ""}`}>
           <input type="radio" name="template" value=${id} checked=${(card.template || template) === id} onChange=${() => onChange({ ...card, template: id === template ? "" : id })} />
           <span class="look-thumb"><${CardFace} card=${{ ...card, template: id }} /></span>
           <span class="look-name">${label}${id === template ? html` <small>set default</small>` : null}</span>
         </label>`)}
-      </fieldset>
+      </fieldset>`}
       <fieldset class="tints">
         <legend>Colour</legend>
         ${[["", "Auto"], ...choices.frames].map(([id, label]) => html`<label class=${`tint-option tint-${id || "auto"}`}>
@@ -185,10 +187,22 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit }) {
             <input type="file" name="art" accept="image/png,image/jpeg,image/webp" disabled=${uploading} onChange=${chooseArt} />
           </label>
           <button type="button" class="quiet search-art" onClick=${() => setSearching(true)}>Find free art…</button>
-          <button type="button" class="quiet remove-art" disabled=${!card.art} onClick=${() => onChange({ ...card, art: null })}>Remove</button>
+          <button type="button" class="quiet remove-art" disabled=${!card.art} onClick=${() => onChange({ ...card, art: null, art_is_card: false, keep_printed_text: false })}>Remove</button>
           <p class="art-hint muted">PNG, JPEG or WebP. It is shrunk to fit before it is sent.</p>
         </div>
       </div>
+      ${card.art
+        ? html`<label class="art-is-card">
+            <input type="checkbox" name="art_is_card" checked=${card.art_is_card} onChange=${(e) => onChange({ ...card, art_is_card: e.currentTarget.checked })} />
+            <span>This picture is a whole card, not just art. It fills the card, with the text laid over it.</span>
+          </label>
+          ${card.art_is_card
+            ? html`<label class="art-is-card keep-printed">
+                <input type="checkbox" name="keep_printed_text" checked=${card.keep_printed_text} onChange=${(e) => onChange({ ...card, keep_printed_text: e.currentTarget.checked })} />
+                <span>Keep the words printed on the picture. Draw none of ours over it.</span>
+              </label>`
+            : null}`
+        : null}
       ${card.art && credit ? html`<p class="art-credit-line"><${Credit} credit=${credit} /></p>` : null}
       <${ArtSearchDialog} open=${searching} onPick=${pickedArt} onCancel=${() => setSearching(false)} />
       <p class="error art-error" role="alert">${artError}</p>

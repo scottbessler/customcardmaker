@@ -97,3 +97,26 @@ button.mtg-card{cursor:pointer}
 .tpl-full-art .mtg-name,.tpl-full-art .mtg-type{background-color:color-mix(in srgb,var(--box) 88%,transparent)}
 .tpl-full-art .mtg-foot{bottom:2.2cqw;left:3cqw;color:var(--card-foot-ink)}
 .tpl-full-art .mtg-pt{bottom:2.6cqw;right:3.4cqw}
+
+/* A whole-card picture (an import from MTG Nexus, or a scan): the picture is the
+   card, edge to edge. Our name plate, type plate and text box are laid over it,
+   opaque, so they hide the words printed on the picture and show the card's own.
+   Every number is a place on a Nexus card, in card-width units (the card is 100
+   wide and 140 tall), measured off real exports: they are not our modern frame's
+   places, whose art box is shorter. Each plate is a little bigger than the one it
+   hides, to cover its bevel. The picture brings its own border, so whatever
+   template the card names, this is the geometry. */
+.mtg-card.art-card{background-size:100% 100%;background-position:center;background-repeat:no-repeat}
+.art-card .mtg-frame{inset:0;display:block;padding:0;background:none;box-shadow:none;border-radius:0}
+.art-card .mtg-name,.art-card .mtg-type,.art-card .mtg-box,.art-card .mtg-pt,.art-card .mtg-art{position:absolute}
+.art-card .mtg-name{left:4.6cqw;top:5.8cqw;width:90.8cqw;height:10cqw;padding:0 3.4cqw}
+.art-card .mtg-art{visibility:hidden;left:7.7cqw;top:15.5cqw;width:84.6cqw;height:62cqw}
+.art-card .mtg-type{left:4.6cqw;top:77.8cqw;width:90.8cqw;height:9.6cqw;padding:0 3.4cqw}
+.art-card .mtg-box{left:6.8cqw;top:87.4cqw;width:86.4cqw;height:40.6cqw;padding:2.6cqw 3cqw}
+.art-card .mtg-pt{left:78cqw;top:125cqw;right:auto;bottom:auto;width:16.4cqw;min-width:0;height:8.6cqw;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw}
+.art-card .mtg-title{font-size:5.6cqw}
+.art-card .mtg-type span{font-size:5cqw}
+.art-card .mana{font-size:4.6cqw}
+.art-card .mtg-foot{display:none}
+/* Keeping the picture's own words: none of ours is drawn at all. */
+.art-card-plain .mtg-frame{display:none}

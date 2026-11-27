@@ -1,0 +1,62 @@
+{
+  ".preview .mtg-card": {
+    "x": 16,
+    "y": 421,
+    "width": 361,
+    "height": 504,
+    "display": "block",
+    "position": "relative",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "color": "rgb(22, 19, 15)",
+    "backgroundColor": "rgb(13, 11, 20)",
+    "borderRadius": "4.8% / 3.4%",
+    "gridTemplateColumns": "none",
+    "flexDirection": "row"
+  },
+  ".preview .mtg-name": {
+    "x": 33,
+    "y": 442,
+    "width": 328,
+    "height": 36,
+    "display": "flex",
+    "position": "absolute",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "color": "rgb(22, 19, 15)",
+    "backgroundColor": "rgb(251, 248, 234)",
+    "borderRadius": "9px / 6px",
+    "gridTemplateColumns": "none",
+    "flexDirection": "row"
+  },
+  ".preview .mtg-type": {
+    "x": 33,
+    "y": 701,
+    "width": 328,
+    "height": 35,
+    "display": "flex",
+    "position": "absolute",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "color": "rgb(22, 19, 15)",
+    "backgroundColor": "rgb(251, 248, 234)",
+    "borderRadius": "9px / 6px",
+    "gridTemplateColumns": "none",
+    "flexDirection": "row"
+  },
+  ".preview .mtg-box": {
+    "x": 41,
+    "y": 736,
+    "width": 312,
+    "height": 147,
+    "display": "flex",
+    "position": "absolute",
+    "fontSize": "15px",
+    "fontWeight": "400",
+    "color": "rgb(22, 19, 15)",
+    "backgroundColor": "rgb(251, 248, 234)",
+    "borderRadius": "3px",
+    "gridTemplateColumns": "none",
+    "flexDirection": "column"
+  }
+}

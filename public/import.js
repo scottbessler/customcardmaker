@@ -77,6 +77,7 @@ if (form) {
           set_code: setCode,
           set_name: setName || null,
           images: data.get("images") === "on",
+          whole_cards: data.get("whole_cards") === "on",
         }),
       });
       const payload = await response.json().catch(() => ({}));

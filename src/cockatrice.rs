@@ -17,6 +17,10 @@ pub struct ImportedCard {
     pub card: Card,
     /// The `picurl` on the card's `<set>`, if the file gives one.
     pub image_url: Option<String>,
+    /// A layout MTG Nexus draws differently from a normal card (token, planeswalker,
+    /// saga), so our text cannot be laid over its picture: the picture is kept as
+    /// printed.
+    pub printed_layout: bool,
 }
 
 /// What a Cockatrice file says about the set and the cards in it.
@@ -72,15 +76,24 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
     let field = |tag| prop.and_then(|prop| text(prop, tag)).unwrap_or_default();
     let set = node.children().find(|child| child.has_tag_name("set"));
 
+    let layout = prop
+        .and_then(|prop| text(prop, "layout"))
+        .unwrap_or_default();
+    let type_line = field("type");
+    let printed_layout = layout.eq_ignore_ascii_case("planeswalker")
+        || ["token", "saga", "planeswalker"]
+            .iter()
+            .any(|word| type_line.to_ascii_lowercase().contains(word));
+
     let card = Card {
         name: text(node, "name").unwrap_or_default(),
         mana_cost: field("manacost"),
-        type_line: field("type"),
+        type_line,
         rarity: set
             .and_then(|set| set.attribute("rarity"))
             .map(rarity)
             .unwrap_or_default(),
-        rules_text: text(node, "text").unwrap_or_default(),
+        rules_text: paragraphs(text(node, "text").unwrap_or_default()),
         power_toughness: field("pt"),
         ..Card::default()
     };
@@ -92,6 +105,7 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
         image_url: set
             .and_then(|set| set.attribute("picurl"))
             .and_then(web_url),
+        printed_layout,
     })
 }
 
@@ -121,6 +135,17 @@ fn text(node: Node<'_, '_>, tag: &str) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
+/// Nexus separates paragraphs with a blank line, and a card's rules text is one
+/// paragraph per line, so a blank line would only draw as a gap; and a line may
+/// carry trailing spaces.
+fn paragraphs(text: String) -> String {
+    text.lines()
+        .map(str::trim_end)
+        .filter(|line| !line.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 fn card_set_code(node: Node<'_, '_>) -> Option<String> {
     node.children()
         .find(|child| child.has_tag_name("set"))
@@ -134,7 +159,9 @@ fn rarity(value: &str) -> Rarity {
     match value.to_ascii_lowercase().as_str() {
         "uncommon" => Rarity::Uncommon,
         "rare" => Rarity::Rare,
-        "mythic" => Rarity::Mythic,
+        // Nexus's "special" is a bonus-sheet rarity we have no pip for; mythic is the
+        // nearest, being the one reserved for a set's showpieces.
+        "mythic" | "special" => Rarity::Mythic,
         _ => Rarity::Common,
     }
 }
@@ -254,5 +281,35 @@ mod tests {
         );
         let err = parse(&xml).unwrap_err();
         assert!(err.detail().contains("Card \"A\""));
+    }
+
+    /// Shaped like a real MTG Nexus export: `layout` and `side` in `prop`, blank lines
+    /// between paragraphs, a `special` rarity, loyalty, and a token with no cost.
+    const NEXUS: &str = r#"<?xml version="1.0" encoding="UTF-8"?><cockatrice_carddatabase version="4"><sets><set><name>ALA</name><longname>animals</longname></set></sets><cards>
+<card><name>Bandage</name><text>Enchant Creature
+
+Enchanted Creature Gains +0+2  
+
+You can only Activate this Ability: Sacrifice Bandage
+</text><prop><layout>normal</layout><side>front</side><type>Enchantment — Aura</type><manacost>{1}{W}</manacost></prop><set rarity="special" picurl="https://example.test/a.jpg" num="1">ALA</set></card>
+<card><name>Dog</name><text></text><prop><layout>normal</layout><side>front</side><type>Token Creature — Dog</type><pt>1/1</pt></prop><set rarity="mythic" picurl="https://example.test/b.jpg" num="2">ALA</set></card>
+<card><name>Munchkin</name><text>+1: Add {B}{B}</text><prop><layout>planeswalker</layout><side>front</side><type>Legendary Planeswalker — Bird</type><manacost>{2}{W}{W}{W}</manacost><loyalty>4</loyalty></prop><set rarity="mythic" picurl="https://example.test/c.jpg" num="3">ALA</set></card>
+<card><name>Jorgan</name><text>I: Draw.</text><prop><layout>transform</layout><side>back</side><type>Enchantment — Saga</type></prop><set rarity="uncommon" picurl="https://example.test/d.jpg" num="4">ALA</set></card>
+</cards></cockatrice_carddatabase>"#;
+
+    #[test]
+    fn a_real_nexus_export_reads_cleanly() {
+        let db = parse(NEXUS).unwrap();
+        let cards: Vec<_> = db.cards.iter().collect();
+        // Blank lines and trailing spaces are not paragraphs.
+        assert_eq!(
+            cards[0].card.rules_text,
+            "Enchant Creature\nEnchanted Creature Gains +0+2\nYou can only Activate this Ability: Sacrifice Bandage"
+        );
+        // "special" has no pip of its own; it is shown as mythic.
+        assert_eq!(cards[0].card.rarity, Rarity::Mythic);
+        // A normal card can be drawn over; a token, planeswalker or saga cannot.
+        let printed: Vec<_> = cards.iter().map(|c| c.printed_layout).collect();
+        assert_eq!(printed, [false, true, true, true]);
     }
 }

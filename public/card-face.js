@@ -24,13 +24,16 @@ export function CardFace({ card, template = "modern", code = "", number = 0, tot
   const frame = frameOf(card);
   // A card that names a template wears it; otherwise it wears the set's.
   const look = card.template || template;
+  // A whole-card picture is the card; the plates and text box go on top of it.
+  const scan = card.art && card.art_is_card;
   const rules = card.rules_text ? card.rules_text.split("\n") : [];
   const flavor = card.flavor_text ? card.flavor_text.split("\n") : [];
   const collector = number ? `${String(number).padStart(3, "0")}${total ? `/${String(total).padStart(3, "0")}` : ""}` : "";
   const label = card.name || "Untitled card";
   const Tag = onClick ? "button" : "article";
   return html`<${Tag}
-    class=${`mtg-card tpl-${look} frame-${frame} rarity-${card.rarity}${selected ? " selected" : ""}`}
+    class=${`mtg-card tpl-${look} frame-${frame} rarity-${card.rarity}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
+    style=${scan ? `background-image:url(${artUrl(card.art)})` : undefined}
     aria-label=${label}
     aria-pressed=${onClick ? String(selected) : undefined}
     onClick=${onClick}
