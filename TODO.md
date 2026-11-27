@@ -89,8 +89,51 @@ that changes behaviour, not here.
   - [x] Per card, with a default for the set; saved in the card document
   - [x] The `/frames` page makes no sense to a visitor: remove it from the app. Keep
         what it gave the tests (every frame rendered side by side) as a dev-only page
+  - [x] Layouts: token, planeswalker (with loyalty) and saga, drawn natively and over
+        a Nexus scan, in every template
+  - [x] Transform / double-faced cards: a back face, Front/Back tabs and a Flip, linked on
+        import by `<related>`
+  - [ ] Still to do: Nexus draws a transform front with its own crown frame, which peeks out
+        above our plate on a scan; measure it. Then split, adventure, flip and modal layouts
   - [ ] Still to do: match the real MTG Nexus template list (Nexus's creator refuses automated
         fetches, so ask for names or screenshots)
+
+- [ ] **13. Progress for a large import** — a real Nexus export is ~300 cards and one
+      picture download each, which can take minutes; the import page shows nothing until
+      it ends.
+  - [ ] Run the import in the background and report progress (cards read, pictures
+        fetched of N, failures so far), e.g. a job the page polls or an event stream
+  - [ ] Show it on the import page with a bar, and let the person leave and come back
+  - [ ] Say at the end which pictures failed, so they can be retried
+  - [ ] A cap on how long one import may run, and one import at a time per account
+
+- [ ] **14. Card features and templates** — design in `CARDTYPES.md`. A card has the base
+      fields (name, type line, rules text, flavor, artist) plus **features** it turns on
+      (cost, power_toughness, loyalty, defense); a template says which features it
+      needs/excludes and places the fields; a card picks a template that can draw it.
+  - [x] Stage 1 (DONE): the registry (`src/cardtype.rs`), the generic card (`src/card.rs`,
+        flat JSON: `features` + the fields they allow, old documents read as the card they
+        were), the form built from the features, the import turning on the right ones, a
+        card's template checked against its features
+  - [ ] Stage 2 — IN PROGRESS (format and renderer are done; what is left is porting)
+    - [x] XML format, `src/template.rs` loader/validator (closed element list, field and feature
+          checks, 5 tests), files in `public/templates/`, embedded and sent to every card page
+    - [x] renderer: `public/templates.js` (`allTemplates`, `resolveTemplate`), `card-face.js`
+          draws a template with a body; planeswalker, saga and token are data now, their
+          geometry removed from `04-cards.css` (only styling is left there)
+    - [ ] port the four looks' standard grid layout (name plate, art, type plate, text box, P/T,
+          foot; `.mtg-frame` grid in `04-cards.css` for modern/classic/borderless/full-art) into
+          `<template>` bodies so a look is data too; keep the e2e image/geometry baselines green
+    - [ ] `scan-*` templates (the Nexus overlay, now `.art-card` rules in `04-cards.css`) replacing
+          the `art_is_card` special case; a scan template per layout (normal, planeswalker, saga,
+          token); `keep_printed_text` becomes "no template body"
+    - [ ] a set keeps a default template per kind of card (today one look for all, only a look)
+    - [ ] both stats at once: a template that draws power/toughness and loyalty (creature
+          planeswalker); today the planeswalker layout shows loyalty only
+    - [ ] delete what the above makes dead: the `.lay-*` position group and `layoutOf` leftovers,
+          `.art-card` geometry, `TEMPLATES`-style lists in `set.js`
+  - [ ] Later: split / adventure / flip / modal; custom templates per account (editor,
+        per-account storage, the whitelist enforced on save)
 
 ## Notes
 

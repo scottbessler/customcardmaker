@@ -120,3 +120,63 @@ button.mtg-card{cursor:pointer}
 .art-card .mtg-foot{display:none}
 /* Keeping the picture's own words: none of ours is drawn at all. */
 .art-card-plain .mtg-frame{display:none}
+
+/* ---- Template layouts -------------------------------------------------------
+   Where each part of a planeswalker, saga or token goes is in its template file
+   (`public/templates/`), placed inline by `card-face.js`; the rules below are only how
+   those parts look. The places are those of a real MTG Nexus card, so a card drawn
+   natively and a scan with our text laid over it share one geometry. `--fx`/`--fy` are where the template's
+   frame starts on the card: the children are absolute inside the frame, so each
+   place is taken from them. A scan has no frame of its own, so it starts at 0. */
+.mtg-card{--fx:3.4cqw;--fy:3.4cqw}
+.mtg-card.tpl-classic{--fx:4.6cqw;--fy:4.6cqw}
+.mtg-card.tpl-borderless,.mtg-card.tpl-full-art,.mtg-card.art-card{--fx:0cqw;--fy:0cqw}
+.lay-planeswalker .mtg-name,.lay-planeswalker .mtg-art,.lay-planeswalker .mtg-type,.lay-planeswalker .mtg-box,.lay-planeswalker .mtg-pt,
+.lay-saga .mtg-name,.lay-saga .mtg-art,.lay-saga .mtg-type,.lay-saga .mtg-box,
+.lay-token .mtg-name,.lay-token .mtg-art,.lay-token .mtg-type,.lay-token .mtg-box,.lay-token .mtg-pt{position:absolute;grid-row:auto;grid-column:auto}
+/* Planeswalker: tall art, abilities over its foot, loyalty where power/toughness would be. */
+.lay-planeswalker .mtg-name{padding:0 3.4cqw}
+.lay-planeswalker .mtg-type{padding:0 3.4cqw}
+.lay-planeswalker .mtg-box{padding:1.6cqw 3cqw 1.6cqw 1.4cqw;justify-content:space-evenly}
+.lay-planeswalker .mtg-loyalty{min-width:0;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw;border-radius:1.4cqw}
+/* Saga: chapters down the left, art on the right, the type line across the foot. */
+.lay-saga .mtg-name{padding:0 3.4cqw}
+.lay-saga .mtg-box{padding:2cqw 2cqw 2cqw 3.4cqw;justify-content:space-evenly;border-radius:0}
+.lay-saga .mtg-type{padding:0 3.4cqw}
+/* Token: the art is the card; a centred name, and a type line and text box low down. */
+.lay-token .mtg-name{padding:0 3.4cqw;justify-content:center}
+.lay-token .mtg-type{padding:0 3.4cqw}
+.lay-token .mtg-box{padding:2cqw 3cqw;background-image:none;background-color:color-mix(in srgb,var(--box) 82%,transparent)}
+.lay-token .mtg-pt{min-width:0;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw}
+.lay-token .mtg-cost{display:none}
+.lay-token .mtg-title{text-align:center;flex:1}
+.lay-token .mtg-art{z-index:0}
+.lay-token .mtg-name,.lay-token .mtg-type,.lay-token .mtg-box,.lay-token .mtg-pt{z-index:1}
+
+/* Planeswalker abilities: a loyalty cost beside each line. */
+.pw-rows{display:grid;gap:1.4cqw}
+.pw-row{display:grid;grid-template-columns:11cqw minmax(0,1fr);align-items:center;gap:1.2cqw}
+.pw-row p{margin:0}
+.pw-cost{justify-self:center;min-width:8.4cqw;padding:.8cqw 1cqw;border-radius:1cqw;background:var(--card-border);color:var(--card-foot-ink);font-size:4.4cqw;font-weight:800;line-height:1;text-align:center;clip-path:polygon(12% 0,88% 0,100% 50%,88% 100%,12% 100%,0 50%)}
+.pw-static .pw-cost{visibility:hidden}
+/* Saga chapters: a numeral hexagon beside each, and the reminder text above. */
+.lay-saga .mtg-rules{font-size:3.3cqw !important}
+.saga-rows{display:grid;gap:1.2cqw}
+.saga-reminder{font-style:italic;padding-bottom:1.2cqw}
+.saga-reminder p{margin:0 0 .4em}
+.saga-row{display:grid;grid-template-columns:8cqw minmax(0,1fr);align-items:center;gap:1.4cqw}
+.saga-marks{display:grid;gap:.4cqw;justify-items:center}
+.saga-mark{display:grid;place-items:center;width:7cqw;height:7.8cqw;font-style:normal;font-weight:800;font-size:3.4cqw;color:var(--card-text);background:linear-gradient(160deg,var(--frame-gold-hi),var(--frame-gold-lo));clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.saga-text p{margin:0 0 .3em}
+.saga-text p:last-child{margin-bottom:0}
+
+/* Over a scan the text box must hide what is printed under it, so a token's, which is
+   see-through over its art, is solid there. */
+.art-card.lay-token .mtg-box{background-color:var(--box)}
+
+/* A double-faced card marks its name plate: an open ring on the front, a solid disc on
+   the back, as the printed ones do. A scan has its own printed one. */
+.mtg-dfc{flex:none;width:3.6cqw;height:3.6cqw;margin-right:1.4cqw;border-radius:50%;box-sizing:border-box;border:.6cqw solid var(--card-text)}
+.mtg-dfc.dfc-back{background:var(--card-text)}
+.has-back .mtg-title{flex:1;min-width:0}
+.art-card .mtg-dfc{display:none}

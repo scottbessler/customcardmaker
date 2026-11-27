@@ -1,13 +1,14 @@
 use crate::{
     app::AppState,
     art,
-    card::{self, Card},
+    card::Card,
     cockatrice,
     error::{ApiError, AppError},
     openverse::{ArtCredit, SearchPage},
     render,
     session::{ApiUser, MaybeUser},
     sets::{self, Destination, SetDetail, SetSummary, StoredCard, Transferred},
+    template,
     users::User,
 };
 use axum::{
@@ -120,7 +121,7 @@ pub async fn get_set(
     let detail = s.sets.get(me, id).await?.ok_or_else(no_set)?;
     let credits = s
         .art
-        .credits(detail.cards.iter().filter_map(|c| c.card.art).collect())
+        .credits(detail.cards.iter().flat_map(|c| c.card.art_ids()).collect())
         .await?;
     Ok(Json(SetView { detail, credits }))
 }
@@ -144,9 +145,9 @@ pub async fn patch_set(
     let name = body.name.as_deref().map(sets::clean_name).transpose()?;
     let code = body.code.as_deref().map(sets::clean_code).transpose()?;
     if let Some(template) = body.default_template.as_deref()
-        && !card::is_template(template)
+        && !template::get(template).is_some_and(template::Template::is_look)
     {
-        return Err(AppError::bad_request("That is not a card template.").into());
+        return Err(AppError::bad_request("That is not a template every card can wear.").into());
     }
     let changes = sets::SetChanges {
         name,
@@ -220,12 +221,12 @@ pub async fn delete_card(
 
 /// A card may only point at art its owner uploaded.
 async fn own_art(s: &AppState, me: Uuid, card: &Card) -> Result<(), ApiError> {
-    match card.art {
-        Some(id) if !s.art.owned_by(me, id).await? => {
-            Err(AppError::bad_request("That image is not in your uploads.").into())
+    for id in card.art_ids() {
+        if !s.art.owned_by(me, id).await? {
+            return Err(AppError::bad_request("That image is not in your uploads.").into());
         }
-        _ => Ok(()),
     }
+    Ok(())
 }
 
 /// The body is the image itself, not a form: the browser has already shrunk it.
@@ -329,39 +330,64 @@ async fn attach_pictures(
 ) -> (Vec<Card>, usize) {
     let permits = Arc::new(Semaphore::new(PICTURE_FETCHES));
     let mut set = JoinSet::new();
-    let mut arts: Vec<Option<Uuid>> = vec![None; cards.len()];
-
+    // One download per picture: a card's front, and the back of a double-faced one.
     for (index, item) in cards.iter().enumerate() {
-        let Some(url) = item.image_url.clone() else {
-            continue;
-        };
-        let client = s.http.clone();
-        let store = s.art.clone();
-        let permits = Arc::clone(&permits);
-        set.spawn(async move {
-            let _permit = permits.acquire_owned().await.ok()?;
-            let (content_type, bytes) = fetch_picture(&client, &url).await?;
-            let id = store.save(me, content_type, &bytes, None).await.ok()?;
-            Some((index, id))
-        });
+        for (back, url) in [(false, &item.image_url), (true, &item.back_image_url)] {
+            let Some(url) = url.clone() else {
+                continue;
+            };
+            let client = s.http.clone();
+            let store = s.art.clone();
+            let permits = Arc::clone(&permits);
+            set.spawn(async move {
+                let _permit = permits.acquire_owned().await.ok()?;
+                let (content_type, bytes) = fetch_picture(&client, &url).await?;
+                let id = store.save(me, content_type, &bytes, None).await.ok()?;
+                Some((index, back, id))
+            });
+        }
     }
 
+    let mut fronts: Vec<Option<Uuid>> = vec![None; cards.len()];
+    let mut backs: Vec<Option<Uuid>> = vec![None; cards.len()];
     let mut imported = 0;
     while let Some(joined) = set.join_next().await {
-        if let Ok(Some((index, id))) = joined {
-            arts[index] = Some(id);
+        if let Ok(Some((index, back, id))) = joined {
+            if back {
+                backs[index] = Some(id);
+            } else {
+                fronts[index] = Some(id);
+            }
             imported += 1;
         }
     }
 
+    // A picture is a whole card when asked, and kept as printed for a layout we cannot draw.
+    let wear = |card: Card, art: Option<Uuid>, printed: bool| Card {
+        art_is_card: whole_cards && art.is_some(),
+        keep_printed_text: whole_cards && art.is_some() && printed,
+        art,
+        ..card
+    };
     let cards = cards
         .into_iter()
-        .zip(arts)
-        .map(|(item, art)| Card {
-            art_is_card: whole_cards && art.is_some(),
-            keep_printed_text: whole_cards && art.is_some() && item.printed_layout,
-            art,
-            ..item.card
+        .zip(fronts.into_iter().zip(backs))
+        .map(|(item, (front_art, back_art))| {
+            let back = item
+                .card
+                .back
+                .map(|back| Box::new(wear(*back, back_art, item.back_printed_layout)));
+            Card {
+                back,
+                ..wear(
+                    Card {
+                        back: None,
+                        ..item.card
+                    },
+                    front_art,
+                    item.printed_layout,
+                )
+            }
         })
         .collect();
     (cards, imported)
@@ -559,7 +585,7 @@ pub async fn gallery_set(State(s): State<AppState>, Path(id): Path<Uuid>) -> Api
         .ok_or_else(|| ApiError::from(AppError::not_found("There is no such public set.")))?;
     let credits = s
         .art
-        .credits(detail.cards.iter().filter_map(|c| c.card.art).collect())
+        .credits(detail.cards.iter().flat_map(|c| c.card.art_ids()).collect())
         .await?;
     Ok(Json(GalleryView { detail, credits }))
 }

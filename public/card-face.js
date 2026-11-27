@@ -1,6 +1,7 @@
 import { html } from "/public/vendor/htm-preact.js";
 import { artUrl } from "/public/art.js";
-import { costSymbols, frameOf, rulesSize, symbolKey, tokenize } from "/public/frame.js";
+import { abilities, chapters, costSymbols, frameOf, rulesSize, symbolKey, tokenize } from "/public/frame.js";
+import { resolveTemplate } from "/public/templates.js";
 
 /**
  * One symbol, drawn by the Mana font. Something the font has no glyph for is
@@ -16,42 +17,116 @@ function Line({ text }) {
   return html`<p>${tokenize(text).map((t) => (t.symbol ? html`<${Mana} symbol=${t.symbol} />` : t.text))}</p>`;
 }
 
+/** A planeswalker's abilities: a loyalty cost beside each line. */
+function Abilities({ text }) {
+  return html`<div class="pw-rows">${abilities(text).map(
+    ({ cost, text: line }) => html`<div class=${`pw-row${cost ? "" : " pw-static"}`}>
+      <span class="pw-cost">${cost}</span>
+      <${Line} text=${line} />
+    </div>`,
+  )}</div>`;
+}
+
+/** A saga's reminder text, then each chapter beside its numeral(s). */
+function Chapters({ text }) {
+  const { reminder, chapters: list } = chapters(text);
+  return html`<div class="saga-rows">
+    ${reminder.length ? html`<div class="saga-reminder">${reminder.map((line) => html`<${Line} text=${line} />`)}</div>` : null}
+    ${list.map(
+      ({ marks, lines }) => html`<div class="saga-row">
+        <span class="saga-marks">${marks.map((mark) => html`<i class="saga-mark">${mark}</i>`)}</span>
+        <div class="saga-text">${lines.map((line) => html`<${Line} text=${line} />`)}</div>
+      </div>`,
+    )}
+  </div>`;
+}
+
 /**
  * One printed card. Its size is its container's: every measurement inside is
  * in container-width units, so it renders the same at any scale.
  */
-export function CardFace({ card, template = "modern", code = "", number = 0, total = 0, selected = false, onClick }) {
-  const frame = frameOf(card);
-  // A card that names a template wears it; otherwise it wears the set's.
-  const look = card.template || template;
+/** Where a template puts an element, in card-width units from the frame's own corner. */
+const place = ({ x, y, w, h }) =>
+  `position:absolute;left:calc(${x}cqw - var(--fx));top:calc(${y}cqw - var(--fy));width:${w}cqw;height:${h}cqw;right:auto;bottom:auto`;
+
+/** The rules text, read the way a template says (plain, as a planeswalker's abilities, a saga's chapters). */
+function Rules({ card, as }) {
+  if (as === "abilities") return html`<${Abilities} text=${card.rules_text} />`;
+  if (as === "chapters") return html`<${Chapters} text=${card.rules_text} />`;
+  return (card.rules_text ? card.rules_text.split("\n") : []).map((text) => html`<${Line} text=${text} />`);
+}
+
+/** One element of a template's body, drawn with the card's own fields. */
+function Part({ part, card, turned, whole }) {
+  const style = place(part);
+  const field = (name) => part.fields.find((f) => f.name === name);
+  if (part.tag === "art") {
+    return html`<div class=${`mtg-art${card.art ? " has-art" : ""}`} style=${`${style}${card.art ? `;background-image:url(${artUrl(card.art)})` : ""}`}></div>`;
+  }
+  if (part.tag === "plate" && part.role === "name") {
+    return html`<header class="mtg-name" style=${style}>
+      ${whole.back ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
+      <span class="mtg-title">${card.name || html`<em>Untitled</em>`}</span>
+      ${field("mana_cost") ? html`<span class="mtg-cost">${costSymbols(card.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>` : null}
+    </header>`;
+  }
+  if (part.tag === "plate") return html`<div class="mtg-type" style=${style}><span>${card.type_line}</span><i class="mtg-pip"></i></div>`;
+  if (part.tag === "box") {
+    const rules = field("rules_text");
+    return html`<div class="mtg-box" style=${style}>
+      <div class="mtg-rules" style=${`font-size:${rulesSize(card)}cqw`}>${rules ? html`<${Rules} card=${card} as=${rules.as} />` : null}</div>
+    </div>`;
+  }
+  // A stat: the first of its fields the card has a value for.
+  const stat = part.fields.find((f) => card[f.name]);
+  if (!stat) return null;
+  return html`<div class=${`mtg-pt${stat.name === "loyalty" ? " mtg-loyalty" : ""}`} style=${style}>${card[stat.name]}</div>`;
+}
+
+/**
+ * One printed card. Its size is its container's: every measurement inside is
+ * in container-width units, so it renders the same at any scale.
+ */
+export function CardFace({ card: whole, flipped = false, template = "modern", code = "", number = 0, total = 0, selected = false, onClick }) {
+  // A double-faced card shows one face at a time; the back is a card of its own.
+  const turned = flipped && whole.back;
+  const card = turned ? whole.back : whole;
+  // A back with no cost of its own keeps the front's colour, as printed ones do.
+  const frame = card.frame || (turned && !card.mana_cost ? frameOf(whole) : frameOf(card));
+  // Which template places the parts, and which look (frame) it wears; a back wears its own.
+  const { layout, look } = resolveTemplate(card.template ? card : { ...card, template: whole.template }, template);
   // A whole-card picture is the card; the plates and text box go on top of it.
   const scan = card.art && card.art_is_card;
-  const rules = card.rules_text ? card.rules_text.split("\n") : [];
-  const flavor = card.flavor_text ? card.flavor_text.split("\n") : [];
+  const own = layout.body.length > 0;
   const collector = number ? `${String(number).padStart(3, "0")}${total ? `/${String(total).padStart(3, "0")}` : ""}` : "";
   const label = card.name || "Untitled card";
   const Tag = onClick ? "button" : "article";
+  const flavor = card.flavor_text ? card.flavor_text.split("\n") : [];
   return html`<${Tag}
-    class=${`mtg-card tpl-${look} frame-${frame} rarity-${card.rarity}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
+    data-face=${whole.back ? (turned ? "back" : "front") : undefined}
+    class=${`mtg-card tpl-${look} lay-${own ? layout.id : "normal"} frame-${frame} rarity-${card.rarity}${whole.back ? " has-back" : ""}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
     style=${scan ? `background-image:url(${artUrl(card.art)})` : undefined}
     aria-label=${label}
     aria-pressed=${onClick ? String(selected) : undefined}
     onClick=${onClick}
   >
     <div class="mtg-frame">
-      <header class="mtg-name">
-        <span class="mtg-title">${card.name || html`<em>Untitled</em>`}</span>
-        <span class="mtg-cost">${costSymbols(card.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>
-      </header>
-      <div class=${`mtg-art${card.art ? " has-art" : ""}`} style=${card.art ? `background-image:url(${artUrl(card.art)})` : undefined}></div>
-      <div class="mtg-type"><span>${card.type_line}</span><i class="mtg-pip"></i></div>
-      <div class="mtg-box">
-        <div class="mtg-rules" style=${`font-size:${rulesSize(card)}cqw`}>
-          ${rules.map((text) => html`<${Line} text=${text} />`)}
-          ${flavor.length ? html`<div class="mtg-flavor">${flavor.map((text) => html`<p>${text}</p>`)}</div>` : null}
-        </div>
-      </div>
-      ${card.power_toughness ? html`<div class="mtg-pt">${card.power_toughness}</div>` : null}
+      ${own
+        ? layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} whole=${whole} />`)
+        : html`<header class="mtg-name">
+              ${whole.back ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
+              <span class="mtg-title">${card.name || html`<em>Untitled</em>`}</span>
+              <span class="mtg-cost">${costSymbols(card.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>
+            </header>
+            <div class=${`mtg-art${card.art ? " has-art" : ""}`} style=${card.art ? `background-image:url(${artUrl(card.art)})` : undefined}></div>
+            <div class="mtg-type"><span>${card.type_line}</span><i class="mtg-pip"></i></div>
+            <div class="mtg-box">
+              <div class="mtg-rules" style=${`font-size:${rulesSize(card)}cqw`}>
+                <${Rules} card=${card} />
+                ${flavor.length ? html`<div class="mtg-flavor">${flavor.map((text) => html`<p>${text}</p>`)}</div>` : null}
+              </div>
+            </div>
+            ${card.power_toughness ? html`<div class="mtg-pt">${card.power_toughness}</div>` : null}`}
       <footer class="mtg-foot">
         <span>${collector}${collector && code ? " • " : ""}${code}</span>
         <span>${card.artist ? `Illus. ${card.artist}` : ""}</span>

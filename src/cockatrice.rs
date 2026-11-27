@@ -17,10 +17,17 @@ pub struct ImportedCard {
     pub card: Card,
     /// The `picurl` on the card's `<set>`, if the file gives one.
     pub image_url: Option<String>,
-    /// A layout MTG Nexus draws differently from a normal card (token, planeswalker,
-    /// saga), so our text cannot be laid over its picture: the picture is kept as
-    /// printed.
+    /// A layout Nexus draws in a way we have no geometry for, so our text cannot be
+    /// laid over its picture: the picture is kept as printed.
     pub printed_layout: bool,
+    /// The file marks this as the back face of a double-faced card.
+    pub is_back: bool,
+    /// The other face's name, from `<related attach="transform">`.
+    pub related: Option<String>,
+    /// Once the two faces are joined: the back's picture, and whether it is kept as
+    /// printed. (`card.back` holds the rest of it.)
+    pub back_image_url: Option<String>,
+    pub back_printed_layout: bool,
 }
 
 /// What a Cockatrice file says about the set and the cards in it.
@@ -42,6 +49,7 @@ pub fn parse(xml: &str) -> Result<Database, AppError> {
         .filter(|node| node.has_tag_name("card"))
         .map(card)
         .collect::<Result<Vec<_>, _>>()?;
+    let cards = join_faces(cards);
     if cards.is_empty() {
         return Err(AppError::bad_request("That file has no cards in it."));
     }
@@ -78,35 +86,124 @@ fn card(node: Node<'_, '_>) -> Result<ImportedCard, AppError> {
 
     let layout = prop
         .and_then(|prop| text(prop, "layout"))
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .to_ascii_lowercase();
     let type_line = field("type");
-    let printed_layout = layout.eq_ignore_ascii_case("planeswalker")
-        || ["token", "saga", "planeswalker"]
-            .iter()
-            .any(|word| type_line.to_ascii_lowercase().contains(word));
-
-    let card = Card {
-        name: text(node, "name").unwrap_or_default(),
-        mana_cost: field("manacost"),
-        type_line,
-        rarity: set
-            .and_then(|set| set.attribute("rarity"))
-            .map(rarity)
-            .unwrap_or_default(),
-        rules_text: paragraphs(text(node, "text").unwrap_or_default()),
-        power_toughness: field("pt"),
-        ..Card::default()
+    let lowered = type_line.to_ascii_lowercase();
+    // What the card is, by its type first (a transform's back may be a saga), then by
+    // the layout the file names.
+    let ours = if lowered.contains("token") {
+        "token"
+    } else if lowered.contains("planeswalker") || layout == "planeswalker" {
+        "planeswalker"
+    } else if lowered.contains("saga") || layout == "saga" {
+        "saga"
+    } else {
+        ""
     };
+    // A layout Nexus draws in a way we have no geometry for (split, flip, adventure...):
+    // its picture is kept as printed.
+    let printed_layout =
+        ours.is_empty() && !matches!(layout.as_str(), "" | "normal" | "transform" | "modal_dfc");
 
-    card.validate()
-        .map_err(|e| AppError::bad_request(format!("Card \"{}\": {}", card.name, e.detail())))?;
+    // The features it has on, from what the file gives it: a token has no cost; a stat is on if
+    // the card has one (a creature by its type line, a planeswalker by its layout or type).
+    let creature = lowered.contains("creature");
+    let walker = ours == "planeswalker";
+    let mut features = Vec::new();
+    if ours != "token" {
+        features.push("cost");
+    }
+    if !field("pt").is_empty() || creature {
+        features.push("power_toughness");
+    }
+    if walker || !field("loyalty").is_empty() {
+        features.push("loyalty");
+    }
+    let features: Vec<String> = features.into_iter().map(String::from).collect();
+    let mut card = Card::with_features(&features);
+    card.set("name", text(node, "name").unwrap_or_default());
+    card.set("type_line", type_line);
+    card.set(
+        "rules_text",
+        paragraphs(text(node, "text").unwrap_or_default()),
+    );
+    for (key, tag) in [
+        ("mana_cost", "manacost"),
+        ("power_toughness", "pt"),
+        ("loyalty", "loyalty"),
+    ] {
+        // Only what the card has a field for; the rest of the file's keys are ignored.
+        if card.fields.contains_key(key) {
+            card.set(key, field(tag));
+        }
+    }
+    // A saga and a token are drawn by templates of their own.
+    if matches!(ours, "saga" | "token") {
+        card.template = ours.to_string();
+    }
+    card.rarity = set
+        .and_then(|set| set.attribute("rarity"))
+        .map(rarity)
+        .unwrap_or_default();
+
+    card.validate().map_err(|e| {
+        AppError::bad_request(format!("Card \"{}\": {}", card.get("name"), e.detail()))
+    })?;
     Ok(ImportedCard {
         card,
         image_url: set
             .and_then(|set| set.attribute("picurl"))
             .and_then(web_url),
         printed_layout,
+        is_back: prop
+            .and_then(|prop| text(prop, "side"))
+            .is_some_and(|side| side.eq_ignore_ascii_case("back")),
+        related: node
+            .children()
+            .find(|child| child.has_tag_name("related"))
+            .filter(|related| {
+                related
+                    .attribute("attach")
+                    .is_none_or(|attach| attach.eq_ignore_ascii_case("transform"))
+            })
+            .and_then(|related| related.text())
+            .map(|name| name.trim().to_string())
+            .filter(|name| !name.is_empty()),
+        back_image_url: None,
+        back_printed_layout: false,
     })
+}
+
+/// Nexus writes a double-faced card as two `<card>`s, the back marked `side=back`, each
+/// naming the other in `<related>`. They become one card with a back face. A back whose
+/// front is not in the file (or does not name it in return) stays a card of its own.
+fn join_faces(cards: Vec<ImportedCard>) -> Vec<ImportedCard> {
+    let mut joined: Vec<ImportedCard> = Vec::new();
+    let mut backs: Vec<ImportedCard> = Vec::new();
+    for item in cards {
+        if item.is_back && item.related.is_some() {
+            backs.push(item);
+        } else {
+            joined.push(item);
+        }
+    }
+    for back in backs {
+        let front = joined.iter_mut().find(|front| {
+            front.card.back.is_none()
+                && front.related.as_deref() == Some(back.card.get("name"))
+                && back.related.as_deref() == Some(front.card.get("name"))
+        });
+        match front {
+            Some(front) => {
+                front.back_image_url = back.image_url;
+                front.back_printed_layout = back.printed_layout;
+                front.card.back = Some(Box::new(back.card));
+            }
+            None => joined.push(back),
+        }
+    }
+    joined
 }
 
 /// Only an `http`/`https` URL is worth fetching; anything else (a `file:` or a
@@ -213,11 +310,14 @@ mod tests {
         assert_eq!(db.cards.len(), 2);
 
         let first = &db.cards[0].card;
-        assert_eq!(first.name, "Vivi's Friend");
-        assert_eq!(first.mana_cost, "{2}{W}{W}");
-        assert_eq!(first.type_line, "Creature — Bird");
-        assert_eq!(first.power_toughness, "2/2");
-        assert_eq!(first.rules_text, "Birds you control have +1+1 and haste");
+        assert_eq!(first.get("name"), "Vivi's Friend");
+        assert_eq!(first.get("mana_cost"), "{2}{W}{W}");
+        assert_eq!(first.get("type_line"), "Creature — Bird");
+        assert_eq!(first.get("power_toughness"), "2/2");
+        assert_eq!(
+            first.get("rules_text"),
+            "Birds you control have +1+1 and haste"
+        );
         assert_eq!(first.rarity, Rarity::Mythic);
         assert_eq!(
             db.cards[0].image_url.as_deref(),
@@ -225,7 +325,7 @@ mod tests {
         );
 
         assert_eq!(db.cards[1].card.rarity, Rarity::Rare);
-        assert_eq!(db.cards[1].card.power_toughness, "");
+        assert_eq!(db.cards[1].card.get("power_toughness"), "");
         assert_eq!(db.cards[1].image_url, None);
     }
 
@@ -261,7 +361,7 @@ mod tests {
                    <text>one\r\ntwo\rthree</text><set>ABC</set></card></cards>\
                    </cockatrice_carddatabase>";
         let db = parse(xml).unwrap();
-        assert_eq!(db.cards[0].card.rules_text, "one\ntwo\nthree");
+        assert_eq!(db.cards[0].card.get("rules_text"), "one\ntwo\nthree");
     }
 
     #[test]
@@ -277,7 +377,7 @@ mod tests {
         let xml = format!(
             "<cockatrice_carddatabase><cards><card><name>A</name>\
              <text>{}</text><set>ABC</set></card></cards></cockatrice_carddatabase>",
-            "x".repeat(crate::card::MAX_RULES_TEXT + 1)
+            "x".repeat(1501)
         );
         let err = parse(&xml).unwrap_err();
         assert!(err.detail().contains("Card \"A\""));
@@ -295,6 +395,7 @@ You can only Activate this Ability: Sacrifice Bandage
 <card><name>Dog</name><text></text><prop><layout>normal</layout><side>front</side><type>Token Creature — Dog</type><pt>1/1</pt></prop><set rarity="mythic" picurl="https://example.test/b.jpg" num="2">ALA</set></card>
 <card><name>Munchkin</name><text>+1: Add {B}{B}</text><prop><layout>planeswalker</layout><side>front</side><type>Legendary Planeswalker — Bird</type><manacost>{2}{W}{W}{W}</manacost><loyalty>4</loyalty></prop><set rarity="mythic" picurl="https://example.test/c.jpg" num="3">ALA</set></card>
 <card><name>Jorgan</name><text>I: Draw.</text><prop><layout>transform</layout><side>back</side><type>Enchantment — Saga</type></prop><set rarity="uncommon" picurl="https://example.test/d.jpg" num="4">ALA</set></card>
+<card><name>Cut</name><text>Deal 2.</text><prop><layout>split</layout><side>front</side><type>Instant</type><manacost>{R}</manacost></prop><set rarity="common" picurl="https://example.test/e.jpg" num="5">ALA</set></card>
 </cards></cockatrice_carddatabase>"#;
 
     #[test]
@@ -303,13 +404,52 @@ You can only Activate this Ability: Sacrifice Bandage
         let cards: Vec<_> = db.cards.iter().collect();
         // Blank lines and trailing spaces are not paragraphs.
         assert_eq!(
-            cards[0].card.rules_text,
+            cards[0].card.get("rules_text"),
             "Enchant Creature\nEnchanted Creature Gains +0+2\nYou can only Activate this Ability: Sacrifice Bandage"
         );
         // "special" has no pip of its own; it is shown as mythic.
         assert_eq!(cards[0].card.rarity, Rarity::Mythic);
-        // A normal card can be drawn over; a token, planeswalker or saga cannot.
+        // Token and planeswalker are types of our own now; a saga is a spell drawn by the
+        // saga template.
+        let features: Vec<_> = cards.iter().map(|c| c.card.features.join("+")).collect();
+        assert_eq!(
+            features,
+            ["cost", "power_toughness", "cost+loyalty", "cost", "cost"]
+        );
+        assert_eq!(cards[1].card.template, "token");
+        assert_eq!(cards[3].card.template, "saga");
+        assert_eq!(cards[2].card.get("loyalty"), "4");
+        // One we have no geometry for keeps its picture as printed.
         let printed: Vec<_> = cards.iter().map(|c| c.printed_layout).collect();
-        assert_eq!(printed, [false, true, true, true]);
+        assert_eq!(printed, [false, false, false, false, true]);
+    }
+
+    #[test]
+    fn the_two_faces_of_a_transform_card_become_one_card() {
+        let xml = r#"<cockatrice_carddatabase><cards>
+<card><name>Day</name><text>Flip me.</text><prop><layout>transform</layout><side>front</side><type>Creature — Human</type><manacost>{1}{W}</manacost><pt>1/1</pt></prop><set rarity="rare" picurl="https://example.test/day-a.jpg" num="7">ABC</set><related attach="transform">Night</related></card>
+<card><name>Solo</name><text>Alone.</text><prop><layout>normal</layout><side>front</side><type>Instant</type></prop><set rarity="common">ABC</set></card>
+<card><name>Night</name><text>Flipped.</text><prop><layout>transform</layout><side>back</side><type>Creature — Werewolf</type><pt>2/2</pt></prop><set rarity="rare" picurl="https://example.test/day-b.jpg" num="7">ABC</set><related attach="transform">Day</related></card>
+<card><name>Orphan</name><text>No front.</text><prop><layout>transform</layout><side>back</side><type>Instant</type></prop><set rarity="rare">ABC</set><related attach="transform">Missing</related></card>
+</cards></cockatrice_carddatabase>"#;
+        let db = parse(xml).unwrap();
+        let names: Vec<_> = db.cards.iter().map(|c| c.card.get("name")).collect();
+        // The back leaves the list; a back with no front in the file stays, at the end.
+        assert_eq!(names, ["Day", "Solo", "Orphan"]);
+        let day = &db.cards[0];
+        let back = day.card.back.as_ref().expect("Day has a back face");
+        assert_eq!(
+            (back.get("name"), back.get("power_toughness")),
+            ("Night", "2/2")
+        );
+        assert_eq!(
+            day.image_url.as_deref(),
+            Some("https://example.test/day-a.jpg")
+        );
+        assert_eq!(
+            day.back_image_url.as_deref(),
+            Some("https://example.test/day-b.jpg")
+        );
+        assert!(db.cards[1].card.back.is_none());
     }
 }

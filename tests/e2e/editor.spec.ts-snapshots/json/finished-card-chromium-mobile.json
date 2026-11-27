@@ -181,9 +181,9 @@
   },
   ".card-form": {
     "x": 16,
-    "y": 1001,
+    "y": 1057,
     "width": 361,
-    "height": 2338,
+    "height": 2553,
     "display": "grid",
     "position": "static",
     "fontSize": "15px",
@@ -197,9 +197,9 @@
   ".form-section": [
     {
       "x": 37,
-      "y": 1022,
+      "y": 1078,
       "width": 319,
-      "height": 710,
+      "height": 774,
       "display": "grid",
       "position": "static",
       "fontSize": "15px",
@@ -212,9 +212,9 @@
     },
     {
       "x": 37,
-      "y": 1749,
+      "y": 1869,
       "width": 319,
-      "height": 692,
+      "height": 843,
       "display": "grid",
       "position": "static",
       "fontSize": "15px",
@@ -227,7 +227,7 @@
     },
     {
       "x": 37,
-      "y": 2457,
+      "y": 2728,
       "width": 319,
       "height": 457,
       "display": "grid",
@@ -242,7 +242,7 @@
     },
     {
       "x": 37,
-      "y": 2930,
+      "y": 3201,
       "width": 319,
       "height": 259,
       "display": "grid",
@@ -257,7 +257,7 @@
     },
     {
       "x": 37,
-      "y": 3205,
+      "y": 3476,
       "width": 319,
       "height": 114,
       "display": "grid",
@@ -273,7 +273,7 @@
   ],
   ".palette": {
     "x": 50,
-    "y": 2642,
+    "y": 2912,
     "width": 293,
     "height": 163,
     "display": "grid",
@@ -289,7 +289,7 @@
   ".symbol-key": [
     {
       "x": 50,
-      "y": 2668,
+      "y": 2939,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -304,7 +304,7 @@
     },
     {
       "x": 98,
-      "y": 2668,
+      "y": 2939,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -319,7 +319,7 @@
     },
     {
       "x": 146,
-      "y": 2668,
+      "y": 2939,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -334,7 +334,7 @@
     },
     {
       "x": 194,
-      "y": 2668,
+      "y": 2939,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -349,7 +349,7 @@
     },
     {
       "x": 242,
-      "y": 2668,
+      "y": 2939,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -364,7 +364,7 @@
     },
     {
       "x": 290,
-      "y": 2668,
+      "y": 2939,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -379,7 +379,7 @@
     },
     {
       "x": 50,
-      "y": 2716,
+      "y": 2987,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -394,7 +394,7 @@
     },
     {
       "x": 98,
-      "y": 2716,
+      "y": 2987,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -409,7 +409,7 @@
     },
     {
       "x": 146,
-      "y": 2716,
+      "y": 2987,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -424,7 +424,7 @@
     },
     {
       "x": 194,
-      "y": 2716,
+      "y": 2987,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -439,7 +439,7 @@
     },
     {
       "x": 242,
-      "y": 2716,
+      "y": 2987,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -454,7 +454,7 @@
     },
     {
       "x": 290,
-      "y": 2716,
+      "y": 2987,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -469,7 +469,7 @@
     },
     {
       "x": 50,
-      "y": 2764,
+      "y": 3035,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -484,7 +484,7 @@
     },
     {
       "x": 98,
-      "y": 2764,
+      "y": 3035,
       "width": 40,
       "height": 40,
       "display": "grid",
@@ -499,7 +499,7 @@
     },
     {
       "x": 146,
-      "y": 2764,
+      "y": 3035,
       "width": 40,
       "height": 40,
       "display": "grid",

@@ -36,12 +36,15 @@ Toolchain: Rust 1.90+ (edition 2024), bun 1.3.13, node 22 — see `.mise.toml`.
   with Preact + htm vendored in `public/vendor/`. Pages are a server-rendered
   shell (`src/render.rs`) plus one island per page. Shared modules are listed
   in the import map in `render.rs` so a release versions them too.
-- **One source for each rule.** Card validation lives in `src/card.rs`; what a
+- **One source for each rule.** What a card has (its fields, and which are required) is the
+  base fields plus the features it turns on, in `src/cardtype.rs`, and the editor's form, the
+  validation and the import all read that one list (`CARDTYPES.md`). Card validation lives in `src/card.rs`; what a
   mana cost *means* (colours, frame) lives in `public/frame.js`, pure and
   DOM-free, so the editor and every other view agree.
 - **Documents stay documents.** A card is one JSON blob in one row; columns exist
-  only for what is ordered or joined on. Every `Card` field is `#[serde(default)]`
-  so the shape can grow without a migration.
+  only for what is ordered or joined on. Every card field is optional on read (a
+  missing one is empty, and a document with no `features` is read as the card it was) so
+  the shape can grow without a migration.
 - **Schema changes are appended to `MIGRATIONS` in `src/db.rs`.** A migration
   that has shipped is never edited.
 - **Tokens, not literals.** Every colour is defined in `public/css/01-tokens.css`;
