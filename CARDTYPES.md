@@ -109,7 +109,9 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
   frame (and a scan, which has none).
 - **Elements** (a closed list): `plate` (the tinted plates; `role="name"` or `role="type"`),
   `box` (the text box), `art`, `stat` (a badge showing the first of its fields the card has a
-  value for). Unknown elements and attributes are an error, not ignored.
+  value for). A `stat` may leave out `w` and `h` — both or neither — and is then as big as its
+  value, anchored by its bottom-right corner, which is how a printed card's P/T box grows.
+  Unknown elements and attributes are an error, not ignored.
 - **`<field name="…"/>`** draws one field of the card, in the element that holds it. `as` picks
   a reader for the rules text: `as="abilities"` (loyalty costs beside each line),
   `as="chapters"` (a saga's numerals), plain by default. A template may name any field of the
@@ -119,9 +121,12 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
 - **`requires` / `excludes`** are space-separated feature ids.
 - **`frame`** is `modern`, `classic`, `borderless` or `full-art` (a frame of its own), or
   `inherit` (the card's own look, else the set's).
-- **No body** means a frame: the four looks have none, and a card in one is laid out by the
-  standard grid layout (name plate, art, type plate, text box) the stylesheet draws for that
-  frame. Porting that layout into bodies is the rest of stage 2.
+- **A body is the layout.** Every built-in template has one: the four looks place the name
+  plate, the art, the type plate, the text box and the P/T badge the way the standard grid
+  layout used to, so a look is data too. A template with no body would draw none of its own
+  parts (no built-in one is like that). The footer is not a template element: its place is a
+  look's, not a layout's, so the stylesheet keeps it (a saga card in the borderless look must
+  get the borderless foot).
 - **Style** is by `role` and class from the card stylesheet, not by raw CSS: a template says
   *where* things go and which part each is, and the stylesheet (with its tokens) says how a plate
   or a text box looks.
@@ -147,6 +152,9 @@ it is drawn by the same template as any card, over its picture with no frame of 
 with no layout of its own is drawn by `nexus` there, since a whole-card picture is a Nexus card;
 a planeswalker, saga or token is drawn by its own. So a scan and a native card share a geometry.
 
+The four looks are layouts too: each places the name plate, art, type plate and text box in its
+own way, so choosing a look changes where things go as well as how they are drawn.
+
 A card with `loyalty` is drawn by the `planeswalker` template whatever it names, and wears its
 own look or the set's for its frame (`resolveTemplate` in `public/templates.js`). A card with
 both stats draws the planeswalker layout (loyalty only); a template that shows both is not
@@ -167,7 +175,8 @@ matching `scan-*` template, which is what `art_is_card` selects today.
    on the right ones; old documents read as above. Drawing is unchanged.
 2. **Templates** (in progress). Done: the XML format, its loader and checker (`src/template.rs`),
    the renderer (`public/templates.js`, `card-face.js`), the planeswalker, saga, token and Nexus
-   templates as data, and scans drawn by them. To do: the four looks' standard layout as bodies,
-   and a default template per kind of card in a set.
+   templates as data, scans drawn by them, and the four looks' standard layout as bodies (a look
+   is data too). To do: a default template per kind of card in a set, and a template that draws
+   both stats at once.
 3. **Later.** Split / adventure / flip / modal; custom templates per account (an editor,
    storage, and the whitelist enforced on save).

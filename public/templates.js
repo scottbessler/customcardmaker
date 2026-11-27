@@ -12,7 +12,8 @@ function body(xml) {
   const doc = new DOMParser().parseFromString(xml, "application/xml");
   return [...doc.documentElement.children].map((el) => {
     const part = { tag: el.tagName, role: el.getAttribute("role") };
-    for (const side of ["x", "y", "w", "h"]) part[side] = Number(el.getAttribute(side));
+    // A <stat> may leave out w/h: null means "as big as its value".
+    for (const side of ["x", "y", "w", "h"]) part[side] = el.hasAttribute(side) ? Number(el.getAttribute(side)) : null;
     part.fields = [...el.children].map((field) => ({ name: field.getAttribute("name"), as: field.getAttribute("as") }));
     return part;
   });

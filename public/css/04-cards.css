@@ -6,7 +6,7 @@ button.mtg-card{cursor:pointer}
 /* Inside the edge, over the black border: outside it the scrolling filmstrip
    clips the ring on the first and last card. */
 .mtg-card.selected{outline:3px solid var(--gold-hi);outline-offset:-3px}
-.mtg-frame{position:absolute;inset:3.4cqw 3.4cqw 7.4cqw;display:grid;grid-template-rows:7.4cqw 41cqw 6.6cqw 1fr;gap:1.2cqw;padding:2.4cqw 3cqw 3cqw;border-radius:2.6cqw;background-color:var(--lo);background-image:repeating-linear-gradient(90deg,color-mix(in srgb,var(--white) 5%,transparent) 0 .3cqw,transparent .3cqw .9cqw),linear-gradient(160deg,var(--hi),var(--lo) 72%,color-mix(in srgb,var(--lo) 80%,black));box-shadow:inset 0 0 0 .4cqw color-mix(in srgb,var(--lo) 45%,black),inset .5cqw .6cqw .9cqw color-mix(in srgb,var(--white) 35%,transparent)}
+.mtg-frame{position:absolute;inset:3.4cqw 3.4cqw 7.4cqw;border-radius:2.6cqw;background-color:var(--lo);background-image:repeating-linear-gradient(90deg,color-mix(in srgb,var(--white) 5%,transparent) 0 .3cqw,transparent .3cqw .9cqw),linear-gradient(160deg,var(--hi),var(--lo) 72%,color-mix(in srgb,var(--lo) 80%,black));box-shadow:inset 0 0 0 .4cqw color-mix(in srgb,var(--lo) 45%,black),inset .5cqw .6cqw .9cqw color-mix(in srgb,var(--white) 35%,transparent)}
 .mtg-card.frame-w{--hi:var(--frame-w-hi);--lo:var(--frame-w-lo);--box:var(--box-w)}
 .mtg-card.frame-u{--hi:var(--frame-u-hi);--lo:var(--frame-u-lo);--box:var(--box-u)}
 .mtg-card.frame-b{--hi:var(--frame-b-hi);--lo:var(--frame-b-lo);--box:var(--box-b)}
@@ -84,21 +84,17 @@ button.mtg-card{cursor:pointer}
 
 /* Borderless: the frame runs to the edge of the card, with no black border. */
 .mtg-card.tpl-borderless{background:var(--lo)}
-.tpl-borderless .mtg-frame{inset:0;padding:4.4cqw 5cqw 9cqw;border-radius:0;box-shadow:none}
+.tpl-borderless .mtg-frame{inset:0;border-radius:0;box-shadow:none}
 .tpl-borderless .mtg-foot{bottom:2.2cqw;left:3cqw}
-.tpl-borderless .mtg-pt{bottom:2.6cqw;right:3.4cqw}
 
 /* Full art: the picture is the whole card; the plates and text box float on it. */
 .mtg-card.tpl-full-art{background:var(--lo)}
-.tpl-full-art .mtg-frame{inset:0;padding:4.4cqw 5cqw 9cqw;border-radius:0;background-image:none;box-shadow:none;grid-template-rows:7.4cqw 1fr 6.6cqw 27cqw}
-.tpl-full-art .mtg-art{position:absolute;inset:0;border-radius:0;box-shadow:none}
-.tpl-full-art .mtg-name,.tpl-full-art .mtg-type,.tpl-full-art .mtg-box{position:relative;z-index:1}
-.tpl-full-art .mtg-name{grid-row:1}
-.tpl-full-art .mtg-type{grid-row:3}
-.tpl-full-art .mtg-box{grid-row:4;background-image:none;background-color:color-mix(in srgb,var(--box) 82%,transparent)}
+.tpl-full-art .mtg-frame{inset:0;border-radius:0;background-image:none;box-shadow:none}
+.tpl-full-art .mtg-art{border-radius:0;box-shadow:none}
+.tpl-full-art .mtg-name,.tpl-full-art .mtg-type,.tpl-full-art .mtg-box{z-index:1}
+.tpl-full-art .mtg-box{background-image:none;background-color:color-mix(in srgb,var(--box) 82%,transparent)}
 .tpl-full-art .mtg-name,.tpl-full-art .mtg-type{background-color:color-mix(in srgb,var(--box) 88%,transparent)}
 .tpl-full-art .mtg-foot{bottom:2.2cqw;left:3cqw;color:var(--card-foot-ink)}
-.tpl-full-art .mtg-pt{bottom:2.6cqw;right:3.4cqw}
 
 /* A whole-card picture (an import from MTG Nexus, or a scan): the picture is the
    card, edge to edge. Our name plate, type plate and text box are laid over it,
@@ -123,19 +119,15 @@ button.mtg-card{cursor:pointer}
 .art-card-plain .mtg-frame{display:none}
 
 /* ---- Template layouts -------------------------------------------------------
-   Where each part of a planeswalker, saga or token goes is in its template file
-   (`public/templates/`), placed inline by `card-face.js`; the rules below are only how
-   those parts look. The places are those of a real MTG Nexus card, so a card drawn
-   natively and a scan with our text laid over it share one geometry. `--fx`/`--fy` are where the template's
-   frame starts on the card: the children are absolute inside the frame, so each
-   place is taken from them. A scan has no frame of its own, so it starts at 0. */
-.mtg-card{--fx:3.4cqw;--fy:3.4cqw}
-.mtg-card.tpl-classic{--fx:4.6cqw;--fy:4.6cqw}
-.mtg-card.tpl-borderless,.mtg-card.tpl-full-art,.mtg-card.art-card{--fx:0cqw;--fy:0cqw}
-.lay-planeswalker .mtg-name,.lay-planeswalker .mtg-art,.lay-planeswalker .mtg-type,.lay-planeswalker .mtg-box,.lay-planeswalker .mtg-pt,
-.lay-saga .mtg-name,.lay-saga .mtg-art,.lay-saga .mtg-type,.lay-saga .mtg-box,
-.lay-token .mtg-name,.lay-token .mtg-art,.lay-token .mtg-type,.lay-token .mtg-box,.lay-token .mtg-pt,
-.lay-nexus .mtg-name,.lay-nexus .mtg-art,.lay-nexus .mtg-type,.lay-nexus .mtg-box,.lay-nexus .mtg-pt{position:absolute;grid-row:auto;grid-column:auto}
+   Where each part of a card goes is in its template file (`public/templates/`),
+   placed inline by `card-face.js`; the rules below are only how those parts look.
+   `--fx`/`--fy` are where the template's frame starts on the card and `--fb` how far
+   its bottom edge is inset, so a place taken from the card's corner lands right; a
+   scan has no frame of its own, so it starts at 0. `--card-h` is the card's height in
+   card-width units, for a part anchored by its bottom edge. */
+.mtg-card{--fx:3.4cqw;--fy:3.4cqw;--fb:7.4cqw;--card-h:calc(100cqw * 88 / 63)}
+.mtg-card.tpl-classic{--fx:4.6cqw;--fy:4.6cqw;--fb:8.6cqw}
+.mtg-card.tpl-borderless,.mtg-card.tpl-full-art,.mtg-card.art-card{--fx:0cqw;--fy:0cqw;--fb:0cqw}
 /* Planeswalker: tall art, abilities over its foot, loyalty where power/toughness would be. */
 .lay-planeswalker .mtg-name{padding:0 3.4cqw}
 .lay-planeswalker .mtg-type{padding:0 3.4cqw}

@@ -66,7 +66,7 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
   await expect(page.locator("h1")).toBeVisible();
   await page.click(".add-card");
   const preview = page.locator(".preview .mtg-card");
-  await expect(preview).toHaveClass(/lay-normal/);
+  await expect(preview).toHaveClass(/lay-modern/);
   // A new card has a mana cost and no stats.
   await expect(feature(page, "cost")).toBeChecked();
   await expect(page.locator('input[name="power_toughness"]')).toHaveCount(0);
@@ -97,7 +97,7 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
   await expect(page.locator(".preview .saga-row")).toHaveCount(2);
   await expect(page.locator(".preview .saga-mark")).toHaveCount(3);
   await feature(page, "power_toughness").check();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-normal/);
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-modern/);
   await expect(page.locator(".look-option", { hasText: "Saga" })).toHaveCount(0);
   await feature(page, "power_toughness").uncheck();
 
@@ -110,7 +110,7 @@ test("a card becomes a planeswalker, a saga or a token by what it has and how it
   await expect(page.locator(".preview .mtg-cost")).toBeHidden();
   // Giving it a cost again takes the token look off it.
   await feature(page, "cost").check();
-  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-normal/);
+  await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-modern/);
 });
 
 for (const template of ["modern", "classic", "borderless", "full-art"]) {

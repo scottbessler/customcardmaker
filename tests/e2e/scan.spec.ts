@@ -47,6 +47,8 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
   await page.reload();
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/art-card/);
   await expect(page.locator('input[name="art_is_card"]')).toBeChecked();
+  // The filmstrip is above the preview, so it must be drawn before the boxes are read.
+  await expect(page.locator(".filmstrip .strip-item")).toHaveCount(1);
 
   // Boxes are measured from the top of the page, wherever the checkbox clicks left it scrolled.
   await page.evaluate(() => window.scrollTo(0, 0));

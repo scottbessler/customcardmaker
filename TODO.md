@@ -133,15 +133,16 @@ that changes behaviour, not here.
           geometry now comes from it (`resolveTemplate(..., scan)`), so `.art-card` in
           `04-cards.css` holds only styling; a scan of a planeswalker/saga/token already used
           their own templates. (`keep_printed_text` stays: "draw none of ours".)
-    - [ ] port the four looks' standard grid layout (name plate, art, type plate, text box, P/T,
-          foot; `.mtg-frame` grid in `04-cards.css` for modern/classic/borderless/full-art) into
-          `<template>` bodies so a look is data too; keep the e2e image/geometry baselines green.
-          Lowest value of what is left (they are our own looks, not Nexus layouts): do last
+    - [x] port the four looks' standard grid layout (name plate, art, type plate, text box, P/T)
+          into `<template>` bodies so a look is data too; the geometry baselines are unchanged
+          (only `display`/`position` moved). The footer stays in the stylesheet: its place is a
+          look's, not a layout's (a saga card in the borderless look must get the borderless
+          foot), so a `<foot>` element would need the look/layout split reworked first
     - [ ] a set keeps a default template per kind of card (today one look for all, only a look)
     - [ ] both stats at once: a template that draws power/toughness and loyalty (creature
           planeswalker); today the planeswalker layout shows loyalty only
-    - [ ] delete what the above makes dead: the `.lay-*` position-group CSS rule once the looks are
-          bodies
+    - [x] delete what the above makes dead: the `.mtg-frame` grid, the `.lay-*` position group,
+          and the per-look P/T overrides
   - [ ] Later: split / adventure / flip / modal; custom templates per account (editor,
         per-account storage, the whitelist enforced on save)
 
