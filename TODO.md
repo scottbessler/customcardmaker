@@ -78,10 +78,11 @@ that changes behaviour, not here.
   - [ ] Works without a key configured (the button is simply absent), and is tested
         against a fake OpenRouter so no test spends money
 
-- [ ] **11. Symbols still not quite vertically aligned** — found by eye, so measure
+- [x] **11. Symbols still not quite vertically aligned** — found by eye, so measure
       *where*: the rules text, the mana cost in the name plate, the palette.
-  - [ ] Decide what "centred" means for a symbol beside mixed-case text, check it
-        at several sizes, and pin it with a measurement, not a screenshot
+  - [x] Decide what "centred" means for a symbol beside mixed-case text (the middle of
+        the capitals), check it at several sizes, and pin it with a measurement, not a
+        screenshot: rules text, the plates, and now a palette key (`symbols.spec.ts`)
 - [x] **12. Choose a frame / template, like MTG Nexus** — not only the one a card
       gets from its mana cost.
   - [x] A **frame colour** the author can set (or leave on Auto, from the cost):

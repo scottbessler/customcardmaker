@@ -48,7 +48,10 @@ nothing about real Magic cards.
   generic 0–20, `W U B R G C`, `X Y Z`, `S` (snow), `E` (energy), `P`, `CHAOS`,
   `T` (tap) and `Q` (untap), hybrid (`W/U`, either order), two-colour generic
   (`2/W`), colourless hybrid (`C/W`), Phyrexian (`W/P`) and Phyrexian hybrid
-  (`G/U/P`, either order). They are drawn with the Mana font (R6).
+  (`G/U/P`, either order). They are drawn with the Mana font (R6). A symbol beside
+  text is centred on the middle of the capitals beside it, not on its line box (which
+  has room for descenders and sits low); a palette key centres its symbol in the key.
+  Both are pinned by measurement, not by a screenshot (`tests/e2e/symbols.spec.ts`).
 - **R6.** Symbols are the Mana font's, vendored under `public/vendor/`. Something
   typed in braces that the font has no symbol for is shown as typed, never as a
   blank disc. The footer says this is an unofficial fan tool and whose symbols

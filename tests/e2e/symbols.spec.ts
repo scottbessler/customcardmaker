@@ -169,6 +169,31 @@ for (const [size, text] of Object.entries(SIZES)) {
   });
 }
 
+// A palette key has no letters to sit beside, so "centred" there is the middle of
+// the key, which is what the eye reads on a round button.
+const PALETTE_TOLERANCE = 0.5;
+
+test("a palette symbol sits in the middle of its key", async ({ page }) => {
+  await cardInEditor(page);
+  await page.evaluate(() => document.fonts.ready);
+  const offsets = await page.evaluate(() => {
+    // oxlint-disable-next-line unicorn/consistent-function-scoping -- runs in the browser, like the rest of this callback
+    const middle = (box: DOMRect) => (box.top + box.bottom) / 2;
+    // oxlint-disable-next-line unicorn/consistent-function-scoping -- as above
+    const middleX = (box: DOMRect) => (box.left + box.right) / 2;
+    return [...document.querySelectorAll(".symbol-key")].map((key) => {
+      const symbol = key.querySelector(".mana")!.getBoundingClientRect();
+      const button = key.getBoundingClientRect();
+      return { y: middle(symbol) - middle(button), x: middleX(symbol) - middleX(button) };
+    });
+  });
+  expect(offsets.length, "the palette has keys to measure").toBeGreaterThan(0);
+  for (const offset of offsets) {
+    expect(Math.abs(offset.y), `a palette symbol is ${offset.y.toFixed(2)}px off the middle of its key`).toBeLessThanOrEqual(PALETTE_TOLERANCE);
+    expect(Math.abs(offset.x), `a palette symbol is ${offset.x.toFixed(2)}px off the middle of its key`).toBeLessThanOrEqual(PALETTE_TOLERANCE);
+  }
+});
+
 test("a symbol is the size of the text beside it, so small text does not get a big disc", async ({ page }) => {
   await cardInEditor(page);
   await page.fill('textarea[name="rules_text"]', SIZES.large);
