@@ -35,6 +35,8 @@ button.mtg-card{cursor:pointer}
 .mtg-rules{line-height:1.22}
 .mtg-rules p{margin:0 0 .6em}
 .mtg-rules p:last-child{margin-bottom:0}
+/* Reminder text — the words in parentheses — is printed in italics. */
+.mtg-rules .reminder{font-style:italic}
 .mtg-flavor{margin-top:.7em;font-style:italic}
 .mtg-pt{position:absolute;right:2cqw;bottom:-2.8cqw;min-width:15cqw;padding:.8cqw 2.6cqw;border-radius:2cqw;background-color:var(--box);background-image:linear-gradient(180deg,color-mix(in srgb,var(--box) 65%,white),var(--box) 55%,color-mix(in srgb,var(--box) 85%,var(--lo)));font-size:5cqw;font-weight:800;text-align:center;line-height:1.1;box-shadow:0 0 0 .5cqw var(--card-text),0 0 0 1cqw color-mix(in srgb,var(--lo) 55%,black),0 .6cqw .8cqw 1cqw var(--shadow-40)}
 .mtg-foot{position:absolute;left:2cqw;right:19cqw;bottom:-6.1cqw;display:flex;flex-direction:column;align-items:flex-start;gap:.5cqw;color:var(--card-foot-ink);font-size:2.5cqw;font-weight:700;line-height:1;letter-spacing:.02em;white-space:nowrap}

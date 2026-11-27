@@ -1,6 +1,6 @@
 import { html } from "/public/vendor/htm-preact.js";
 import { artUrl } from "/public/art.js";
-import { abilities, chapters, costSymbols, frameOf, rulesSize, symbolKey, tokenize } from "/public/frame.js";
+import { abilities, chapters, costSymbols, frameOf, reminders, rulesSize, symbolKey, tokenize } from "/public/frame.js";
 import { resolveTemplate } from "/public/templates.js";
 
 /**
@@ -13,8 +13,14 @@ export function Mana({ symbol }) {
   return html`<i class=${`mana ms ms-cost ms-shadow ms-${key}`} data-symbol=${symbol} role="img" aria-label=${symbol}></i>`;
 }
 
+/** One line of rules text: symbols drawn, reminder text in italics. */
+const tokens = (text) =>
+  tokenize(text).map((t) => (t.symbol ? html`<${Mana} symbol=${t.symbol} />` : t.text));
+
 function Line({ text }) {
-  return html`<p>${tokenize(text).map((t) => (t.symbol ? html`<${Mana} symbol=${t.symbol} />` : t.text))}</p>`;
+  return html`<p>${reminders(text).map((part) =>
+    part.reminder ? html`<i class="reminder">${tokens(part.text)}</i>` : tokens(part.text),
+  )}</p>`;
 }
 
 /** A planeswalker's abilities: a loyalty cost beside each line. */

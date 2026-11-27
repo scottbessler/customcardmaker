@@ -80,6 +80,9 @@ nothing about real Magic cards.
   public set with its default. (`src/card.rs`, `public/card-face.js`)
 - **R5.** A card's art fills the art box, cropped to cover it and centred; a card
   with none shows the striped placeholder.
+- **R11.** Reminder text — the words in parentheses in `rules_text` — is printed in
+  italics; the rest of the line is not. Parentheses do not nest, so the first `)`
+  closes the run. (`reminders` in `public/frame.js`)
 
 ## 5. Art
 

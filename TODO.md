@@ -19,9 +19,11 @@ that changes behaviour, not here.
   - [x] Real frame art per colour: borders, textured boxes, name/type plates
         (`/frames` shows every frame; collector line and P/T box are placed as
         on a printed card)
-  - [ ] Rules text: reminder text in italics, symbol sizing, line spacing
-  - [ ] Set symbol by rarity in the type line; collector footer layout
+  - [x] Rules text: reminder text in italics (R11), symbol sizing, line spacing
+  - [x] Set symbol by rarity in the type line (the pip); collector footer layout
   - [ ] Proper P/T box, and layouts for planeswalker, saga, split, transform
+        (planeswalker, saga, token and transform came with items 12 and 14; split
+        is item 14's later work)
 - [x] **3. Type line help** — dropdowns / typeahead for each part.
   - [x] Supertype, card type(s), and subtypes as separate parts
   - [x] Subtype typeahead filtered by the chosen card type

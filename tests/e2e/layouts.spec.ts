@@ -3,13 +3,15 @@ import { expectLayout } from "./layout";
 import { expectImage } from "./rendering";
 import { registerUser } from "./session";
 
-test("planeswalker abilities and saga chapters are read from the rules text", async ({ page }) => {
+test("planeswalker abilities, saga chapters and reminder text are read from the rules text", async ({ page }) => {
   await page.goto("/");
   const parsed = await page.evaluate(async () => {
-    const { abilities, chapters } = await import("/public/frame.js");
+    const { abilities, chapters, reminders } = await import("/public/frame.js");
     return {
       pw: abilities("+1: Add {B}\n-7: Big\n−2: Minus\n0: Draw\n: static\nPlain\nX: not a cost"),
       saga: chapters(": (Reminder)\nI: One\nII, III: Two\nmore\nIV: Four"),
+      reminder: reminders("Flying (It can only be blocked by creatures with flying or reach.) Haste"),
+      none: reminders("No parentheses here"),
     };
   });
   expect(parsed.pw).toEqual([
@@ -29,6 +31,29 @@ test("planeswalker abilities and saga chapters are read from the rules text", as
       { marks: ["IV"], lines: ["Four"] },
     ],
   });
+  expect(parsed.reminder).toEqual([
+    { text: "Flying ", reminder: false },
+    { text: "It can only be blocked by creatures with flying or reach.", reminder: true },
+    { text: " Haste", reminder: false },
+  ]);
+  expect(parsed.none).toEqual([{ text: "No parentheses here", reminder: false }]);
+});
+
+test("reminder text is printed in italics, and the rest is not", async ({ page }) => {
+  await registerUser(page, "reminder");
+  await page.fill('.new-set input[name="name"]', "Reminders");
+  await page.fill('.new-set input[name="code"]', "REM");
+  await page.click(".new-set button");
+  await expect(page.locator("h1")).toBeVisible();
+  await page.click(".add-card");
+  await page.fill(
+    'textarea[name="rules_text"]',
+    "Flying (It can only be blocked by creatures with flying or reach.)",
+  );
+  const reminder = page.locator(".preview .mtg-rules .reminder");
+  await expect(reminder).toHaveText("It can only be blocked by creatures with flying or reach.");
+  await expect(reminder).toHaveCSS("font-style", "italic");
+  await expect(page.locator(".preview .mtg-rules p")).toHaveCSS("font-style", "normal");
 });
 
 const feature = (page, id: string) => page.locator(`input[name="feature-${id}"]`);
