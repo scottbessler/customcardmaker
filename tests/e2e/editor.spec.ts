@@ -228,22 +228,60 @@ test("clicking preview fields edits the card and full form", async ({ page }) =>
   await createSet(page);
   await addCard(page, 1);
   const preview = page.locator(".preview");
+  // Editing happens on the card itself: the printed text becomes a field in the same place.
   await preview.getByRole("button", { name: "Edit name and mana cost" }).click();
-  const dialog = page.getByRole("dialog", { name: "Edit name and mana cost" });
-  await expect(dialog.getByLabel("Name")).toBeFocused();
-  await dialog.getByLabel("Name").fill("Preview Pilot");
-  await dialog.getByLabel("Mana cost").fill("{1}{U}");
-  await dialog.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const name = preview.getByLabel("Name", { exact: true });
+  await expect(name).toBeFocused();
+  await name.fill("Preview Pilot");
+  await preview.getByLabel("Mana cost", { exact: true }).fill("{1}{U}");
+  await preview.getByLabel("Mana cost", { exact: true }).press("Enter");
+  await expect(preview.locator(".card-inline")).toHaveCount(0);
   await expect(page.locator('input[name="name"]')).toHaveValue("Preview Pilot");
   await expect(preview.locator(".mtg-card")).toHaveClass(/frame-u/);
   await preview.getByRole("button", { name: "Edit rules text and flavor text" }).click();
-  const prose = page.getByRole("dialog", { name: "Edit rules text and flavor text" });
-  await prose.getByLabel("Rules text").fill("Flying");
-  await prose.getByLabel("Flavor text").fill("Above the clouds.");
-  await prose.getByRole("button", { name: "Done" }).click();
+  const rules = preview.getByLabel("Rules text", { exact: true });
+  await rules.fill("Flying");
+  // Enter is a new paragraph in the rules text, not the end of the edit.
+  await rules.press("Enter");
+  await rules.pressSequentially("Haste");
+  await preview.getByLabel("Flavor text", { exact: true }).fill("Above the clouds.");
+  await page.locator("h1").click();
+  await expect(preview.locator(".card-inline")).toHaveCount(0);
   await expect(preview.locator(".mtg-box")).toContainText("Above the clouds.");
+  await expect(preview.locator(".mtg-rules > p")).toHaveText(["Flying", "Haste"]);
   await expect(page.locator(".save-state")).toHaveText("Saved");
   await page.reload();
   await expect(preview.locator(".mtg-title")).toHaveText("Preview Pilot");
   await expect(preview.locator(".mtg-box")).toContainText("Flying");
+});
+
+test("editing on the card: Tab moves between a part's fields, Escape and clicking away end it", async ({ page }) => {
+  await createSet(page);
+  await addCard(page, 1);
+  const preview = page.locator(".preview");
+  await preview.getByRole("button", { name: "Edit name and mana cost" }).click();
+  const name = preview.getByLabel("Name", { exact: true });
+  const cost = preview.getByLabel("Mana cost", { exact: true });
+  await name.fill("Tabbed");
+  // The two fields of the name plate are one edit: tabbing between them keeps it open.
+  await page.keyboard.press("Tab");
+  await expect(cost).toBeFocused();
+  await expect(name).toBeVisible();
+  // The field sits where the printed text was, in the same plate.
+  const plate = (await preview.locator(".mtg-name").boundingBox())!;
+  const field = (await name.boundingBox())!;
+  expect(field.x).toBeGreaterThanOrEqual(plate.x);
+  expect(field.y + field.height).toBeLessThanOrEqual(plate.y + plate.height + 1);
+  // Escape ends it, keeping what was typed.
+  await page.keyboard.press("Escape");
+  await expect(preview.locator(".card-inline")).toHaveCount(0);
+  await expect(preview.locator(".mtg-title")).toHaveText("Tabbed");
+  // Opening another part ends the first and starts the next.
+  await preview.getByRole("button", { name: "Edit type line" }).click();
+  await expect(preview.getByLabel("Type line", { exact: true })).toBeFocused();
+  await preview.getByRole("button", { name: "Edit rules text and flavor text" }).click();
+  await expect(preview.getByLabel("Type line", { exact: true })).toHaveCount(0);
+  await expect(preview.getByLabel("Rules text", { exact: true })).toBeFocused();
+  await expect(preview.locator(".card-inline-rules_text")).toHaveCount(1);
 });

@@ -64,9 +64,8 @@ test("setup adds and locks required features while switching preserves shared fi
   await expect(page.locator('input[name="name"]')).toHaveValue("Siege");
   await expect(page.locator('input[name="mana_cost"]')).toHaveValue("{R}");
   await page.locator(".preview").getByRole("button", { name: "Edit defense" }).click();
-  const defenseDialog = page.getByRole("dialog", { name: "Edit defense" });
-  await defenseDialog.getByLabel("Defense").fill("5");
-  await defenseDialog.getByRole("button", { name: "Done" }).click();
+  await page.locator(".preview").getByLabel("Defense", { exact: true }).fill("5");
+  await page.locator(".preview").getByLabel("Defense", { exact: true }).press("Enter");
   await expect(page.locator(".preview .mtg-pt")).toHaveText("5");
 });
 
@@ -112,9 +111,9 @@ test("a two-halved layout draws the card and its second half at once", async ({ 
   await expect(page.locator(".editing .face-tab.chosen")).toHaveText("2nd half");
   await page.locator('.editing .face-tab:has-text("Front")').click();
   await page.locator(".preview .mtg-name[data-part-face=half]").getByRole("button").click();
-  const halfDialog = page.getByRole("dialog", { name: "Edit name and mana cost" });
-  await halfDialog.getByLabel("Name").fill("Right Half");
-  await halfDialog.getByRole("button", { name: "Done" }).click();
+  const half = page.locator(".preview .mtg-name[data-part-face=half]").getByLabel("Name", { exact: true });
+  await half.fill("Right Half");
+  await half.press("Enter");
   await expect(page.locator(".preview .mtg-title").last()).toHaveText("Right Half");
   await page.fill('input[name="mana_cost"]', "{2}{U}");
   await page.locator('.face-tab:has-text("Front")').click();

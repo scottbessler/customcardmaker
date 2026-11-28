@@ -230,4 +230,13 @@
 .card-stat-empty{opacity:0}
 .card-stat-empty:hover,.card-stat-empty:focus-within{opacity:1}
 @media(hover:none){.card-stat-empty{opacity:1}}
-.card-text-dialog>form{padding:var(--space-16)}
+/* Editing in place: a real field standing where the printed text is, in the card's own type
+   (it is rendered inside the element that shows the text, so everything is inherited). */
+.card-inline{font:inherit;letter-spacing:inherit;line-height:inherit;color:inherit;text-align:inherit;background:transparent;border:0;border-radius:0;box-shadow:none;margin:0;padding:0;min-height:0;width:100%;min-width:0;outline:2px solid var(--gold-hi);outline-offset:2px}
+/* A single line sits inside a clipped plate, so its outline is drawn inside it. */
+input.card-inline{outline-offset:-2px;line-height:1.3}
+textarea.card-inline{display:block;resize:none;height:auto;max-height:100%}
+.card-inline-mana_cost{width:16cqw;text-align:right}
+.card-inline-flavor_text{font-style:italic;margin-top:.7em}
+.mtg-pt .card-inline{text-align:center}
+.is-editing .card-edit-target{display:none}

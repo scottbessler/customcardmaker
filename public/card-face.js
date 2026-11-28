@@ -1,4 +1,4 @@
-import { html } from "/public/vendor/htm-preact.js";
+import { html, useLayoutEffect, useRef } from "/public/vendor/htm-preact.js";
 import { artBackground, artUrl } from "/public/art.js";
 import { abilities, chapters, costSymbols, frameOf, reminders, rulesSize, symbolKey, tokenize } from "/public/frame.js";
 import { parseTypeLine } from "/public/types.js";
@@ -70,6 +70,63 @@ function Rules({ card, as }) {
 }
 
 /**
+ * One field being edited in place: a real input (or textarea) rendered inside the element that
+ * shows the printed text, so it takes the card's own type and sits exactly where the text is.
+ * `edit` says which fields the part has, their values and labels, and how to change or close.
+ */
+function Inline({ edit, name, multiline = false, placeholder }) {
+  const ref = useRef(null);
+  const first = edit.keys[0] === name;
+  // Opening a part puts the caret at the end of its first field.
+  useLayoutEffect(() => {
+    if (!first) return;
+    const el = ref.current;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, []);
+  const props = {
+    ref,
+    class: `card-inline card-inline-${name}`,
+    value: edit.value(name),
+    maxLength: edit.max(name),
+    placeholder,
+    "aria-label": edit.label(name),
+    onInput: (event) => edit.change(name, event.currentTarget.value),
+    onKeyDown: (event) => {
+      if (event.key === "Escape" || (event.key === "Enter" && !multiline)) {
+        event.preventDefault();
+        event.stopPropagation();
+        edit.close();
+      }
+    },
+  };
+  if (!multiline) return html`<input autocomplete="off" ...${props} />`;
+  return html`<textarea rows=${Math.max(2, String(props.value).split("\n").length + 1)} ...${props}></textarea>`;
+}
+
+/** The printed text of a field, or its input while its part is being edited. */
+function Slot({ edit, name, multiline, placeholder, children }) {
+  if (!edit?.active || !edit.keys.includes(name)) return children;
+  return html`<${Inline} edit=${edit} name=${name} multiline=${multiline} placeholder=${placeholder} />`;
+}
+
+/** What a part needs to be edited in place: a click target while it is not, its inputs while it is. */
+const editable = (edit) => ({
+  class: edit?.active ? " is-editing" : "",
+  // Leaving the part (not just moving between its own fields) ends the edit. (Attached as
+  // `onfocusout`: this Preact only maps names that are native properties, and `focusout` is not one.)
+  onFocusOut: edit?.active ? (event) => {
+    // Opening a part swaps out the button that was clicked, which loses focus on its way out;
+    // that is not leaving.
+    if (event.target.classList.contains("card-edit-target")) return;
+    if (!event.currentTarget.contains(event.relatedTarget)) edit.close();
+  } : undefined,
+});
+const target = (edit) => (edit && !edit.active
+  ? html`<button type="button" class="card-edit-target" aria-label=${edit.title} title=${edit.title} onClick=${edit.open}></button>`
+  : null);
+
+/**
  * One element of a template's body, drawn with this face's fields — or the second half's,
  * when the element says `face="half"` (the split and adventure layouts).
  */
@@ -80,34 +137,40 @@ function Part({ part, card, turned, marker, symbol, editPart }) {
   if (part.tag === "art") {
     return html`<div class=${`mtg-art${source.art ? " has-art" : ""}${source.art && source.art_zoom > 100 ? " art-zoomed" : ""}`} style=${`${style}${source.art ? `;${artBackground(source)}` : ""}`}></div>`;
   }
-  const control = editPart?.(source, part.fields.map(({ name }) => name), part.face === "half");
+  const edit = editPart?.(source, part.fields.map(({ name }) => name), part.face === "half");
+  const { class: editing, onFocusOut } = editable(edit);
+  const control = target(edit);
   if (part.tag === "plate" && part.role === "name") {
-    return html`<header class="mtg-name" data-part-face=${part.face ?? undefined} style=${style}>
+    return html`<header class=${`mtg-name${editing}`} data-part-face=${part.face ?? undefined} style=${style} onfocusout=${onFocusOut}>
       ${marker ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
-      <span class="mtg-title">${source.name || html`<em>Untitled</em>`}</span>
-      ${field("mana_cost") ? html`<span class="mtg-cost">${costSymbols(source.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>` : null}
+      <span class="mtg-title"><${Slot} edit=${edit} name="name" placeholder="Name">${source.name || html`<em>Untitled</em>`}<//></span>
+      ${field("mana_cost") ? html`<span class="mtg-cost"><${Slot} edit=${edit} name="mana_cost" placeholder="{2}{U}">${costSymbols(source.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}<//></span>` : null}
       ${control}
     </header>`;
   }
-  if (part.tag === "plate") return html`<div class="mtg-type" data-part-face=${part.face ?? undefined} style=${style}><span>${source.type_line}</span><i class="mtg-pip" data-symbol=${symbol} aria-hidden="true"></i>${control}</div>`;
+  if (part.tag === "plate") return html`<div class=${`mtg-type${editing}`} data-part-face=${part.face ?? undefined} style=${style} onfocusout=${onFocusOut}><span><${Slot} edit=${edit} name="type_line" placeholder="Type line">${source.type_line}<//></span><i class="mtg-pip" data-symbol=${symbol} aria-hidden="true"></i>${control}</div>`;
   if (part.tag === "box") {
     const rules = field("rules_text");
     const flavor = field("flavor_text");
     const lines = flavor && source.flavor_text ? source.flavor_text.split("\n") : [];
-    return html`<div class="mtg-box" data-part-face=${part.face ?? undefined} style=${style}>
+    return html`<div class=${`mtg-box${editing}`} data-part-face=${part.face ?? undefined} style=${style} onfocusout=${onFocusOut}>
       <div class="mtg-rules" style=${`--rules-size:${rulesSize(source)}cqw`}>
-        ${rules ? html`<${Rules} card=${source} as=${rules.as} />` : null}
-        ${lines.length ? html`<div class="mtg-flavor">${lines.map((text) => html`<p>${text}</p>`)}</div>` : null}
+        ${rules ? html`<${Slot} edit=${edit} name="rules_text" multiline placeholder="Rules text"><${Rules} card=${source} as=${rules.as} /><//>` : null}
+        ${edit?.active && flavor
+          ? html`<${Inline} edit=${edit} name="flavor_text" multiline placeholder="Flavor text" />`
+          : lines.length ? html`<div class="mtg-flavor">${lines.map((text) => html`<p>${text}</p>`)}</div>` : null}
       </div>
       ${control}
     </div>`;
   }
-  // A stat: the first of its fields the card has a value for.
+  // A stat: the first of its fields the card has a value for. Its input stands in for it, and
+  // an empty stat is shown only so there is something to click.
   const stat = part.fields.find((f) => source[f.name]);
-  if (!stat && !control) return null;
-  const loyalty = stat ? stat.name === "loyalty" : field("loyalty");
-  return html`<div class=${`mtg-pt${loyalty ? " mtg-loyalty" : ""}${stat ? "" : " card-stat-empty"}`} style=${style}>
-    ${stat ? source[stat.name] : html`<span aria-hidden="true">—</span>`}${control}
+  if (!stat && !control && !edit?.active) return null;
+  const named = stat ?? part.fields.find((f) => edit?.keys.includes(f.name));
+  const loyalty = named ? named.name === "loyalty" : field("loyalty");
+  return html`<div class=${`mtg-pt${loyalty ? " mtg-loyalty" : ""}${stat ? "" : " card-stat-empty"}${editing}`} style=${style} onfocusout=${onFocusOut}>
+    <${Slot} edit=${edit} name=${named?.name} placeholder="—">${stat ? source[stat.name] : html`<span aria-hidden="true">—</span>`}<//>${control}
   </div>`;
 }
 
@@ -149,11 +212,15 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
   >
     <div class="mtg-frame">
       ${layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} marker=${marker} symbol=${symbol} editPart=${editPart} />`)}
-      <footer class="mtg-foot">
-        <span>${collector}${collector && code ? " • " : ""}${code}</span>
-        <span>${card.artist ? `Illus. ${card.artist}` : ""}</span>
-        ${editPart?.(card, ["artist"], false)}
-      </footer>
+      ${(() => {
+        const edit = editPart?.(card, ["artist"], false);
+        const { class: editing, onFocusOut } = editable(edit);
+        return html`<footer class=${`mtg-foot${editing}`} onfocusout=${onFocusOut}>
+          <span>${collector}${collector && code ? " • " : ""}${code}</span>
+          <span><${Slot} edit=${edit} name="artist" placeholder="Artist">${card.artist ? `Illus. ${card.artist}` : ""}<//></span>
+          ${target(edit)}
+        </footer>`;
+      })()}
     </div>
     ${onArt ? artZones.map(({ x, y, w, h, face }) => html`<div class="card-art-zone"
       style=${`left:${x}cqw;top:${y}cqw;width:${w}cqw;height:${h}cqw`}>
