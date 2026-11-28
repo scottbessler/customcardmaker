@@ -1,4 +1,4 @@
-// A stand-in for Openverse's API, for the e2e suite: a few fixed records, the
+// A stand-in for Openverse and OpenRouter, for the e2e suite: a few fixed records, the
 // same shapes the real service answers with, and one query that is always
 // rate-limited. Run by playwright.config.ts; nothing here touches the network.
 import { createServer } from "node:http";
@@ -25,10 +25,25 @@ const record = (id) => {
   };
 };
 
-createServer((request, response) => {
+createServer(async (request, response) => {
   const url = new URL(request.url, BASE);
   const json = (status, body) => { response.writeHead(status, { "content-type": "application/json" }); response.end(JSON.stringify(body)); };
   if (url.pathname === "/health") return json(200, { ok: true });
+  if (url.pathname === "/api/v1/chat/completions" && request.method === "POST") {
+    if (request.headers.authorization !== "Bearer e2e-only") return json(401, {});
+    let body = "";
+    request.setEncoding("utf8");
+    for await (const chunk of request) body += chunk;
+    const payload = JSON.parse(body);
+    if (payload.modalities?.includes("image")) {
+      const image = payload.messages[0].content[1].image_url.url;
+      if (!image.startsWith("data:image/") || !payload.image_config.aspect_ratio) return json(400, {});
+      return json(200, { choices: [{ message: { images: [{ image_url: { url: `data:image/png;base64,${PNG.toString("base64")}` } }] } }] });
+    }
+    const original = payload.messages[1].content;
+    const content = original === "{T}: draw a card" ? "{T}: Draw a card." : "{W}: Draw a card.";
+    return json(200, { choices: [{ message: { content } }] });
+  }
   if (url.pathname === "/v1/images/") {
     const q = (url.searchParams.get("q") ?? "").toLowerCase();
     if (q.includes("busy")) return json(429, { detail: "throttled" });

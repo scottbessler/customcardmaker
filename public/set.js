@@ -1,4 +1,5 @@
 import { html, render, useCallback, useEffect, useLayoutEffect, useRef, useState } from "/public/vendor/htm-preact.js";
+import { ArtExtension, RulesCleanup } from "/public/ai-tools.js";
 import { api, uploadArt } from "/public/api.js";
 import { artBackground, artUrl, prepareArt } from "/public/art.js";
 import { ArtSearchDialog, Credit } from "/public/art-search.js";
@@ -169,6 +170,7 @@ function TemplateSetup({ initial, initialSide, template, symbol, creating, onApp
 
 const app = document.getElementById("app");
 const setId = app.dataset.setId;
+const aiEnabled = app.dataset.aiEnabled === "true";
 // The server says how long each field may be, so the form never keeps its own copy.
 const limits = JSON.parse(document.getElementById("limits").textContent);
 // So does the list of looks and frame colours a card may name.
@@ -203,11 +205,15 @@ function CardTextDialog({ fields, title, card, onChange, onClose }) {
       <h2 id="card-text-title">${title}</h2>
       ${fields.map(({ key, kind, label }) => {
         const props = fieldProps(card, key, onChange);
-        return html`<${Field} label=${label}>
-          ${kind === "text"
-            ? html`<textarea rows=${key === "rules_text" ? 5 : 2} ...${props}></textarea>`
-            : html`<input autocomplete="off" ...${props} />`}
-        <//>`;
+        return html`<div class="card-text-field">
+          <${Field} label=${label}>
+            ${kind === "text"
+              ? html`<textarea rows=${key === "rules_text" ? 5 : 2} ...${props}></textarea>`
+              : html`<input autocomplete="off" ...${props} />`}
+          <//>
+          ${aiEnabled && key === "rules_text" ? html`<${RulesCleanup} text=${card.rules_text}
+            onApply=${(rules_text) => onChange({ ...card, rules_text })} />` : null}
+        </div>`;
       })}
       <footer><button type="submit">Done</button></footer>
     </form>
@@ -377,6 +383,8 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
         <textarea rows="5" placeholder="Flying\n{T}: Draw a card." ...${text("rules_text")} ...${watch("rules_text")}></textarea>
       <//>
       <${Palette} target=${target} onInsert=${insert} />
+      ${aiEnabled ? html`<${RulesCleanup} text=${card.rules_text}
+        onApply=${(rules_text) => onChange({ ...card, rules_text })} />` : null}
       ${has("flavor_text")
         ? html`<${Field} label="Flavor text" count=${`${card.flavor_text.length}/${limits.flavor_text}`}>
             <textarea rows="2" ...${text("flavor_text")}></textarea>
@@ -413,6 +421,12 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
             <p class="art-hint muted">PNG, JPEG or WebP. It is shrunk to fit before it is sent.</p>
           </div>
         </div>
+        ${aiEnabled && artOpen && card.art && crop ? html`<${ArtExtension}
+          key=${card.art} art=${card.art} ratio=${crop.w / crop.h} disabled=${uploading || searching}
+          onApply=${({ id, credit: originalCredit }) => {
+            if (originalCredit) onCredit(id, originalCredit);
+            onChange({ ...card, art: id, art_position: null, art_zoom: null });
+          }} />` : null}
         ${card.art && crop ? html`<fieldset class="form-section art-crop">
           <legend>Crop</legend>
           <${Field} label="Zoom" count=${`${zoom}%`}>

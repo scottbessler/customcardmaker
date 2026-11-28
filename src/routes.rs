@@ -72,7 +72,13 @@ pub async fn set_page(
         .get(user.id, id)
         .await?
         .ok_or_else(|| AppError::not_found("There is no such set."))?;
-    Ok(Html(render::set_page(id, &detail.set.name, &user.display_name)).into_response())
+    Ok(Html(render::set_page(
+        id,
+        &detail.set.name,
+        &user.display_name,
+        s.openrouter.is_some(),
+    ))
+    .into_response())
 }
 
 fn no_set() -> ApiError {
@@ -934,4 +940,56 @@ pub async fn import_art(
         StatusCode::CREATED,
         Json(serde_json::json!({ "id": id, "credit": got.credit })),
     ))
+}
+
+#[derive(Deserialize)]
+pub struct RulesSuggestion {
+    text: String,
+}
+
+pub async fn suggest_rules(
+    State(s): State<AppState>,
+    ApiUser(owner): ApiUser,
+    Json(request): Json<RulesSuggestion>,
+) -> Api<serde_json::Value> {
+    let service = s
+        .openrouter
+        .as_ref()
+        .ok_or_else(|| AppError::not_found("AI tools are unavailable."))?;
+    let text = service.cleanup(owner, &request.text).await?;
+    Ok(Json(serde_json::json!({ "text": text })))
+}
+
+#[derive(Deserialize)]
+pub struct ArtExtension {
+    id: Uuid,
+    aspect: String,
+}
+
+pub async fn extend_art(
+    State(s): State<AppState>,
+    ApiUser(owner): ApiUser,
+    Json(request): Json<ArtExtension>,
+) -> Api<serde_json::Value> {
+    let service = s
+        .openrouter
+        .as_ref()
+        .ok_or_else(|| AppError::not_found("AI tools are unavailable."))?;
+    if !s.art.owned_by(owner, request.id).await? {
+        return Err(AppError::not_found("There is no such image.").into());
+    }
+    let (mime, bytes) = s
+        .art
+        .read(Some(owner), request.id)
+        .await?
+        .ok_or_else(|| AppError::not_found("There is no such image."))?;
+    let (mime, extended) = service
+        .extend(owner, &mime, &bytes, &request.aspect)
+        .await?;
+    let mut credit = s.art.credits(vec![request.id]).await?.remove(&request.id);
+    if let Some(credit) = &mut credit {
+        credit.title = format!("{} (AI-extended)", credit.title);
+    }
+    let id = s.art.save(owner, mime, &extended, credit.as_ref()).await?;
+    Ok(Json(serde_json::json!({ "id": id, "credit": credit })))
 }
