@@ -60,6 +60,24 @@ test("a Cockatrice file is previewed, then becomes a set you can open", async ({
   await expect(page.locator(".strip-item")).toHaveCount(2);
 });
 
+test("Preview waits for the import form to be ready", async ({ page }) => {
+  await registerUser(page, "preview");
+  let release!: () => void;
+  const scriptReady = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/public/import.js*", async (route) => {
+    await scriptReady;
+    await route.continue();
+  });
+  await page.goto("/import", { waitUntil: "commit" });
+  const preview = page.getByRole("button", { name: "Preview", exact: true });
+  try {
+    await expect(preview).toBeDisabled();
+  } finally {
+    release();
+  }
+  await expect(preview).toBeEnabled();
+});
+
 /** One card of the slow-import file, with its picture at `url`. */
 const slowCard = (n: number, url: string) =>
   `<card><name>Slow ${n}</name><text>Flying</text><prop><type>Creature — Bird</type><manacost>{1}{W}</manacost><pt>1/1</pt></prop><set rarity="common" picurl="${url}">SLW</set></card>`;

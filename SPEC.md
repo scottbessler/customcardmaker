@@ -218,7 +218,8 @@ nothing about real Magic cards.
   back whose front is not in the file stays a card of its own. Rules text drops blank lines
   between paragraphs, and Nexus's `special` rarity is read as mythic. The set and its cards are written together or not at all,
   and only into the signed-in account. A signed-out visitor to `/import` is sent
-  to `/`. The page previews first: it says what would be created, and what the file had
+  to `/`. Preview becomes available once the import form can handle submission.
+  The page previews first: it says what would be created, and what the file had
   that we could not keep as it was (a layout we cannot draw, a back face with no front, a
   rarity we do not have, a card with no picture), and creates nothing until the import is
   confirmed. A confirmed import runs in the background: the page is given a job to poll and

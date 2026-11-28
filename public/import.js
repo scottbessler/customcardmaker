@@ -281,10 +281,12 @@ async function showPreview(button) {
 }
 
 if (form) {
+  const previewButton = form.querySelector("button[type=submit]");
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    showPreview(form.querySelector("button[type=submit]"));
+    showPreview(previewButton);
   });
+  previewButton.disabled = false;
   // Changing an option makes the shown preview out of date.
   form.addEventListener("change", () => {
     if (previewBox) previewBox.hidden = true;
