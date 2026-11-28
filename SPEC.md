@@ -289,6 +289,19 @@ nothing about real Magic cards.
   we have no overlay for. The art dialog has a checkbox for each. Removing
   the art clears both.
 
+### AI suggestions
+
+- **A1.** Configure `OPENROUTER_API_KEY` to enable AI actions. The key stays on
+  the server. A rules cleanup sends only the current rules text and previews
+  Oracle-style wording. Apply saves the proposal explicitly. Length, controls
+  and every braced symbol are validated before review.
+- **A2.** Extend background sends the selected, owned artwork to OpenRouter.
+  Preview original and proposed art. Apply swaps the upload and resets crop.
+  Original upload and attribution are retained. Whole-card scans use their
+  regular art settings.
+- **A3.** Per account, allow 12 text suggestions and three art extensions per
+  ten minutes. The service has bounded response sizes and a request timeout.
+
 ## 8. Not yet built
 
 Roughly in the order they make sense:

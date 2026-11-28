@@ -3,6 +3,7 @@ use crate::{
     auth,
     db::Db,
     imports::Imports,
+    openrouter::OpenRouter,
     openverse::{self, Openverse},
     render, routes,
     sets::SetStore,
@@ -35,6 +36,7 @@ pub struct AppState {
     pub users: UserStore,
     pub art: ArtStore,
     pub openverse: Arc<Openverse>,
+    pub openrouter: Option<Arc<OpenRouter>>,
     /// Imports running in the background, and their progress.
     pub imports: Imports,
     pub webauthn: Arc<Webauthn>,
@@ -69,6 +71,23 @@ impl AppState {
             openverse: Arc::new(Openverse::new(
                 &env::var("OPENVERSE_URL").unwrap_or_else(|_| openverse::DEFAULT_BASE.into()),
             )?),
+            openrouter: env::var("OPENROUTER_API_KEY")
+                .or_else(|_| env::var("openrouter_api_key"))
+                .ok()
+                .filter(|key| !key.trim().is_empty())
+                .map(|key| {
+                    OpenRouter::new(
+                        &env::var("OPENROUTER_URL")
+                            .unwrap_or_else(|_| "https://openrouter.ai/api/v1".into()),
+                        key,
+                        env::var("OPENROUTER_TEXT_MODEL")
+                            .unwrap_or_else(|_| "openai/gpt-5-mini".into()),
+                        env::var("OPENROUTER_IMAGE_MODEL")
+                            .unwrap_or_else(|_| "google/gemini-2.5-flash-image".into()),
+                    )
+                    .map(Arc::new)
+                })
+                .transpose()?,
             imports: Imports::default(),
             webauthn: Arc::new(build_webauthn()?),
             key: load_key(),
@@ -96,6 +115,8 @@ pub fn router(s: AppState) -> Router {
         .route("/import", get(routes::import_cockatrice_ui))
         .route("/gallery", get(routes::gallery_page))
         .route("/gallery/{id}", get(routes::gallery_set_page))
+        .route("/api/ai/rules", post(routes::suggest_rules))
+        .route("/api/ai/extend-art", post(routes::extend_art))
         .route("/api/gallery", get(routes::gallery_list))
         .route("/api/gallery/{id}", get(routes::gallery_set))
         .route("/sets/{id}", get(routes::set_page))

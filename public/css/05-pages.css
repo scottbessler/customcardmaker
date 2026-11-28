@@ -231,3 +231,13 @@
 .card-stat-empty:hover,.card-stat-empty:focus-within{opacity:1}
 @media(hover:none){.card-stat-empty{opacity:1}}
 .card-text-dialog>form{padding:var(--space-16)}
+
+.ai-tool,.ai-review,.card-text-field{display:grid;gap:var(--space-8)}
+.ai-tool>button{justify-self:start}
+.ai-review{padding:var(--space-12);border:1px solid var(--line-2);border-radius:var(--radius-control)}
+.ai-compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-12)}
+.ai-compare h3,.ai-compare figcaption{margin:0 0 var(--space-4);font-size:var(--text-small);font-weight:700}
+.ai-compare p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.ai-compare figure{margin:0;min-width:0}
+.ai-compare img{display:block;width:100%;height:8rem;object-fit:contain}
+.ai-actions{display:flex;flex-wrap:wrap;gap:var(--space-8)}

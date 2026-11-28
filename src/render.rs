@@ -24,6 +24,7 @@ fn asset(p: &str) -> String {
 fn import_map() -> String {
     let entries = [
         "/public/api.js",
+        "/public/ai-tools.js",
         "/public/art-search.js",
         "/public/art.js",
         "/public/bulk.js",
@@ -136,11 +137,11 @@ fn templates_script() -> String {
     json_script("templates", &crate::template::all())
 }
 
-pub fn set_page(id: Uuid, name: &str, user: &str) -> String {
+pub fn set_page(id: Uuid, name: &str, user: &str, ai_enabled: bool) -> String {
     layout(
         name,
         &format!(
-            r#"<div id="app" class="set-page" data-set-id="{id}"></div>{}{}{}{}"#,
+            r#"<div id="app" class="set-page" data-set-id="{id}" data-ai-enabled="{ai_enabled}"></div>{}{}{}{}"#,
             json_script("limits", &crate::cardtype::limits()),
             json_script("choices", &crate::card::choices()),
             json_script("set-symbols", &crate::sets::SYMBOLS),
