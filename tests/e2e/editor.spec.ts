@@ -223,3 +223,27 @@ test("the creator fits a phone: nothing scrolls sideways but the filmstrip", asy
   const form = await page.locator(".card-form").boundingBox();
   expect(form!.y).toBeGreaterThan(stage!.y + stage!.height - 1);
 });
+
+test("clicking preview fields edits the card and full form", async ({ page }) => {
+  await createSet(page);
+  await addCard(page, 1);
+  const preview = page.locator(".preview");
+  await preview.getByRole("button", { name: "Edit name and mana cost" }).click();
+  const dialog = page.getByRole("dialog", { name: "Edit name and mana cost" });
+  await expect(dialog.getByLabel("Name")).toBeFocused();
+  await dialog.getByLabel("Name").fill("Preview Pilot");
+  await dialog.getByLabel("Mana cost").fill("{1}{U}");
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await expect(page.locator('input[name="name"]')).toHaveValue("Preview Pilot");
+  await expect(preview.locator(".mtg-card")).toHaveClass(/frame-u/);
+  await preview.getByRole("button", { name: "Edit rules text and flavor text" }).click();
+  const prose = page.getByRole("dialog", { name: "Edit rules text and flavor text" });
+  await prose.getByLabel("Rules text").fill("Flying");
+  await prose.getByLabel("Flavor text").fill("Above the clouds.");
+  await prose.getByRole("button", { name: "Done" }).click();
+  await expect(preview.locator(".mtg-box")).toContainText("Above the clouds.");
+  await expect(page.locator(".save-state")).toHaveText("Saved");
+  await page.reload();
+  await expect(preview.locator(".mtg-title")).toHaveText("Preview Pilot");
+  await expect(preview.locator(".mtg-box")).toContainText("Flying");
+});

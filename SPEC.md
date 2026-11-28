@@ -172,7 +172,9 @@ nothing about real Magic cards.
   Both ask for confirmation first, naming what will be lost.
 - **B4.** The creator shows the set as a filmstrip, the selected card as a live
   preview, and the form beside it (stacked on a phone). The strip, the preview
-  and the form always show the same card.
+  and the form always show the same card. Select a printed text region in the
+  preview to edit its visible fields, including empty stats. Edits autosave to
+  the face or half that owns the region.
 - **B5.** The symbol palette inserts `{W}`, `{2}`, `{T}` and the rest at the
   caret of whichever of *mana cost* or *rules text* was last focused, and says
   which. `{T}` is not offered for a mana cost.

@@ -29,7 +29,10 @@ test("a card can be given a back face, turned over, and keeps both", async ({ pa
   // The back is a blank card of its own, and keeps the front's colour while it has no cost.
   await expect(preview.locator(".mtg-title")).toContainText("Untitled");
   await expect(preview).toHaveClass(/frame-r/);
-  await page.fill('input[name="name"]', "Night Side");
+  await preview.getByRole("button", { name: "Edit name and mana cost" }).click();
+  const backDialog = page.getByRole("dialog", { name: "Edit name and mana cost" });
+  await backDialog.getByLabel("Name").fill("Night Side");
+  await backDialog.getByRole("button", { name: "Done" }).click();
   await page.fill('input[name="power_toughness"]', "3/3");
   await expect(preview.locator(".mtg-title")).toHaveText("Night Side");
   await expect(preview.locator(".mtg-dfc")).toHaveClass(/dfc-back/);
