@@ -1,25 +1,24 @@
-<!-- Landscape: the two halves side by side, each a card of its own down the card. -->
-<template id="landscape" label="Landscape" requires="half cost" frame="inherit">
-  <art x="5" y="4.5" w="42" h="36"/>
-  <plate role="name" x="5" y="42" w="42" h="7.2">
+<template id="landscape" label="Landscape" requires="half cost" frame="inherit" orientation="landscape">
+  <art x="5" y="4.7" w="43" h="24"/>
+  <plate role="name" x="5" y="29.4" w="43" h="5.3">
     <field name="name"/>
     <field name="mana_cost"/>
   </plate>
-  <plate role="type" x="5" y="50" w="42" h="6.4">
+  <plate role="type" x="5" y="35.3" w="43" h="4.9">
     <field name="type_line"/>
   </plate>
-  <box x="5" y="57" w="42" h="77">
+  <box x="5" y="40.8" w="43" h="24.1">
     <field name="rules_text"/>
   </box>
-  <art x="53" y="4.5" w="42" h="36" face="half"/>
-  <plate role="name" x="53" y="42" w="42" h="7.2" face="half">
+  <art x="52" y="4.7" w="43" h="24" face="half"/>
+  <plate role="name" x="52" y="29.4" w="43" h="5.3" face="half">
     <field name="name"/>
     <field name="mana_cost"/>
   </plate>
-  <plate role="type" x="53" y="50" w="42" h="6.4" face="half">
+  <plate role="type" x="52" y="35.3" w="43" h="4.9" face="half">
     <field name="type_line"/>
   </plate>
-  <box x="53" y="57" w="42" h="77" face="half">
+  <box x="52" y="40.8" w="43" h="24.1" face="half">
     <field name="rules_text"/>
   </box>
 </template>

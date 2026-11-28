@@ -163,8 +163,8 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
 | `planeswalker` | loyalty | | tall art, abilities over its foot, loyalty badge and optional P/T badge |
 | `battle` | defense | stats | the standard frame with a defense badge |
 | `adventure` | half cost | | the card, with the adventure spell name, cost, type and rules in a left inset |
-| `prepared` | half | | the card, with the prepared spell's text beside it |
-| `omen` | half | | as prepared, with the omen's text given the wider box |
+| `prepared` | half | | main card with a complete prepare spell inset on the right |
+| `omen` | half | | main card with a complete Omen spell inset on the left |
 | `split` | half cost | | two halves, each a card, the art beside its name and text |
 | `fuse` | half cost | | the same two halves, each art on its outer edge |
 | `aftermath` | half cost | | two halves one above the other, each across the width |
@@ -172,10 +172,12 @@ that draws a card (`<script id="templates">`); `public/templates.js` parses them
 | `landscape` | half cost | | two halves side by side, each a card down the card |
 
 The two-halved ones draw the card and its `half` at once, so the card is one document
-with a second half and neither half gets the transform marker — a `back` is what you turn to.
+with a second half, and only the main nameplate can carry a transform marker — a `back` is what you turn to.
 
 The layouts are our own drawings in Nexus's arrangement, not their artwork: a place is a
 fraction of the card, and any of them can be tuned later.
+
+`orientation="landscape"` sets an 88:63 canvas, still measured in card-width units.
 
 A **scan** (a card whose picture is a whole card, `art_is_card`) needs no templates of its own:
 it is drawn by the same template as any card, over its picture with no frame of its own, so a

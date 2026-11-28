@@ -1,24 +1,23 @@
-<!-- Semi-split: one art column down the whole card, both halves' plates beside it. -->
-<template id="semi-split" label="Semi-split" requires="half cost" frame="inherit">
-  <art x="5" y="4.5" w="52" h="130.5"/>
-  <plate role="name" x="60" y="5" w="36" h="7.2">
+<template id="semi-split" label="Semi-split" requires="half cost" frame="inherit" orientation="landscape">
+  <art x="5" y="4.7" w="35" h="60.2"/>
+  <plate role="name" x="42" y="4.6" w="53" h="5.3">
     <field name="name"/>
     <field name="mana_cost"/>
   </plate>
-  <plate role="type" x="60" y="13" w="36" h="6.4">
+  <plate role="type" x="42" y="10.6" w="53" h="4.9">
     <field name="type_line"/>
   </plate>
-  <box x="60" y="20" w="36" h="47">
+  <box x="42" y="16.1" w="53" h="17.9">
     <field name="rules_text"/>
   </box>
-  <plate role="name" x="60" y="73" w="36" h="7.2" face="half">
+  <plate role="name" x="42" y="35.5" w="53" h="5.3" face="half">
     <field name="name"/>
     <field name="mana_cost"/>
   </plate>
-  <plate role="type" x="60" y="81" w="36" h="6.4" face="half">
+  <plate role="type" x="42" y="41.5" w="53" h="4.9" face="half">
     <field name="type_line"/>
   </plate>
-  <box x="60" y="88" w="36" h="46.5" face="half">
+  <box x="42" y="47" w="53" h="17.9" face="half">
     <field name="rules_text"/>
   </box>
 </template>

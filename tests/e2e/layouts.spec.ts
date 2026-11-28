@@ -254,3 +254,14 @@ test("frame treatments follow the type line and rules text starts at the top", a
   await expect(preview).not.toHaveClass(/treatment-(legendary|enchantment|artifact)/);
   await expect(preview).toHaveClass(/frame-w/);
 });
+
+test("wide templates use the rotated card aspect and keep their parts on the canvas", async ({ page }) => {
+  await page.goto("/dev/frames?templates=1");
+  await Promise.all(["landscape", "split", "fuse", "semi-split"].map(async (id) => {
+    const sample = page.locator(`.frame-sample[data-template="${id}"] .mtg-card`);
+    await expect(sample).toHaveAttribute("data-orientation", "landscape");
+    const { width, height } = (await sample.boundingBox())!;
+    expect(width / height).toBeCloseTo(88 / 63, 2);
+    await expect(sample.locator(".mtg-title")).toHaveCount(2);
+  }));
+});

@@ -83,7 +83,7 @@ function Part({ part, card, turned, marker, symbol, editPart }) {
   const control = editPart?.(source, part.fields.map(({ name }) => name), part.face === "half");
   if (part.tag === "plate" && part.role === "name") {
     return html`<header class="mtg-name" data-part-face=${part.face ?? undefined} style=${style}>
-      ${marker ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
+      ${marker && part.face !== "half" ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
       <span class="mtg-title">${source.name || html`<em>Untitled</em>`}</span>
       ${field("mana_cost") ? html`<span class="mtg-cost">${costSymbols(source.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>` : null}
       ${control}
@@ -131,15 +131,13 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
     types.includes("Artifact") ? " treatment-artifact" : "",
   ].join("");
   const { layout, look } = resolveTemplate(card.template ? card : { ...card, template: whole.template }, template);
-  // A layout that places the second half draws both at once (a split card), so neither
-  // gets the transform marker; one that does not is a card you turn over.
-  const paired = layout.body.some((part) => part.face === "half");
-  const marker = Boolean(whole.back && !paired);
+  const marker = Boolean(whole.back);
   const collector = number ? `${String(number).padStart(3, "0")}${total ? `/${String(total).padStart(3, "0")}` : ""}` : "";
   const label = card.name || "Untitled card";
   const Tag = onClick ? "button" : "article";
-  const artZones = scan ? [{ x: 0, y: 0, w: 100, h: 140 }] : layout.body.filter((part) => part.tag === "art");
+  const artZones = scan ? [{}] : layout.body.filter((part) => part.tag === "art");
   return html`<${Tag}
+    data-orientation=${layout.orientation}
     data-face=${whole.back ? (turned ? "back" : "front") : undefined}
     class=${`mtg-card tpl-${look} lay-${layout.id} frame-${frame} rarity-${card.rarity}${treatments}${whole.back ? " has-back" : ""}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
     style=${scan ? `background-image:url(${artUrl(card.art)})` : undefined}
@@ -156,7 +154,7 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
       </footer>
     </div>
     ${onArt ? artZones.map(({ x, y, w, h, face }) => html`<div class="card-art-zone"
-      style=${`left:${x}cqw;top:${y}cqw;width:${w}cqw;height:${h}cqw`}>
+      style=${scan ? "inset:0" : `left:${x}cqw;top:${y}cqw;width:${w}cqw;height:${h}cqw`}>
       <button type="button" class="card-art-control" onClick=${() => onArt(face === "half")}
         aria-label=${face === "half" ? "Edit second half art" : "Edit card art"}>Edit art</button>
     </div>`) : null}
