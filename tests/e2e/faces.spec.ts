@@ -30,9 +30,8 @@ test("a card can be given a back face, turned over, and keeps both", async ({ pa
   await expect(preview.locator(".mtg-title")).toContainText("Untitled");
   await expect(preview).toHaveClass(/frame-r/);
   await preview.getByRole("button", { name: "Edit name and mana cost" }).click();
-  const backDialog = page.getByRole("dialog", { name: "Edit name and mana cost" });
-  await backDialog.getByLabel("Name").fill("Night Side");
-  await backDialog.getByRole("button", { name: "Done" }).click();
+  await preview.getByLabel("Name", { exact: true }).fill("Night Side");
+  await preview.getByLabel("Name", { exact: true }).press("Enter");
   await page.fill('input[name="power_toughness"]', "3/3");
   await expect(preview.locator(".mtg-title")).toHaveText("Night Side");
   await expect(preview.locator(".mtg-dfc")).toHaveClass(/dfc-back/);

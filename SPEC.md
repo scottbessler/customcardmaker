@@ -178,8 +178,13 @@ nothing about real Magic cards.
 - **B4.** The creator shows the set as a filmstrip, the selected card as a live
   preview, and the form beside it (stacked on a phone). The strip, the preview
   and the form always show the same card. Select a printed text region in the
-  preview to edit its visible fields, including empty stats. Edits autosave to
-  the face or half that owns the region.
+  preview to edit it where it is printed, including empty stats: the text becomes a
+  field in the same place, in the card's own type (a mana cost or rules text shows its
+  braces while it is edited). A region's fields open together (the name plate's name and
+  cost; the text box's rules and flavor), Tab moves between them, Enter (except in the
+  rules and flavor text) or Escape ends the edit and so does leaving the region, and
+  opening another region ends the first. Edits autosave to the face or half that owns
+  the region. No dialog is involved.
 - **B5.** The symbol palette inserts `{W}`, `{2}`, `{T}` and the rest at the
   caret of whichever of *mana cost* or *rules text* was last focused, and says
   which. `{T}` is not offered for a mana cost.

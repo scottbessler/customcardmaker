@@ -190,30 +190,6 @@ function fieldProps(card, key, onChange) {
   };
 }
 
-function CardTextDialog({ fields, title, card, onChange, onClose }) {
-  const ref = useRef(null);
-  useLayoutEffect(() => { ref.current.showModal(); }, []);
-  function close() {
-    ref.current.close();
-    onClose();
-  }
-  return html`<dialog ref=${ref} class="confirm-dialog card-text-dialog" aria-labelledby="card-text-title"
-    onCancel=${(event) => { event.preventDefault(); close(); }}>
-    <form onSubmit=${(event) => { event.preventDefault(); close(); }}>
-      <h2 id="card-text-title">${title}</h2>
-      ${fields.map(({ key, kind, label }) => {
-        const props = fieldProps(card, key, onChange);
-        return html`<${Field} label=${label}>
-          ${kind === "text"
-            ? html`<textarea rows=${key === "rules_text" ? 5 : 2} ...${props}></textarea>`
-            : html`<input autocomplete="off" ...${props} />`}
-        <//>`;
-      })}
-      <footer><button type="submit">Done</button></footer>
-    </form>
-  </dialog>`;
-}
-
 function Confirm({ open, title, body, action, onConfirm, onCancel }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -653,15 +629,27 @@ function SetPage() {
     setArtOpen(true);
   }
 
+  /**
+   * What the card face needs to let one of its parts be edited where it is printed: the fields
+   * it shows, their values, and how to change them. Which part is open is `textEdit`, an id made
+   * of the face and the fields, so flipping the card or opening another part closes this one.
+   */
   function editPart(source, keys, half) {
     const fields = fieldsFor(source.features).filter(({ key }) => keys.includes(key));
     if (!fields.length) return null;
-    const title = `Edit ${fields.map(({ label }) => label.toLowerCase()).join(" and ")}`;
-    return html`<button type="button" class="card-edit-target" aria-label=${title} title=${title}
-      onClick=${() => {
-        setSide(half ? [...visibleSide, "half"] : visibleSide);
-        setTextEdit({ fields, title });
-      }}></button>`;
+    const path = half ? [...visibleSide, "half"] : visibleSide;
+    const id = `${path.join(".")}:${fields.map(({ key }) => key).join(",")}`;
+    return {
+      keys: fields.map(({ key }) => key),
+      title: `Edit ${fields.map(({ label }) => label.toLowerCase()).join(" and ")}`,
+      active: textEdit === id,
+      open: () => { setSide(path); setTextEdit(id); },
+      close: () => setTextEdit((now) => (now === id ? null : now)),
+      value: (key) => source[key] ?? "",
+      max: (key) => limits[key],
+      label: (key) => fields.find((f) => f.key === key)?.label ?? key,
+      change: (key, value) => edit(current.id, replaceFace(current.card, path, { ...source, [key]: value })),
+    };
   }
 
 
@@ -774,9 +762,6 @@ function SetPage() {
         </section>`
       : html`<p class="muted empty">No cards yet. Add the first one.</p>`}
 
-    ${current && textEdit ? html`<${CardTextDialog} ...${textEdit} card=${editing}
-      onChange=${(card) => edit(current.id, replaceFace(current.card, side, card))}
-      onClose=${() => setTextEdit(null)} />` : null}
     ${setup ? html`<${TemplateSetup} ...${setup} template=${set.default_template} symbol=${set.symbol} creating=${!setup.id}
       onCancel=${() => setSetup(null)} onApply=${async (card) => {
         if (!setup.id) return addCard(card);
