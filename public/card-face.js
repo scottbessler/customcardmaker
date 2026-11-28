@@ -73,21 +73,23 @@ function Rules({ card, as }) {
  * One element of a template's body, drawn with this face's fields — or the second half's,
  * when the element says `face="half"` (the split and adventure layouts).
  */
-function Part({ part, card, turned, marker, symbol }) {
+function Part({ part, card, turned, marker, symbol, editPart }) {
   const style = place(part);
   const source = part.face === "half" && card.half ? card.half : card;
   const field = (name) => part.fields.find((f) => f.name === name);
   if (part.tag === "art") {
     return html`<div class=${`mtg-art${source.art ? " has-art" : ""}${source.art && source.art_zoom > 100 ? " art-zoomed" : ""}`} style=${`${style}${source.art ? `;${artBackground(source)}` : ""}`}></div>`;
   }
+  const control = editPart?.(source, part.fields.map(({ name }) => name), part.face === "half");
   if (part.tag === "plate" && part.role === "name") {
     return html`<header class="mtg-name" data-part-face=${part.face ?? undefined} style=${style}>
       ${marker ? html`<i class=${`mtg-dfc ${turned ? "dfc-back" : "dfc-front"}`} aria-hidden="true"></i>` : null}
       <span class="mtg-title">${source.name || html`<em>Untitled</em>`}</span>
       ${field("mana_cost") ? html`<span class="mtg-cost">${costSymbols(source.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>` : null}
+      ${control}
     </header>`;
   }
-  if (part.tag === "plate") return html`<div class="mtg-type" data-part-face=${part.face ?? undefined} style=${style}><span>${source.type_line}</span><i class="mtg-pip" data-symbol=${symbol} aria-hidden="true"></i></div>`;
+  if (part.tag === "plate") return html`<div class="mtg-type" data-part-face=${part.face ?? undefined} style=${style}><span>${source.type_line}</span><i class="mtg-pip" data-symbol=${symbol} aria-hidden="true"></i>${control}</div>`;
   if (part.tag === "box") {
     const rules = field("rules_text");
     const flavor = field("flavor_text");
@@ -97,19 +99,23 @@ function Part({ part, card, turned, marker, symbol }) {
         ${rules ? html`<${Rules} card=${source} as=${rules.as} />` : null}
         ${lines.length ? html`<div class="mtg-flavor">${lines.map((text) => html`<p>${text}</p>`)}</div>` : null}
       </div>
+      ${control}
     </div>`;
   }
   // A stat: the first of its fields the card has a value for.
   const stat = part.fields.find((f) => source[f.name]);
-  if (!stat) return null;
-  return html`<div class=${`mtg-pt${stat.name === "loyalty" ? " mtg-loyalty" : ""}`} style=${style}>${source[stat.name]}</div>`;
+  if (!stat && !control) return null;
+  const loyalty = stat ? stat.name === "loyalty" : field("loyalty");
+  return html`<div class=${`mtg-pt${loyalty ? " mtg-loyalty" : ""}${stat ? "" : " card-stat-empty"}`} style=${style}>
+    ${stat ? source[stat.name] : html`<span aria-hidden="true">—</span>`}${control}
+  </div>`;
 }
 
 /**
  * One printed card. Its size is its container's: every measurement inside is
  * in container-width units, so it renders the same at any scale.
  */
-export function CardFace({ card: whole, flipped = false, template = "modern", code = "", symbol = "circle", number = 0, total = 0, selected = false, onClick, onArt }) {
+export function CardFace({ card: whole, flipped = false, template = "modern", code = "", symbol = "circle", number = 0, total = 0, selected = false, onClick, onArt, editPart }) {
   // A double-faced card shows one face at a time; the back is a card of its own.
   const turned = flipped && whole.back;
   const card = turned ? whole.back : whole;
@@ -142,10 +148,11 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
     onClick=${onClick}
   >
     <div class="mtg-frame">
-      ${layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} marker=${marker} symbol=${symbol} />`)}
+      ${layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} marker=${marker} symbol=${symbol} editPart=${editPart} />`)}
       <footer class="mtg-foot">
         <span>${collector}${collector && code ? " • " : ""}${code}</span>
         <span>${card.artist ? `Illus. ${card.artist}` : ""}</span>
+        ${editPart?.(card, ["artist"], false)}
       </footer>
     </div>
     ${onArt ? artZones.map(({ x, y, w, h, face }) => html`<div class="card-art-zone"

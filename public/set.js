@@ -148,6 +148,38 @@ function Field({ label, count, children }) {
   </label>`;
 }
 
+function fieldProps(card, key, onChange) {
+  return {
+    value: card[key],
+    maxLength: limits[key],
+    onInput: (event) => onChange({ ...card, [key]: event.currentTarget.value }),
+  };
+}
+
+function CardTextDialog({ fields, title, card, onChange, onClose }) {
+  const ref = useRef(null);
+  useLayoutEffect(() => { ref.current.showModal(); }, []);
+  function close() {
+    ref.current.close();
+    onClose();
+  }
+  return html`<dialog ref=${ref} class="confirm-dialog card-text-dialog" aria-labelledby="card-text-title"
+    onCancel=${(event) => { event.preventDefault(); close(); }}>
+    <form onSubmit=${(event) => { event.preventDefault(); close(); }}>
+      <h2 id="card-text-title">${title}</h2>
+      ${fields.map(({ key, kind, label }) => {
+        const props = fieldProps(card, key, onChange);
+        return html`<${Field} label=${label}>
+          ${kind === "text"
+            ? html`<textarea rows=${key === "rules_text" ? 5 : 2} ...${props}></textarea>`
+            : html`<input autocomplete="off" ...${props} />`}
+        <//>`;
+      })}
+      <footer><button type="submit">Done</button></footer>
+    </form>
+  </dialog>`;
+}
+
 function Confirm({ open, title, body, action, onConfirm, onCancel }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -224,10 +256,8 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
   });
   const text = (key) => ({
     name: key,
-    value: card[key],
-    maxLength: limits[key],
+    ...fieldProps(card, key, onChange),
     ref: (el) => { inputs.current[key] = el; },
-    onInput: (e) => onChange({ ...card, [key]: e.currentTarget.value }),
   });
   const watch = (key) => ({ onFocus: () => setTarget(key) });
 
@@ -395,6 +425,7 @@ function SetPage() {
   const [side, setSide] = useState([]);
   const [setup, setSetup] = useState(null);
   const [artOpen, setArtOpen] = useState(false);
+  const [textEdit, setTextEdit] = useState(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(null);
@@ -451,7 +482,7 @@ function SetPage() {
   }, [selected]);
 
   // Choosing another card starts on its front.
-  useEffect(() => { setSide([]); setArtOpen(false); }, [selected]);
+  useEffect(() => { setSide([]); setArtOpen(false); setTextEdit(null); }, [selected]);
 
   function edit(id, card) {
     setDetail((d) => ({ ...d, cards: d.cards.map((c) => (c.id === id ? { ...c, card } : c)) }));
@@ -580,10 +611,23 @@ function SetPage() {
   const artParts = layout?.body.filter((part) => part.tag === "art") ?? [];
   const artPart = artParts.find((part) => sameSide(side, part.face === "half" ? [...visibleSide, "half"] : visibleSide));
   const scan = visibleFace?.art && visibleFace.art_is_card;
-  const hasArtControl = scan ? sameSide(side, visibleSide) : Boolean(artPart);
+  const hasArtControl = scan
+    ? sameSide(side, visibleSide) && Boolean(artPart || visibleFace.keep_printed_text)
+    : Boolean(artPart);
   function openArt(path) {
     setSide(path);
     setArtOpen(true);
+  }
+
+  function editPart(source, keys, half) {
+    const fields = fieldsFor(source.features).filter(({ key }) => keys.includes(key));
+    if (!fields.length) return null;
+    const title = `Edit ${fields.map(({ label }) => label.toLowerCase()).join(" and ")}`;
+    return html`<button type="button" class="card-edit-target" aria-label=${title} title=${title}
+      onClick=${() => {
+        setSide(half ? [...visibleSide, "half"] : visibleSide);
+        setTextEdit({ fields, title });
+      }}></button>`;
   }
 
 
@@ -664,7 +708,7 @@ function SetPage() {
           <div class="stage">
             <div class="preview"><${CardFace} card=${current.card} flipped=${turned} template=${set.default_template}
               code=${set.code} symbol=${set.symbol} number=${current.position} total=${cards.length}
-              onArt=${(half) => openArt(half ? [...visibleSide, "half"] : visibleSide)} /></div>
+              onArt=${(half) => openArt(half ? [...visibleSide, "half"] : visibleSide)} editPart=${editPart} /></div>
             <div class="stage-actions">
               ${current.card.back
                 ? html`<button type="button" class="quiet flip-card" onClick=${() => setSide(turned ? [] : ["back"])}>Flip</button>`
@@ -695,6 +739,9 @@ function SetPage() {
         </section>`
       : html`<p class="muted empty">No cards yet. Add the first one.</p>`}
 
+    ${current && textEdit ? html`<${CardTextDialog} ...${textEdit} card=${editing}
+      onChange=${(card) => edit(current.id, replaceFace(current.card, side, card))}
+      onClose=${() => setTextEdit(null)} />` : null}
     ${setup ? html`<${TemplateSetup} ...${setup} template=${set.default_template} symbol=${set.symbol} creating=${!setup.id}
       onCancel=${() => setSetup(null)} onApply=${async (card) => {
         if (!setup.id) return addCard(card);

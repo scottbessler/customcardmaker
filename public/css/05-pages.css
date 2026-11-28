@@ -222,3 +222,12 @@
   .card-art-control{opacity:0}
   .card-art-zone:hover .card-art-control,.card-art-control:focus-visible{opacity:1}
 }
+
+/* Preview-only hit areas sit on top of the printed part, including over scan art. */
+.preview :is(.mtg-name,.mtg-type,.mtg-box,.mtg-pt,.mtg-foot):has(>.card-edit-target){z-index:4}
+.card-edit-target{position:absolute;inset:0;width:100%;height:100%;min-height:0;padding:0;background:transparent;border-radius:inherit;cursor:text}
+.card-edit-target:hover,.card-edit-target:focus-visible{outline:2px solid var(--gold-hi);outline-offset:-2px}
+.card-stat-empty{opacity:0}
+.card-stat-empty:hover,.card-stat-empty:focus-within{opacity:1}
+@media(hover:none){.card-stat-empty{opacity:1}}
+.card-text-dialog>form{padding:var(--space-16)}
