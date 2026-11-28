@@ -93,7 +93,12 @@ nothing about real Magic cards.
 - **R14.** Adventure draws full-width art above the main type line. The spell
   name, cost, type and rules sit in a left inset. Main rules and flavor sit on
   the right. Saga gives its art the right column and separates chapter rows
-  on the left. Modern separates flavor from rules when both appear.
+  on the left. Omen prints its spell inset on the left, Prepared on the right.
+  Both show the spell name, cost, type and rules, plus the main creature's P/T.
+  Modern separates flavor from rules when both appear.
+- **R16.** Landscape, Split, Fuse and Semi-split use an 88:63 canvas. Template
+  orientation controls the canvas on each face. Either face of a double-faced
+  card can carry a half. Only the main nameplate carries its transform marker.
 - **R12.** The standard layout is a real card's: the art box is the top half of the card
   and the text box the bottom third, with the name plate above the art and the type line
   between, all in card-width units so it renders at any size. (Its places are in
@@ -275,7 +280,8 @@ nothing about real Magic cards.
   or prepared card. A half is a card of its own — its own features, fields, art and template —
   but it has no back and no half of its own, because it is read at once rather than turned to.
   A layout asks for one with the reserved requirement `half` (never with a feature), and the
-  two-halved layouts draw the card and its half together; neither gets the transform marker.
+  two-halved layouts draw the face and its half together. The half uses its parent's layout.
+  Adventure, Omen and Prepared setup offer instant or sorcery spell types.
   A **back** and a **half** are different things: a back (`card.back`) is a whole card you turn
   to (R10) and may itself have a half; a half is a whole card drawn beside this one.
 - **B14.** `card.art_is_card` says the card's picture is a whole printed card, not

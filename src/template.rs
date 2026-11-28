@@ -60,6 +60,7 @@ pub struct Template {
     /// Features a card must not have on, because the template has nowhere to draw them.
     pub excludes: Vec<String>,
     pub frame: String,
+    pub orientation: String,
     /// Its source, which the page parses to draw it.
     pub xml: &'static str,
 }
@@ -145,7 +146,17 @@ pub fn parse(xml: &'static str) -> Result<Template, String> {
     if root.tag_name().name() != "template" {
         return Err("the root element must be <template>".into());
     }
-    attrs(root, &["id", "label", "requires", "excludes", "frame"])?;
+    attrs(
+        root,
+        &[
+            "id",
+            "label",
+            "requires",
+            "excludes",
+            "frame",
+            "orientation",
+        ],
+    )?;
     let id = root.attribute("id").ok_or("a template needs an id")?;
     if id.is_empty() || !id.chars().all(|c| c.is_ascii_lowercase() || c == '-') {
         return Err(format!(
@@ -157,6 +168,15 @@ pub fn parse(xml: &'static str) -> Result<Template, String> {
     if !FRAMES.contains(&frame) {
         return Err(format!("\"{frame}\" is not a frame"));
     }
+    let orientation = root.attribute("orientation").unwrap_or("portrait");
+    if !matches!(orientation, "portrait" | "landscape") {
+        return Err(format!("\"{orientation}\" is not a card orientation"));
+    }
+    let height = if orientation == "landscape" {
+        100.0 * 63.0 / 88.0
+    } else {
+        140.0
+    };
     let requires = list(root.attribute("requires"))?;
     let excludes = list(root.attribute("excludes"))?;
     if let Some(both) = requires.iter().find(|id| excludes.contains(id)) {
@@ -205,9 +225,9 @@ pub fn parse(xml: &'static str) -> Result<Template, String> {
         }
         for (side, range) in [
             ("x", 0.0..=100.0),
-            ("y", 0.0..=140.0),
+            ("y", 0.0..=height),
             ("w", 0.0..=100.0),
-            ("h", 0.0..=140.0),
+            ("h", 0.0..=height),
         ] {
             if name == "stat" && (side == "w" || side == "h") && element.attribute(side).is_none() {
                 continue;
@@ -240,6 +260,7 @@ pub fn parse(xml: &'static str) -> Result<Template, String> {
         requires,
         excludes,
         frame: frame.to_string(),
+        orientation: orientation.to_string(),
         xml,
     })
 }

@@ -39,6 +39,12 @@ const faceOf = (card, path) => path.reduce((face, key) => face?.[key], card);
 const replaceFace = (card, [key, ...rest], face) => key ? { ...card, [key]: replaceFace(card[key], rest, face) } : face;
 const sameSide = (a, b) => a.join("/") === b.join("/");
 
+const INSET_TYPES = {
+  adventure: { label: "Adventure spell", types: ["Instant — Adventure", "Sorcery — Adventure"] },
+  omen: { label: "Omen spell", types: ["Instant — Omen", "Sorcery — Omen"] },
+  prepared: { label: "Prepared spell", types: ["Instant", "Sorcery"] },
+};
+
 function fitTemplate(card, template) {
   const next = {
     ...card,
@@ -50,15 +56,22 @@ function fitTemplate(card, template) {
     if (template.requires.includes(key)) next[key] ??= blankFace(card.rarity);
     if (template.excludes.includes(key)) next[key] = null;
   }
+  const inset = INSET_TYPES[template.id];
+  if (inset && next.half) {
+    const half = next.half;
+    const prior = Object.values(INSET_TYPES).find(({ types }) => types.includes(half.type_line));
+    const typeLine = prior ? inset.types[prior.types.indexOf(half.type_line)] : half.type_line || inset.types[0];
+    next.half = { ...half, template: "", type_line: typeLine, features: [...new Set([...half.features, "cost"])] };
+  }
   return next;
 }
 
 function cardSides(card) {
   return [
     { path: [], label: "Front" },
-    ...(card.half ? [{ path: ["half"], label: "2nd half" }] : []),
+    ...(card.half ? [{ path: ["half"], label: INSET_TYPES[card.template]?.label ?? "2nd half" }] : []),
     ...(card.back ? [{ path: ["back"], label: "Back" }] : []),
-    ...(card.back?.half ? [{ path: ["back", "half"], label: "Back 2nd half" }] : []),
+    ...(card.back?.half ? [{ path: ["back", "half"], label: `Back ${INSET_TYPES[card.back.template]?.label ?? "2nd half"}` }] : []),
   ];
 }
 
@@ -80,7 +93,10 @@ function TemplateSetup({ initial, initialSide, template, symbol, creating, onApp
   useEffect(() => { ref.current.showModal(); }, []);
   const cancel = () => { ref.current.close(); onCancel(); };
   const card = faceOf(draft, side);
-  const allowed = side.includes("half") ? [] : side.length ? ["half"] : ["back", "half"];
+  const isHalf = side.at(-1) === "half";
+  const parent = isHalf ? faceOf(draft, side.slice(0, -1)) : null;
+  const inset = INSET_TYPES[parent?.template];
+  const allowed = side.length ? ["half"] : ["back", "half"];
   const selected = allTemplates().find((t) => t.id === (card.template || template));
   const change = (next) => setDraft(replaceFace(draft, side, next));
   const lock = (id) => selected.requires.includes(id) ? "Required" : selected.excludes.includes(id) ? "Unavailable" : "";
@@ -92,8 +108,25 @@ function TemplateSetup({ initial, initialSide, template, symbol, creating, onApp
     onCancel=${(e) => { e.preventDefault(); if (!saving) cancel(); }}>
     <div>
       <h2 id="template-title">${creating ? "Set up your card" : "Edit card template"}</h2>
+      <fieldset class="tints features">
+        <legend>Card structure</legend>
+        <label class="tint-option">
+          <input type="checkbox" name="feature-back" checked=${Boolean(draft.back)} onChange=${(event) => {
+            const back = event.currentTarget.checked ? initial.back ?? blankFace(draft.rarity) : null;
+            if (!back && side[0] === "back") setSide([]);
+            setDraft({ ...draft, back });
+          }} />Back face
+        </label>
+      </fieldset>
       <${SideTabs} card=${draft} side=${side} onSide=${setSide} />
-      <fieldset class="looks">
+      ${isHalf ? html`<${Field} label="Half type">
+        ${inset ? html`<select value=${card.type_line} onChange=${(event) => change({ ...card, type_line: event.currentTarget.value })}>
+          ${inset.types.map((line) => html`<option value=${line} selected=${line === card.type_line}>${line}</option>`)}
+          ${!inset.types.includes(card.type_line)
+            ? html`<option value=${card.type_line} selected>${card.type_line || "Choose a type"}</option>` : null}
+        </select>` : html`<input value=${card.type_line} maxLength=${limits.type_line}
+          onInput=${(event) => change({ ...card, type_line: event.currentTarget.value })} />`}
+      <//>` : html`<fieldset class="looks">
         <legend>Template</legend>
         ${allTemplates().filter((t) => t.requires.every((id) => !["back", "half"].includes(id) || allowed.includes(id))).map((t) => {
           const next = fitTemplate(card, t);
@@ -109,11 +142,12 @@ function TemplateSetup({ initial, initialSide, template, symbol, creating, onApp
         ${choices.features.map(({ id, label }) => toggle(id, label, card.features.includes(id), (on) =>
           change({ ...card, features: on ? [...card.features, id] : card.features.filter((f) => f !== id) })))}
       </fieldset>
-      ${allowed.length ? html`<fieldset class="tints features">
-        <legend>Additional faces</legend>
-        ${allowed.map((id) => toggle(id, id === "back" ? "Back face" : "Second half", Boolean(card[id]), (on) =>
-          change({ ...card, [id]: on ? faceOf(initial, [...side, id]) ?? blankFace(card.rarity) : null })))}
-      </fieldset>` : null}
+      <${Field} label="Type line"><input value=${card.type_line} maxLength=${limits.type_line}
+        onInput=${(event) => change({ ...card, type_line: event.currentTarget.value })} /><//>
+      ${card.half ? html`<fieldset class="tints features">
+        <legend>Second half</legend>
+        ${toggle("half", "Second half", true, () => change({ ...card, half: null }))}
+      </fieldset>` : null}`}
       ${error ? html`<p class="error" role="alert">${error}</p>` : null}
       <footer>
         <button type="button" class="quiet" disabled=${saving} onClick=${cancel}>Cancel</button>
@@ -193,7 +227,7 @@ function Palette({ target, onInsert }) {
   </div>`;
 }
 
-function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artOpen, onCloseArt, artPart }) {
+function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artOpen, onCloseArt, artPart, orientation }) {
   const fields = fieldsFor(card.features);
   const has = (key) => fields.some((f) => f.key === key);
   const [wanted, setTarget] = useState("mana_cost");
@@ -336,7 +370,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
       </div>
     </fieldset>
   </form>
-    <dialog ref=${artDialog} class="confirm-dialog art-dialog" aria-labelledby="art-title"
+    <dialog ref=${artDialog} class="confirm-dialog art-dialog" data-orientation=${orientation} aria-labelledby="art-title"
       onCancel=${(e) => { e.preventDefault(); if (!uploading) closeArt(); }}>
       <div>
         <h2 id="art-title">Card art</h2>
@@ -718,6 +752,7 @@ function SetPage() {
               credit=${credits[editing?.art]}
               onChange=${(card) => edit(current.id, replaceFace(current.card, side, card))}
               artOpen=${artOpen}
+              orientation=${layout?.orientation}
               artPart=${scan ? undefined : artPart}
               onCloseArt=${() => setArtOpen(false)}
               onSetDefault=${(default_template) => patchSet({ default_template })}

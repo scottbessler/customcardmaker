@@ -108,6 +108,19 @@ button.mtg-card{cursor:pointer}
    card-width units, for a part anchored by its bottom edge. */
 .mtg-card{--fx:3.9cqw;--fy:3.9cqw;--fb:10.5cqw;--card-h:calc(100cqw * 88 / 63)}
 .mtg-card.art-card{--fx:0cqw;--fy:0cqw;--fb:0cqw}
+/* Wide faces use the same physical card rotated through 90 degrees. */
+[data-orientation=landscape]{--card-aspect:88/63}
+.mtg-card[data-orientation=landscape]{--card-h:calc(100cqw * 63 / 88)}
+.mtg-card[data-orientation=landscape]:not(.art-card){--fx:2.7cqw;--fy:2.7cqw;--fb:6cqw}
+.mtg-card[data-orientation=landscape]:not(.art-card) .mtg-frame{inset:var(--fy) var(--fx) var(--fb)}
+.mtg-card[data-orientation=landscape] .mtg-title{font-size:3.35cqw}
+.mtg-card[data-orientation=landscape] .mtg-type span{font-size:2.65cqw}
+.mtg-card[data-orientation=landscape] .mtg-cost .mana{font-size:2.55cqw}
+.mtg-card[data-orientation=landscape] .mtg-pip{width:2.55cqw;height:2.55cqw}
+.mtg-card[data-orientation=landscape] .mtg-box{padding:1.05cqw 1.4cqw}
+.mtg-card[data-orientation=landscape] .mtg-rules{font-size:calc(var(--rules-size) * .68)}
+.mtg-card[data-orientation=landscape] .mtg-foot{bottom:-3.6cqw;font-size:1.65cqw;flex-direction:row;gap:2cqw}
+
 /* Printed frame details. Whole-card scans carry their own plate geometry. */
 .lay-modern:not(.art-card) :is(.mtg-name,.mtg-type){border-radius:1.6cqw;background-image:linear-gradient(180deg,color-mix(in srgb,var(--box) 78%,var(--white)),var(--box) 58%,color-mix(in srgb,var(--box) 88%,var(--lo)));box-shadow:0 0 0 .35cqw color-mix(in srgb,var(--lo) 35%,var(--card-border)),inset 0 0 0 .25cqw color-mix(in srgb,var(--white) 65%,transparent),0 .28cqw .5cqw var(--shadow-40)}
 .lay-modern:not(.art-card) .mtg-title{font-size:5.1cqw}
@@ -124,14 +137,14 @@ button.mtg-card{cursor:pointer}
 .treatment-artifact .mtg-art{outline:.6cqw double color-mix(in srgb,var(--hi) 85%,var(--card-border));outline-offset:.44cqw}
 
 /* The Adventure inset has its own name and type but shares the main card's set mark. */
-.lay-adventure :is(.mtg-name,.mtg-type)[data-part-face=half]{padding-inline:1.5cqw;border-radius:.65cqw}
-.lay-adventure [data-part-face=half] .mtg-title{font-size:3.8cqw}
-.lay-adventure [data-part-face=half] .mtg-cost .mana{font-size:3.2cqw}
-.lay-adventure .mtg-type[data-part-face=half] span{font-size:3.35cqw}
-.lay-adventure [data-part-face=half] .mtg-pip{display:none}
-.lay-adventure .mtg-box{padding:1.45cqw 1.8cqw}
-.lay-adventure .mtg-box[data-part-face=half]{background-color:color-mix(in srgb,var(--box) 92%,var(--lo))}
-.lay-adventure .mtg-rules{font-size:calc(var(--rules-size) * .83)}
+:is(.lay-adventure,.lay-omen,.lay-prepared) :is(.mtg-name,.mtg-type)[data-part-face=half]{padding-inline:1.5cqw;border-radius:.65cqw}
+:is(.lay-adventure,.lay-omen,.lay-prepared) [data-part-face=half] .mtg-title{font-size:3.8cqw}
+:is(.lay-adventure,.lay-omen,.lay-prepared) [data-part-face=half] .mtg-cost .mana{font-size:3.2cqw}
+:is(.lay-adventure,.lay-omen,.lay-prepared) .mtg-type[data-part-face=half] span{font-size:3.35cqw}
+:is(.lay-adventure,.lay-omen,.lay-prepared) [data-part-face=half] .mtg-pip{display:none}
+:is(.lay-adventure,.lay-omen,.lay-prepared) .mtg-box{padding:1.45cqw 1.8cqw}
+:is(.lay-adventure,.lay-omen,.lay-prepared) .mtg-box[data-part-face=half]{background-color:color-mix(in srgb,var(--box) 92%,var(--lo))}
+:is(.lay-adventure,.lay-omen,.lay-prepared) .mtg-rules{font-size:calc(var(--rules-size) * .83)}
 
 /* Planeswalker: tall art, abilities over its foot, loyalty where power/toughness would be. */
 .lay-planeswalker .mtg-name{padding:0 3.4cqw}

@@ -141,3 +141,37 @@ test("creation waits for setup and starts with the selected template", async ({ 
   await expect(page.locator(".preview .mtg-card")).toHaveClass(/lay-battle/);
   await expect(page.locator('input[name="defense"]')).toBeVisible();
 });
+
+test("a double-faced card can have a typed spell inset on each face", async ({ page }) => {
+  await newSet(page, "INS", false);
+  await page.click(".add-card");
+  await page.check('input[name="feature-back"]');
+  const setup = page.getByRole("dialog");
+  await option(page, "omen").click();
+  await setup.getByRole("button", { name: "Omen spell", exact: true }).click();
+  await expect(setup.getByLabel("Half type")).toHaveValue("Instant — Omen");
+  await expect(setup.locator(".look-option")).toHaveCount(0);
+  await setup.getByLabel("Half type").selectOption("Sorcery — Omen");
+  await setup.getByRole("button", { name: "Back", exact: true }).click();
+  await option(page, "prepared").click();
+  await setup.getByRole("button", { name: "Back Prepared spell", exact: true }).click();
+  await expect(setup.getByLabel("Half type")).toHaveValue("Instant");
+  await setup.getByLabel("Half type").selectOption("Sorcery");
+  await setup.getByRole("button", { name: "Start editing" }).click();
+
+  const preview = page.locator(".preview .mtg-card");
+  const spell = preview.locator(".mtg-type[data-part-face=half]");
+  await expect(preview).toHaveClass(/lay-omen/);
+  await expect(spell).toHaveText("Sorcery — Omen");
+  await expect(preview.locator(".mtg-dfc")).toHaveCount(1);
+  const omenBounds = (await spell.boundingBox())!;
+  const frontBounds = (await preview.boundingBox())!;
+  expect(omenBounds.x).toBeLessThan(frontBounds.x + frontBounds.width / 2);
+  await page.click(".flip-card");
+  await expect(preview).toHaveClass(/lay-prepared/);
+  await expect(spell).toHaveText("Sorcery");
+  await expect(preview.locator(".mtg-dfc")).toHaveClass(/dfc-back/);
+  const prepBounds = (await spell.boundingBox())!;
+  const backBounds = (await preview.boundingBox())!;
+  expect(prepBounds.x).toBeGreaterThanOrEqual(backBounds.x + backBounds.width / 2 - 0.5);
+});
