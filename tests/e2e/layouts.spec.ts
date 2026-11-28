@@ -232,3 +232,25 @@ test("Adventure places its spell type and rules below the art and left of the ma
   expect(type.y).toBeLessThan(spell.y);
   expect(Math.round(spell.x + spell.width)).toBeLessThanOrEqual(Math.round(main.x));
 });
+
+test("frame treatments follow the type line and rules text starts at the top", async ({ page }) => {
+  await registerUser(page);
+  const set = await (await page.request.post("/api/sets", { data: { name: "Frame treatments", code: "FRM" } })).json();
+  const saved = await page.request.post(`/api/sets/${set.id}/cards`, { data: {
+    name: "Gleaming Relic", type_line: "Legendary Enchantment Artifact", mana_cost: "{W}", rules_text: "Flying",
+  } });
+  expect(saved.ok()).toBe(true);
+  await page.goto(`/sets/${set.id}`);
+  const preview = page.locator(".preview .mtg-card");
+  await expect(preview).toHaveClass(/frame-w/);
+  await expect(preview).toHaveClass(/treatment-legendary/);
+  await expect(preview).toHaveClass(/treatment-enchantment/);
+  await expect(preview).toHaveClass(/treatment-artifact/);
+  expect(await preview.locator(".mtg-box").evaluate((box) => {
+    const top = box.getBoundingClientRect().top + parseFloat(getComputedStyle(box).paddingTop);
+    return Math.abs(box.querySelector(".mtg-rules")!.getBoundingClientRect().top - top);
+  })).toBeLessThan(1);
+  await page.fill('input[name="type_line"]', "Creature — Artifact");
+  await expect(preview).not.toHaveClass(/treatment-(legendary|enchantment|artifact)/);
+  await expect(preview).toHaveClass(/frame-w/);
+});

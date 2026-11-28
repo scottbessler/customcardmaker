@@ -14,6 +14,12 @@ use uuid::Uuid;
 pub const MAX_SET_NAME: usize = 64;
 pub const MIN_CODE: usize = 3;
 pub const MAX_CODE: usize = 5;
+pub const SYMBOLS: &[(&str, &str)] = &[
+    ("circle", "Circle"),
+    ("diamond", "Diamond"),
+    ("shield", "Shield"),
+    ("star", "Star"),
+];
 /// The most cards one bulk request may name.
 pub const MAX_BULK: usize = 500;
 
@@ -28,6 +34,7 @@ pub struct SetSummary {
     pub public: bool,
     /// The template a card with none of its own wears.
     pub default_template: String,
+    pub symbol: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -46,6 +53,7 @@ pub struct SetChanges {
     pub public: Option<bool>,
     /// Already checked against `card::is_template`.
     pub default_template: Option<String>,
+    pub symbol: Option<String>,
 }
 
 /// Where a bulk transfer puts its cards.
@@ -114,11 +122,12 @@ fn summary(row: &rusqlite::Row<'_>) -> rusqlite::Result<SetSummary> {
         card_count: row.get(4)?,
         public: row.get::<_, i64>(5)? != 0,
         default_template: row.get(6)?,
+        symbol: row.get(7)?,
     })
 }
 
 const SUMMARY: &str = "SELECT s.id, s.name, s.code, s.updated_at,
-        (SELECT COUNT(*) FROM cards c WHERE c.set_id = s.id), s.is_public, s.default_template
+        (SELECT COUNT(*) FROM cards c WHERE c.set_id = s.id), s.is_public, s.default_template, s.symbol
     FROM sets s";
 
 /// How many sets the gallery's front page shows.
@@ -138,6 +147,7 @@ pub struct GalleryEntry {
     pub preview: Option<Card>,
     /// What a card with no template of its own looks like in this set.
     pub default_template: String,
+    pub symbol: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -155,6 +165,7 @@ pub struct GalleryDetail {
     pub by: String,
     pub updated_at: String,
     pub default_template: String,
+    pub symbol: String,
     pub cards: Vec<GalleryCard>,
 }
 
@@ -353,7 +364,8 @@ impl SetStore {
                 let changed = c.execute(
                     "UPDATE sets SET name = COALESCE(?2, name), code = COALESCE(?3, code),
                             is_public = COALESCE(?6, is_public),
-                            default_template = COALESCE(?7, default_template), updated_at = ?4
+                            default_template = COALESCE(?7, default_template),
+                            symbol = COALESCE(?8, symbol), updated_at = ?4
                      WHERE id = ?1 AND owner_id = ?5",
                     params![
                         id,
@@ -362,7 +374,8 @@ impl SetStore {
                         now(),
                         owner.to_string(),
                         changes.public,
-                        changes.default_template
+                        changes.default_template,
+                        changes.symbol
                     ],
                 )?;
                 if changed == 0 {
@@ -513,7 +526,7 @@ impl SetStore {
                             (SELECT COUNT(*) FROM cards c WHERE c.set_id = s.id),
                             u.display_name,
                             (SELECT doc FROM cards c WHERE c.set_id = s.id ORDER BY position LIMIT 1),
-                            s.default_template
+                            s.default_template, s.symbol
                      FROM sets s JOIN users u ON u.id = s.owner_id
                      WHERE s.is_public = 1
                        AND EXISTS (SELECT 1 FROM cards c WHERE c.set_id = s.id)
@@ -539,6 +552,7 @@ impl SetStore {
                             .transpose()
                             .context("card document is not valid")?,
                         default_template: row.get(7)?,
+                        symbol: row.get(8)?,
                     });
                 }
                 Ok(entries)
@@ -554,7 +568,7 @@ impl SetStore {
                 let id = id.to_string();
                 let head = c
                     .query_row(
-                        "SELECT s.name, s.code, s.updated_at, u.display_name, s.default_template
+                        "SELECT s.name, s.code, s.updated_at, u.display_name, s.default_template, s.symbol
                          FROM sets s JOIN users u ON u.id = s.owner_id
                          WHERE s.id = ?1 AND s.is_public = 1",
                         [&id],
@@ -565,11 +579,12 @@ impl SetStore {
                                 row.get::<_, String>(2)?,
                                 row.get::<_, String>(3)?,
                                 row.get::<_, String>(4)?,
+                                row.get::<_, String>(5)?,
                             ))
                         },
                     )
                     .optional()?;
-                let Some((name, code, updated_at, by, default_template)) = head else {
+                let Some((name, code, updated_at, by, default_template, symbol)) = head else {
                     return Ok(None);
                 };
                 let mut stmt = c.prepare(
@@ -591,6 +606,7 @@ impl SetStore {
                     by,
                     updated_at,
                     default_template,
+                    symbol,
                     cards,
                 }))
             })

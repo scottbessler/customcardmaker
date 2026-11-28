@@ -17,7 +17,7 @@ async function nexusLikeScan(page): Promise<Buffer> {
   return page.locator("#scan").screenshot();
 }
 
-test("a whole-card picture fills the card, with our text laid over it", async ({ page }) => {
+test("a whole-card picture keeps its aspect ratio, with our text laid over it", async ({ page }) => {
   const scan = await nexusLikeScan(page);
   await registerUser(page, "scanner");
   await page.fill('.new-set input[name="name"]', "Scans");
@@ -37,9 +37,12 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
   await expect(page.locator(".art-thumb")).toHaveCSS("background-image", /api\/art/);
   // Used as art first: the picture sits in the art box.
   await expect(preview).not.toHaveClass(/art-card/);
+  await expect(preview.locator(".mtg-art")).toHaveCSS("background-size", "cover");
 
   await page.check('input[name="art_is_card"]');
   await expect(preview).toHaveClass(/art-card/);
+  await expect(preview).toHaveCSS("background-size", "contain");
+  await expect(page.locator(".art-thumb")).toHaveCSS("background-size", "contain");
   await expect(page.getByRole("slider")).toHaveCount(0);
   const relativeSize = await preview.locator(".mtg-rules .mana").first().evaluate((symbol) =>
     parseFloat(getComputedStyle(symbol).fontSize) / parseFloat(getComputedStyle(symbol.parentElement!).fontSize),

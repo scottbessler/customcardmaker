@@ -33,7 +33,10 @@ button.mtg-card{cursor:pointer}
 .rarity-uncommon .mtg-pip{background:var(--rarity-uncommon)}
 .rarity-rare .mtg-pip{background:var(--rarity-rare)}
 .rarity-mythic .mtg-pip{background:var(--rarity-mythic)}
-.mtg-box{border-radius:.9cqw;background-color:var(--box);background-image:radial-gradient(ellipse at 50% 35%,var(--box),color-mix(in srgb,var(--box) 88%,var(--lo)));padding:2.4cqw 3cqw;box-shadow:0 0 0 .45cqw color-mix(in srgb,var(--lo) 40%,black),inset 0 0 2.6cqw color-mix(in srgb,var(--lo) 22%,transparent);overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.mtg-pip[data-symbol=diamond]{clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.mtg-pip[data-symbol=shield]{clip-path:polygon(8% 0,92% 0,85% 69%,50% 100%,15% 69%)}
+.mtg-pip[data-symbol=star]{clip-path:polygon(50% 0,62% 35%,100% 38%,70% 62%,79% 100%,50% 78%,21% 100%,30% 62%,0 38%,38% 35%)}
+.mtg-box{border-radius:.9cqw;background-color:var(--box);background-image:radial-gradient(ellipse at 50% 35%,var(--box),color-mix(in srgb,var(--box) 88%,var(--lo)));padding:2.4cqw 3cqw;box-shadow:0 0 0 .45cqw color-mix(in srgb,var(--lo) 40%,black),inset 0 0 2.6cqw color-mix(in srgb,var(--lo) 22%,transparent);overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start}
 .mtg-rules{font-size:var(--rules-size);line-height:1.22}
 .mtg-rules p{margin:0 0 .6em}
 .mtg-rules p:last-child{margin-bottom:0}
@@ -77,12 +80,12 @@ button.mtg-card{cursor:pointer}
    (--hi, --lo, --box) is the same in every one. */
 
 /* A whole-card picture (an import from MTG Nexus, or a scan): the picture is the
-   card, edge to edge. Our name plate, type plate and text box are laid over it,
+   card, fitted proportionally. Our name plate, type plate and text box are laid over it,
    opaque, so they hide the words printed on the picture and show the card's own.
    The places are the card template's; over a picture the frame has none of its
    own, so they are taken from the card's corner, and the plates are drawn a
    little bigger than a printed one, to cover its bevel. */
-.mtg-card.art-card{background-size:100% 100%;background-position:center;background-repeat:no-repeat}
+.mtg-card.art-card{background-size:contain;background-position:center;background-repeat:no-repeat}
 .art-card .mtg-frame{inset:0;background:none;box-shadow:none;border-radius:0}
 .art-card .mtg-art{visibility:hidden}
 /* How the parts look over a picture. */
@@ -113,6 +116,13 @@ button.mtg-card{cursor:pointer}
 .lay-modern:not(.art-card) .mtg-pt{border-radius:1.3cqw;box-shadow:0 0 0 .4cqw var(--card-text),inset 0 0 0 .25cqw var(--white)}
 .lay-modern:not(.art-card) .mtg-flavor:not(:first-child),.lay-adventure:not(.art-card) .mtg-flavor:not(:first-child){border-top:.22cqw solid color-mix(in srgb,var(--card-text) 26%,transparent);padding-top:.45em}
 
+/* Layer translucent grain and highlights over the native frame surfaces. */
+.mtg-card:not(.art-card) .mtg-frame{background-image:repeating-linear-gradient(122deg,color-mix(in srgb,var(--white) 12%,transparent) 0 .12cqw,transparent .12cqw .64cqw),radial-gradient(ellipse at 28% 17%,var(--hi),transparent 72%),linear-gradient(150deg,var(--hi),var(--lo))}
+.mtg-card:not(.art-card,.lay-token) .mtg-box{background-color:color-mix(in srgb,var(--box) 94%,transparent);background-image:repeating-linear-gradient(112deg,color-mix(in srgb,var(--lo) 8%,transparent) 0 .12cqw,transparent .12cqw .57cqw),radial-gradient(ellipse at 22% 12%,color-mix(in srgb,var(--white) 42%,transparent),color-mix(in srgb,var(--lo) 14%,transparent))}
+.treatment-legendary .mtg-name:not([data-part-face=half])::before{content:"";position:absolute;top:-1.8cqw;left:13%;width:74%;height:2cqw;background:linear-gradient(165deg,var(--hi),var(--lo));clip-path:polygon(0 100%,10% 42%,29% 66%,50% 0,71% 66%,90% 42%,100% 100%);pointer-events:none}
+.treatment-enchantment:not(.art-card) .mtg-frame{background-image:radial-gradient(ellipse at 24% 5%,color-mix(in srgb,var(--white) 62%,transparent),transparent 66%),repeating-linear-gradient(132deg,color-mix(in srgb,var(--hi) 65%,transparent) 0 .15cqw,transparent .15cqw 1.1cqw),linear-gradient(145deg,var(--hi),var(--lo))}
+.treatment-artifact .mtg-art{outline:.6cqw double color-mix(in srgb,var(--hi) 85%,var(--card-border));outline-offset:.44cqw}
+
 /* The Adventure inset has its own name and type but shares the main card's set mark. */
 .lay-adventure :is(.mtg-name,.mtg-type)[data-part-face=half]{padding-inline:1.5cqw;border-radius:.65cqw}
 .lay-adventure [data-part-face=half] .mtg-title{font-size:3.8cqw}
@@ -120,18 +130,18 @@ button.mtg-card{cursor:pointer}
 .lay-adventure .mtg-type[data-part-face=half] span{font-size:3.35cqw}
 .lay-adventure [data-part-face=half] .mtg-pip{display:none}
 .lay-adventure .mtg-box{padding:1.45cqw 1.8cqw}
-.lay-adventure .mtg-box[data-part-face=half]{justify-content:flex-start;background-color:color-mix(in srgb,var(--box) 92%,var(--lo))}
+.lay-adventure .mtg-box[data-part-face=half]{background-color:color-mix(in srgb,var(--box) 92%,var(--lo))}
 .lay-adventure .mtg-rules{font-size:calc(var(--rules-size) * .83)}
 
 /* Planeswalker: tall art, abilities over its foot, loyalty where power/toughness would be. */
 .lay-planeswalker .mtg-name{padding:0 3.4cqw}
 .lay-planeswalker .mtg-type{padding:0 3.4cqw}
-.lay-planeswalker .mtg-box{padding:1.6cqw 3cqw 1.6cqw 1.4cqw;justify-content:space-evenly}
+.lay-planeswalker .mtg-box{padding:1.6cqw 3cqw 1.6cqw 1.4cqw}
 .lay-planeswalker .mtg-loyalty{min-width:0;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw;border-radius:1.4cqw}
 .lay-planeswalker:has(.mtg-pt:not(.mtg-loyalty)) .mtg-foot{right:46cqw}
 /* Saga: chapters down the left, art on the right, the type line across the foot. */
 .lay-saga .mtg-name{padding:0 3.4cqw}
-.lay-saga .mtg-box{padding:2cqw 2cqw 2cqw 3.4cqw;justify-content:space-evenly;border-radius:0}
+.lay-saga .mtg-box{padding:2cqw 2cqw 2cqw 3.4cqw;border-radius:0}
 .lay-saga .mtg-type{padding:0 3.4cqw}
 /* Token: the art is the card; a centred name, and a type line and text box low down. */
 .lay-token .mtg-name{padding:0 3.4cqw;justify-content:center}
