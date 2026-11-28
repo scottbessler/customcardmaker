@@ -92,7 +92,7 @@ pub struct Card {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub art_zoom: Option<u16>,
     /// The picture is a whole printed card (a scan, or an MTG Nexus render), not
-    /// just art: it fills the card, and our plates and text box are laid over it.
+    /// just art: it fits within the card, and our plates and text box are laid over it.
     pub art_is_card: bool,
     /// With `art_is_card`: the words printed on the picture are kept, and nothing
     /// of ours is drawn over it.

@@ -172,3 +172,23 @@ test("visitors can search the gallery and clear the search", async ({ page, brow
   await expect(search).toHaveValue("");
   await close();
 });
+
+test("set settings change the symbol on editor and public cards", async ({ page, browser }) => {
+  await registerUser(page);
+  const set = await setWithCards(page, "Set symbol", ["Ash"]);
+  await page.goto(`/sets/${set.id}`);
+  await page.locator(".set-settings summary").click();
+  await page.getByLabel("Set symbol").selectOption("shield");
+  await expect(page.locator(".preview .mtg-pip")).toHaveAttribute("data-symbol", "shield");
+  await expect(page.locator(".filmstrip .mtg-pip")).toHaveAttribute("data-symbol", "shield");
+  await page.request.patch(`/api/sets/${set.id}`, { data: { public: true } });
+  await page.reload();
+  await expect(page.locator(".preview .mtg-pip")).toHaveAttribute("data-symbol", "shield");
+
+  const { visitor, close } = await stranger(browser, page);
+  await visitor.goto("/gallery");
+  await expect(visitor.locator(`a[href="/gallery/${set.id}"] .mtg-pip`)).toHaveAttribute("data-symbol", "shield");
+  await visitor.goto(`/gallery/${set.id}`);
+  await expect(visitor.locator(".public-card .mtg-pip")).toHaveAttribute("data-symbol", "shield");
+  await close();
+});

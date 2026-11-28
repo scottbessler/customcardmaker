@@ -85,6 +85,11 @@ nothing about real Magic cards.
   them. Apply keeps compatible content. Cancel discards setup changes. The editor
   shows a colour chip for each frame colour plus Auto. An unknown template or frame is a
   400. The gallery draws a public set with its default. (`src/card.rs`, `public/card-face.js`)
+- **R15.** Rules text starts at the top of its box. Native frames use layered
+  texture and highlights. Legendary adds a crown, Enchantment a luminous frame,
+  Artifact a double art rim. Treatments combine and follow the card type line
+  independently of frame colour. Set settings choose a rarity-coloured mark
+  shared by the editor and public gallery.
 - **R14.** Adventure draws full-width art above the main type line. The spell
   name, cost, type and rules sit in a left inset. Main rules and flavor sit on
   the right. Saga gives its art the right column and separates chapter rows
@@ -135,7 +140,7 @@ nothing about real Magic cards.
   live preview and zoom. Each face or half stores its own optional `art_position` pair
   (0–100 per axis) and `art_zoom` (100–300%). Missing crop settings center art at
   100%. Replacing or removing art resets
-  the crop. Whole-card images keep their edge-to-edge placement.
+  the crop. Whole-card images fit within the card at their original aspect ratio.
 - **U5.** Removing art from a card drops the reference; the file is kept
   (cleanup is a known gap, see TODO.md).
 
@@ -267,8 +272,8 @@ nothing about real Magic cards.
   A **back** and a **half** are different things: a back (`card.back`) is a whole card you turn
   to (R10) and may itself have a half; a half is a whole card drawn beside this one.
 - **B14.** `card.art_is_card` says the card's picture is a whole printed card, not
-  just art. Such a card is drawn with the picture edge to edge and our name plate,
-  type plate and text box laid over it, in a Nexus card's places and opaque, so
+  just art. The picture fits within the card at its original aspect ratio. Our name plate,
+  type plate and text box are laid over it in a Nexus card's places and opaque, so
   they hide the words printed on the picture and show the card's own. It has no
   template (the picture brings its border); the frame colour still tints the plates.
   The places are those of a normal MTG Nexus card (400x560, measured off real exports),

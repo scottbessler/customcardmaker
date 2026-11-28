@@ -71,7 +71,7 @@ function SideTabs({ card, side, onSide }) {
   </div>`;
 }
 
-function TemplateSetup({ initial, initialSide, template, creating, onApply, onCancel }) {
+function TemplateSetup({ initial, initialSide, template, symbol, creating, onApply, onCancel }) {
   const [draft, setDraft] = useState(initial);
   const [side, setSide] = useState(initialSide);
   const [saving, setSaving] = useState(false);
@@ -99,7 +99,7 @@ function TemplateSetup({ initial, initialSide, template, creating, onApply, onCa
           const next = fitTemplate(card, t);
           return html`<label class=${`look-option${selected === t ? " chosen" : ""}`}>
             <input type="radio" name="template" value=${t.id} checked=${selected === t} onChange=${() => change(next)} />
-            <span class="look-thumb"><${CardFace} card=${{ ...cleanCard(next), art_is_card: false }} template=${template} /></span>
+            <span class="look-thumb"><${CardFace} card=${{ ...cleanCard(next), art_is_card: false }} template=${template} symbol=${symbol} /></span>
             <span class="look-name">${t.label}</span>
           </label>`;
         })}
@@ -139,6 +139,7 @@ const setId = app.dataset.setId;
 const limits = JSON.parse(document.getElementById("limits").textContent);
 // So does the list of looks and frame colours a card may name.
 const choices = JSON.parse(document.getElementById("choices").textContent);
+const setSymbols = JSON.parse(document.getElementById("set-symbols").textContent);
 
 function Field({ label, count, children }) {
   return html`<label>
@@ -337,7 +338,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
           <div class=${`art-thumb${card.art && crop && zoom > 100 ? " art-zoomed" : ""}`}
             style=${card.art && (crop
               ? `${artBackground(card)};aspect-ratio:${crop.w}/${crop.h}`
-              : `background-image:url(${artUrl(card.art)})`)}></div>
+              : `background-image:url(${artUrl(card.art)});background-size:contain;background-repeat:no-repeat${card.art_is_card ? ";aspect-ratio:var(--card-aspect)" : ""}`)}></div>
           <div class="art-actions">
             <label class="file-button" aria-busy=${String(uploading)}>
               ${uploading ? "Uploading…" : card.art ? "Replace image" : "Upload image"}
@@ -369,7 +370,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
         ${card.art
           ? html`<label class="art-is-card">
               <input type="checkbox" name="art_is_card" checked=${card.art_is_card} onChange=${(e) => onChange({ ...card, art_is_card: e.currentTarget.checked })} />
-              <span>This picture is a whole card, not just art. It fills the card, with the text laid over it.</span>
+              <span>This picture is a whole card, not just art. It fits inside the card, with the text laid over it.</span>
             </label>
             ${card.art_is_card
               ? html`<label class="art-is-card keep-printed">
@@ -610,6 +611,12 @@ function SetPage() {
             ${allTemplates().filter(isLook).map(({ id, label }) => html`<option value=${id} selected=${id === set.default_template}>${label}</option>`)}
           </select>
         </label>
+        <label class="default-look">Set symbol
+          <select name="set-symbol" value=${set.symbol} onChange=${(e) => patchSet({ symbol: e.currentTarget.value })}>
+            ${setSymbols.map(([id, label]) =>
+              html`<option value=${id} selected=${id === set.symbol}>${label}</option>`)}
+          </select>
+        </label>
         <label class="public-toggle">
           <input type="checkbox" name="public" checked=${set.public} onChange=${(e) => patchSet({ public: e.currentTarget.checked })} />
           <span>Show this set in the public gallery</span>
@@ -640,7 +647,7 @@ function SetPage() {
         <${CardFace}
           card=${c.card}
           template=${set.default_template}
-          code=${set.code}
+          code=${set.code} symbol=${set.symbol}
           number=${c.position}
           total=${cards.length}
           selected=${bulk ? picked.has(c.id) : c.id === selected}
@@ -656,7 +663,7 @@ function SetPage() {
       ? html`<section class="creator">
           <div class="stage">
             <div class="preview"><${CardFace} card=${current.card} flipped=${turned} template=${set.default_template}
-              code=${set.code} number=${current.position} total=${cards.length}
+              code=${set.code} symbol=${set.symbol} number=${current.position} total=${cards.length}
               onArt=${(half) => openArt(half ? [...visibleSide, "half"] : visibleSide)} /></div>
             <div class="stage-actions">
               ${current.card.back
@@ -688,7 +695,7 @@ function SetPage() {
         </section>`
       : html`<p class="muted empty">No cards yet. Add the first one.</p>`}
 
-    ${setup ? html`<${TemplateSetup} ...${setup} template=${set.default_template} creating=${!setup.id}
+    ${setup ? html`<${TemplateSetup} ...${setup} template=${set.default_template} symbol=${set.symbol} creating=${!setup.id}
       onCancel=${() => setSetup(null)} onApply=${async (card) => {
         if (!setup.id) return addCard(card);
         if (!faceOf(card, side)) setSide([]);

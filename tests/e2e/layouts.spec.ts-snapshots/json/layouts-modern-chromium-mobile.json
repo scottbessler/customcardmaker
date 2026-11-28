@@ -24,7 +24,7 @@
     "fontSize": "15px",
     "fontWeight": "400",
     "color": "rgb(22, 19, 15)",
-    "backgroundColor": "rgb(251, 248, 234)",
+    "backgroundColor": "color(srgb 0.984314 0.972549 0.917647 / 0.94)",
     "borderRadius": "3px",
     "gridTemplateColumns": "none",
     "flexDirection": "column"
@@ -39,7 +39,7 @@
     "fontSize": "15px",
     "fontWeight": "400",
     "color": "rgb(22, 19, 15)",
-    "backgroundColor": "rgb(242, 232, 196)",
+    "backgroundColor": "color(srgb 0.94902 0.909804 0.768627 / 0.94)",
     "borderRadius": "0px",
     "gridTemplateColumns": "none",
     "flexDirection": "column"

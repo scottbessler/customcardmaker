@@ -9,7 +9,7 @@ const setId = document.getElementById("app").dataset.setId;
 function PublicCard({ entry, set, count }) {
   const [flipped, setFlipped] = useState(false);
   return html`<div class="public-card">
-    <${CardFace} card=${entry.card} flipped=${flipped} template=${set.default_template} code=${set.code} number=${entry.position} total=${count} />
+    <${CardFace} card=${entry.card} flipped=${flipped} template=${set.default_template} code=${set.code} symbol=${set.symbol} number=${entry.position} total=${count} />
     ${entry.card.back ? html`<button type="button" class="quiet flip-card" onClick=${() => setFlipped(!flipped)}>Flip</button>` : null}
   </div>`;
 }

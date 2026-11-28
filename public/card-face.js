@@ -1,6 +1,7 @@
 import { html } from "/public/vendor/htm-preact.js";
 import { artBackground, artUrl } from "/public/art.js";
 import { abilities, chapters, costSymbols, frameOf, reminders, rulesSize, symbolKey, tokenize } from "/public/frame.js";
+import { parseTypeLine } from "/public/types.js";
 import { resolveTemplate } from "/public/templates.js";
 
 /**
@@ -72,7 +73,7 @@ function Rules({ card, as }) {
  * One element of a template's body, drawn with this face's fields — or the second half's,
  * when the element says `face="half"` (the split and adventure layouts).
  */
-function Part({ part, card, turned, marker }) {
+function Part({ part, card, turned, marker, symbol }) {
   const style = place(part);
   const source = part.face === "half" && card.half ? card.half : card;
   const field = (name) => part.fields.find((f) => f.name === name);
@@ -86,7 +87,7 @@ function Part({ part, card, turned, marker }) {
       ${field("mana_cost") ? html`<span class="mtg-cost">${costSymbols(source.mana_cost).map((s) => html`<${Mana} symbol=${s} />`)}</span>` : null}
     </header>`;
   }
-  if (part.tag === "plate") return html`<div class="mtg-type" data-part-face=${part.face ?? undefined} style=${style}><span>${source.type_line}</span><i class="mtg-pip"></i></div>`;
+  if (part.tag === "plate") return html`<div class="mtg-type" data-part-face=${part.face ?? undefined} style=${style}><span>${source.type_line}</span><i class="mtg-pip" data-symbol=${symbol} aria-hidden="true"></i></div>`;
   if (part.tag === "box") {
     const rules = field("rules_text");
     const flavor = field("flavor_text");
@@ -108,7 +109,7 @@ function Part({ part, card, turned, marker }) {
  * One printed card. Its size is its container's: every measurement inside is
  * in container-width units, so it renders the same at any scale.
  */
-export function CardFace({ card: whole, flipped = false, template = "modern", code = "", number = 0, total = 0, selected = false, onClick, onArt }) {
+export function CardFace({ card: whole, flipped = false, template = "modern", code = "", symbol = "circle", number = 0, total = 0, selected = false, onClick, onArt }) {
   // A double-faced card shows one face at a time; the back is a card of its own.
   const turned = flipped && whole.back;
   const card = turned ? whole.back : whole;
@@ -117,6 +118,12 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
   // Which template places the parts, and which look (frame) it wears; a back wears its own.
   // A whole-card picture is the card; the plates and text box go on top of it.
   const scan = card.art && card.art_is_card;
+  const { supertypes, types } = parseTypeLine(card.type_line);
+  const treatments = scan ? "" : [
+    supertypes.includes("Legendary") ? " treatment-legendary" : "",
+    types.includes("Enchantment") ? " treatment-enchantment" : "",
+    types.includes("Artifact") ? " treatment-artifact" : "",
+  ].join("");
   const { layout, look } = resolveTemplate(card.template ? card : { ...card, template: whole.template }, template);
   // A layout that places the second half draws both at once (a split card), so neither
   // gets the transform marker; one that does not is a card you turn over.
@@ -128,14 +135,14 @@ export function CardFace({ card: whole, flipped = false, template = "modern", co
   const artZones = scan ? [{ x: 0, y: 0, w: 100, h: 140 }] : layout.body.filter((part) => part.tag === "art");
   return html`<${Tag}
     data-face=${whole.back ? (turned ? "back" : "front") : undefined}
-    class=${`mtg-card tpl-${look} lay-${layout.id} frame-${frame} rarity-${card.rarity}${whole.back ? " has-back" : ""}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
+    class=${`mtg-card tpl-${look} lay-${layout.id} frame-${frame} rarity-${card.rarity}${treatments}${whole.back ? " has-back" : ""}${scan ? " art-card" : ""}${scan && card.keep_printed_text ? " art-card-plain" : ""}${selected ? " selected" : ""}`}
     style=${scan ? `background-image:url(${artUrl(card.art)})` : undefined}
     aria-label=${label}
     aria-pressed=${onClick ? String(selected) : undefined}
     onClick=${onClick}
   >
     <div class="mtg-frame">
-      ${layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} marker=${marker} />`)}
+      ${layout.body.map((part) => html`<${Part} part=${part} card=${card} turned=${turned} marker=${marker} symbol=${symbol} />`)}
       <footer class="mtg-foot">
         <span>${collector}${collector && code ? " • " : ""}${code}</span>
         <span>${card.artist ? `Illus. ${card.artist}` : ""}</span>

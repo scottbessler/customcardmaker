@@ -82,6 +82,8 @@ const MIGRATIONS: &[&str] = &[
     // 8: who made an image and under what licence, kept with the image. Null for
     // an upload, which is the owner's own.
     "ALTER TABLE art ADD COLUMN credit TEXT;",
+    // 9: a set may choose the mark printed on its cards.
+    "ALTER TABLE sets ADD COLUMN symbol TEXT NOT NULL DEFAULT 'circle';",
 ];
 
 #[derive(Clone)]

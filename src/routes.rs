@@ -135,6 +135,7 @@ pub struct SetPatch {
     public: Option<bool>,
     /// The template a card with none of its own wears in this set.
     default_template: Option<String>,
+    symbol: Option<String>,
 }
 
 pub async fn patch_set(
@@ -150,11 +151,19 @@ pub async fn patch_set(
     {
         return Err(AppError::bad_request("That is not a template every card can wear.").into());
     }
+    if body
+        .symbol
+        .as_deref()
+        .is_some_and(|symbol| !sets::SYMBOLS.iter().any(|(id, _)| *id == symbol))
+    {
+        return Err(AppError::bad_request("That is not a set symbol.").into());
+    }
     let changes = sets::SetChanges {
         name,
         code,
         public: body.public,
         default_template: body.default_template,
+        symbol: body.symbol,
     };
     s.sets
         .rename(me, id, changes)
@@ -675,7 +684,7 @@ pub struct ImportCockatriceForm {
     #[serde(default)]
     pub images: bool,
     /// The pictures are whole printed cards (what MTG Nexus exports), not just
-    /// art: each card is marked so it shows the picture edge to edge.
+    /// art: each card is marked so it fits the whole picture within the card.
     #[serde(default)]
     pub whole_cards: bool,
     /// Say what would be created instead of creating it.
