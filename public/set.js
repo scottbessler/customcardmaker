@@ -1,6 +1,6 @@
 import { html, render, useCallback, useEffect, useLayoutEffect, useRef, useState } from "/public/vendor/htm-preact.js";
 import { api, uploadArt } from "/public/api.js";
-import { artPosition, artUrl, prepareArt } from "/public/art.js";
+import { artBackground, artUrl, prepareArt } from "/public/art.js";
 import { ArtSearchDialog, Credit } from "/public/art-search.js";
 import { CardFace, Mana } from "/public/card-face.js";
 import { BulkBar, TransferDialog } from "/public/bulk.js";
@@ -25,6 +25,7 @@ function cleanCard(card) {
     rarity: card.rarity ?? "common",
     art: card.art ?? null,
     art_position: card.art_position ?? null,
+    art_zoom: card.art_zoom ?? null,
     art_is_card: card.art_is_card ?? false,
     keep_printed_text: card.keep_printed_text ?? false,
     back: card.back ? cleanCard(card.back) : null,
@@ -246,7 +247,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
     setSearching(false);
     onCredit(id, found);
     const artist = latest.current.artist || found.creator.slice(0, limits.artist);
-    onChange({ ...latest.current, art: id, art_position: null, artist });
+    onChange({ ...latest.current, art: id, art_position: null, art_zoom: null, artist });
   }
 
   async function chooseArt(event) {
@@ -258,7 +259,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
     setArtError("");
     try {
       const { id } = await uploadArt(await prepareArt(file));
-      onChange({ ...latest.current, art: id, art_position: null });
+      onChange({ ...latest.current, art: id, art_position: null, art_zoom: null });
     } catch (e) {
       setArtError(e.message);
     } finally {
@@ -267,6 +268,7 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
   }
 
   const crop = !card.art_is_card && artPart;
+  const zoom = card.art_zoom ?? 100;
   const [artX, artY] = card.art_position ?? [50, 50];
 
   return html`<form class="panel card-form" onSubmit=${(e) => e.preventDefault()}>
@@ -332,23 +334,27 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
       <div>
         <h2 id="art-title">Card art</h2>
         <div class="art-row">
-          <div class="art-thumb" style=${card.art ? {
-            backgroundImage: `url(${artUrl(card.art)})`,
-            backgroundPosition: crop ? artPosition(card.art_position) : undefined,
-            aspectRatio: crop ? `${crop.w} / ${crop.h}` : undefined,
-          } : undefined}></div>
+          <div class=${`art-thumb${card.art && crop && zoom > 100 ? " art-zoomed" : ""}`}
+            style=${card.art && (crop
+              ? `${artBackground(card)};aspect-ratio:${crop.w}/${crop.h}`
+              : `background-image:url(${artUrl(card.art)})`)}></div>
           <div class="art-actions">
             <label class="file-button" aria-busy=${String(uploading)}>
               ${uploading ? "Uploading…" : card.art ? "Replace image" : "Upload image"}
               <input type="file" name="art" accept="image/png,image/jpeg,image/webp" disabled=${uploading} onChange=${chooseArt} />
             </label>
             <button type="button" class="quiet search-art" disabled=${uploading} onClick=${() => setSearching(true)}>Find free art…</button>
-            <button type="button" class="quiet remove-art" disabled=${!card.art || uploading} onClick=${() => onChange({ ...card, art: null, art_position: null, art_is_card: false, keep_printed_text: false })}>Remove</button>
+            <button type="button" class="quiet remove-art" disabled=${!card.art || uploading} onClick=${() => onChange({ ...card, art: null, art_position: null, art_zoom: null, art_is_card: false, keep_printed_text: false })}>Remove</button>
             <p class="art-hint muted">PNG, JPEG or WebP. It is shrunk to fit before it is sent.</p>
           </div>
         </div>
         ${card.art && crop ? html`<fieldset class="form-section art-crop">
-          <legend>Crop position</legend>
+          <legend>Crop</legend>
+          <${Field} label="Zoom" count=${`${zoom}%`}>
+            <input type="range" min="100" max=${choices.art_zoom_max} value=${zoom} disabled=${uploading}
+              aria-label="Zoom" aria-valuetext=${`${zoom}%`}
+              onInput=${(e) => onChange({ ...card, art_zoom: e.currentTarget.valueAsNumber })} />
+          <//>
           <${Field} label="Horizontal">
             <input type="range" min="0" max="100" value=${artX} disabled=${uploading}
               onInput=${(e) => onChange({ ...card, art_position: [e.currentTarget.valueAsNumber, artY] })} />
@@ -357,8 +363,8 @@ function Editor({ card, template, credit, onChange, onSetDefault, onCredit, artO
             <input type="range" min="0" max="100" value=${artY} disabled=${uploading}
               onInput=${(e) => onChange({ ...card, art_position: [artX, e.currentTarget.valueAsNumber] })} />
           <//>
-          <button type="button" class="quiet" disabled=${uploading || (artX === 50 && artY === 50)}
-            onClick=${() => onChange({ ...card, art_position: null })}>Center art</button>
+          <button type="button" class="quiet" disabled=${uploading || (artX === 50 && artY === 50 && zoom === 100)}
+            onClick=${() => onChange({ ...card, art_position: null, art_zoom: null })}>Reset crop</button>
         </fieldset>` : null}
         ${card.art
           ? html`<label class="art-is-card">

@@ -96,13 +96,19 @@ test("another account cannot fetch your art", async ({ page, browser }) => {
   await stranger.close();
 });
 
-test("crop position updates the art, survives reload, and can be centered", async ({ page }) => {
+test("crop position and zoom update the art, survive reload, and reset", async ({ page }) => {
   await setWithCard(page);
   await upload(page);
   const preview = page.locator(".preview .mtg-art");
   const thumb = page.locator(".art-thumb");
   const horizontal = page.getByRole("slider", { name: "Horizontal" });
   const vertical = page.getByRole("slider", { name: "Vertical" });
+  const zoom = page.getByRole("slider", { name: "Zoom" });
+  await zoom.press("End");
+  await expect(thumb).toHaveClass(/art-zoomed/);
+  await expect(preview).toHaveClass(/art-zoomed/);
+  await expect(page.locator(".filmstrip .mtg-art")).toHaveClass(/art-zoomed/);
+  expect(await preview.evaluate((art) => getComputedStyle(art, "::before").transform)).toBe("matrix(3, 0, 0, 3, 0, 0)");
   await expect(preview).toHaveCSS("background-position", "50% 50%");
   await horizontal.press("ArrowRight");
   await vertical.press("ArrowLeft");
@@ -115,7 +121,10 @@ test("crop position updates the art, survives reload, and can be centered", asyn
   await page.click(".preview .card-art-control");
   await expect(horizontal).toHaveValue("51");
   await expect(vertical).toHaveValue("49");
-  await page.getByRole("button", { name: "Center art" }).click();
+  await expect(zoom).toHaveValue("300");
+  await page.getByRole("button", { name: "Reset crop" }).click();
+  await expect(zoom).toHaveValue("100");
+  await expect(preview).not.toHaveClass(/art-zoomed/);
   await expect(preview).toHaveCSS("background-position", "50% 50%");
   await expect(page.locator(".save-state")).toHaveText("Saved");
 
