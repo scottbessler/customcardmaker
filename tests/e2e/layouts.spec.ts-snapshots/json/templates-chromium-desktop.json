@@ -47,9 +47,9 @@
   ".frame-sample[data-template=\"split\"] .mtg-art": [
     {
       "x": 742,
-      "y": 1090,
-      "width": 123,
-      "height": 176,
+      "y": 1107,
+      "width": 120,
+      "height": 67,
       "display": "block",
       "position": "absolute",
       "fontSize": "15px",
@@ -61,10 +61,10 @@
       "flexDirection": "row"
     },
     {
-      "x": 742,
-      "y": 1282,
-      "width": 123,
-      "height": 174,
+      "x": 874,
+      "y": 1107,
+      "width": 120,
+      "height": 67,
       "display": "block",
       "position": "absolute",
       "fontSize": "15px",
@@ -78,10 +78,10 @@
   ],
   ".frame-sample[data-template=\"split\"] .mtg-box": [
     {
-      "x": 871,
-      "y": 1133,
-      "width": 126,
-      "height": 133,
+      "x": 742,
+      "y": 1191,
+      "width": 120,
+      "height": 67,
       "display": "flex",
       "position": "absolute",
       "fontSize": "15px",
@@ -93,10 +93,10 @@
       "flexDirection": "column"
     },
     {
-      "x": 871,
-      "y": 1325,
-      "width": 126,
-      "height": 129,
+      "x": 874,
+      "y": 1191,
+      "width": 120,
+      "height": 67,
       "display": "flex",
       "position": "absolute",
       "fontSize": "15px",
@@ -175,8 +175,8 @@
   ".frame-sample[data-template=\"semi-split\"] .mtg-art": {
     "x": 446,
     "y": 1532,
-    "width": 146,
-    "height": 365,
+    "width": 98,
+    "height": 169,
     "display": "block",
     "position": "absolute",
     "fontSize": "15px",
