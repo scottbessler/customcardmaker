@@ -15,7 +15,7 @@ use crate::{
 use axum::{
     Json,
     body::Bytes,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{StatusCode, header},
     response::{Html, IntoResponse, Redirect, Response},
 };
@@ -844,8 +844,17 @@ pub async fn gallery_set_page(
     )))
 }
 
-pub async fn gallery_list(State(s): State<AppState>) -> Api<Vec<sets::GalleryEntry>> {
-    Ok(Json(s.sets.gallery().await?))
+#[derive(Deserialize)]
+pub struct GallerySearch {
+    q: Option<String>,
+}
+
+pub async fn gallery_list(
+    State(s): State<AppState>,
+    Query(query): Query<GallerySearch>,
+) -> Api<Vec<sets::GalleryEntry>> {
+    let search = query.q.as_deref().unwrap_or_default().trim().to_owned();
+    Ok(Json(s.sets.gallery(search).await?))
 }
 
 /// A public set as anyone sees it, plus who made each piece of borrowed art.
