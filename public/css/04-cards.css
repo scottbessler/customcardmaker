@@ -21,12 +21,14 @@ button.mtg-card{cursor:pointer}
    which is where a printed card keeps its collector line. */
 /* A plate is the text box's tint, lit from above, with a dark hairline round it. */
 .mtg-name,.mtg-type{display:flex;align-items:center;justify-content:space-between;gap:1.5cqw;padding:0 2.4cqw;border-radius:2.4cqw / 1.8cqw;background-color:var(--box);background-image:linear-gradient(180deg,color-mix(in srgb,var(--box) 65%,white),var(--box) 50%,color-mix(in srgb,var(--box) 85%,var(--lo)));box-shadow:0 0 0 .45cqw color-mix(in srgb,var(--lo) 40%,black),inset 0 .3cqw .2cqw color-mix(in srgb,var(--white) 60%,transparent),0 .4cqw .6cqw var(--shadow-40)}
-.mtg-title{font-size:4.6cqw;font-weight:800;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
+.mtg-title{font-size:4.6cqw;font-weight:650;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em}
 .mtg-title em{font-weight:600;opacity:.5}
 .mtg-cost{display:flex;gap:.5cqw;flex:none}
 .mtg-art{border-radius:.8cqw;background:repeating-linear-gradient(135deg,var(--art-placeholder) 0 3cqw,color-mix(in srgb,var(--art-placeholder) 85%,white) 3cqw 6cqw);box-shadow:0 0 0 .45cqw color-mix(in srgb,var(--lo) 40%,black),0 .5cqw .9cqw .5cqw var(--shadow-40)}
 .mtg-art.has-art{background-size:cover;background-position:center}
-.mtg-type span{font-size:4cqw;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.art-zoomed{overflow:hidden}
+.art-zoomed::before{content:"";position:absolute;inset:0;background:inherit;transform:scale(var(--art-scale));transform-origin:var(--art-origin);pointer-events:none}
+.mtg-type span{font-size:4cqw;font-weight:575;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mtg-pip{flex:none;width:3.6cqw;height:3.6cqw;border-radius:50%;background:var(--rarity-common);box-shadow:0 0 0 .5cqw var(--card-border)}
 .rarity-uncommon .mtg-pip{background:var(--rarity-uncommon)}
 .rarity-rare .mtg-pip{background:var(--rarity-rare)}
@@ -89,7 +91,7 @@ button.mtg-card{cursor:pointer}
 .art-card .mtg-pt{min-width:0;padding:0;display:flex;align-items:center;justify-content:center;font-size:6cqw}
 .art-card .mtg-title{font-size:5.6cqw}
 .art-card .mtg-type span{font-size:5cqw}
-.art-card .mana{font-size:4.6cqw}
+.art-card .mtg-cost .mana{font-size:4.6cqw}
 .art-card .mtg-foot{display:none}
 /* Keeping the picture's own words: none of ours is drawn at all. */
 .art-card-plain .mtg-frame{display:none}

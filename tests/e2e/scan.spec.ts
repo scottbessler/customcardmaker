@@ -29,7 +29,7 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
   await page.fill('input[name="name"]', "Overlaid Name");
   await page.fill('input[name="mana_cost"]', "{1}{W}");
   await page.fill('input[name="type_line"]', "Creature — Human Knight");
-  await page.fill('textarea[name="rules_text"]', "Vigilance");
+  await page.fill('textarea[name="rules_text"]', "Vigilance\n{2}{B}: Draw a card.");
 
   const preview = page.locator(".preview .mtg-card");
   await page.click(".preview .card-art-control");
@@ -41,6 +41,10 @@ test("a whole-card picture fills the card, with our text laid over it", async ({
   await page.check('input[name="art_is_card"]');
   await expect(preview).toHaveClass(/art-card/);
   await expect(page.getByRole("slider")).toHaveCount(0);
+  const relativeSize = await preview.locator(".mtg-rules .mana").first().evaluate((symbol) =>
+    parseFloat(getComputedStyle(symbol).fontSize) / parseFloat(getComputedStyle(symbol.parentElement!).fontSize),
+  );
+  expect(relativeSize).toBeCloseTo(0.86, 2);
   await expect(preview.locator(".mtg-title")).toHaveText("Overlaid Name");
   await expect(page.locator(".save-state")).toHaveText(/Saved/);
 

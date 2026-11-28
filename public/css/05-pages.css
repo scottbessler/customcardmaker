@@ -173,7 +173,7 @@
 .symbol-key .mana{font-size:var(--text-action)}
 .symbol-key:disabled{opacity:.3}
 .art-row{display:grid;grid-template-columns:7.5rem minmax(0,1fr);gap:var(--space-12);align-items:center}
-.art-thumb{aspect-ratio:2.1;border-radius:var(--radius-control);border:1px solid var(--line-2);background:repeating-linear-gradient(135deg,var(--art-placeholder) 0 8px,color-mix(in srgb,var(--art-placeholder) 85%,white) 8px 16px) center/cover}
+.art-thumb{position:relative;aspect-ratio:2.1;border-radius:var(--radius-control);border:1px solid var(--line-2);background:repeating-linear-gradient(135deg,var(--art-placeholder) 0 8px,color-mix(in srgb,var(--art-placeholder) 85%,white) 8px 16px) center/cover}
 .art-crop input[type=range]{width:100%;padding:0;accent-color:var(--gold)}
 .art-crop button{justify-self:start}
 .art-actions{display:flex;flex-wrap:wrap;gap:var(--space-8);align-items:center}

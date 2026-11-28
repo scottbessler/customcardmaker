@@ -39,7 +39,13 @@ export function artUrl(id) {
 }
 
 /** CSS alignment for a cover crop, shared by the art dialog and card renderer. */
-export function artPosition(position) {
+function artPosition(position) {
   const [x, y] = position ?? [50, 50];
   return `${x}% ${y}%`;
+}
+
+/** Background declarations for a crop in a frame or art dialog preview. */
+export function artBackground({ art, art_position, art_zoom }) {
+  const position = artPosition(art_position);
+  return `background-image:url(${artUrl(art)});background-position:${position};--art-origin:${position};--art-scale:${(art_zoom ?? 100) / 100}`;
 }

@@ -45,14 +45,18 @@ pub struct Choices {
     pub base: &'static [cardtype::Field],
     pub features: &'static [cardtype::Feature],
     pub frames: &'static [(&'static str, &'static str)],
+    pub art_zoom_max: u16,
     pub default_template: &'static str,
 }
+
+const ART_ZOOM_MAX: u16 = 300;
 
 pub fn choices() -> Choices {
     Choices {
         base: cardtype::BASE,
         features: cardtype::FEATURES,
         frames: FRAMES,
+        art_zoom_max: ART_ZOOM_MAX,
         default_template: DEFAULT_TEMPLATE,
     }
 }
@@ -84,6 +88,9 @@ pub struct Card {
     /// Horizontal and vertical crop alignment in percent. Missing means centered.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub art_position: Option<[u8; 2]>,
+    /// Crop magnification in percent. Missing means the image fills its art box.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub art_zoom: Option<u16>,
     /// The picture is a whole printed card (a scan, or an MTG Nexus render), not
     /// just art: it fills the card, and our plates and text box are laid over it.
     pub art_is_card: bool,
@@ -112,6 +119,7 @@ struct CardDoc {
     rarity: Rarity,
     art: Option<Uuid>,
     art_position: Option<[u8; 2]>,
+    art_zoom: Option<u16>,
     art_is_card: bool,
     keep_printed_text: bool,
     back: Option<Box<Card>>,
@@ -151,6 +159,7 @@ impl<'de> Deserialize<'de> for Card {
             rarity: doc.rarity,
             art: doc.art,
             art_position: doc.art_position,
+            art_zoom: doc.art_zoom,
             art_is_card: doc.art_is_card,
             keep_printed_text: doc.keep_printed_text,
             back: doc.back,
@@ -185,6 +194,7 @@ impl Card {
             rarity: Rarity::default(),
             art: None,
             art_position: None,
+            art_zoom: None,
             art_is_card: false,
             keep_printed_text: false,
             back: None,
@@ -324,6 +334,14 @@ impl Card {
                 "Art position must be between 0 and 100 on each axis.",
             ));
         }
+        if self
+            .art_zoom
+            .is_some_and(|zoom| !(100..=ART_ZOOM_MAX).contains(&zoom))
+        {
+            return Err(AppError::bad_request(format!(
+                "Art zoom must be between 100 and {ART_ZOOM_MAX} percent.",
+            )));
+        }
         if !self.frame.is_empty() && !is_frame(&self.frame) {
             return Err(AppError::bad_request("That is not a frame colour."));
         }
@@ -396,6 +414,10 @@ mod tests {
             json!([0, 100])
         );
         assert!(card(json!({"art_position": [101, 50]})).validate().is_err());
+        assert_eq!(card(json!({})).art_zoom, None);
+        assert!(card(json!({"art_zoom": 300})).validate().is_ok());
+        assert!(card(json!({"art_zoom": 99})).validate().is_err());
+        assert!(card(json!({"art_zoom": 301})).validate().is_err());
     }
 
     #[test]
